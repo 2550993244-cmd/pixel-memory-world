@@ -1,0 +1,11 @@
+{
+  "pages": ["pages/index/index", "pages/room/room"],
+  "window": {
+    "navigationBarTitleText": "小小世界",
+    "navigationBarBackgroundColor": "#fff6eb",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f7f1e8"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

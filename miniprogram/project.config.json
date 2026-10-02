@@ -1,0 +1,15 @@
+{
+  "description": "Pixel Memory V9 微信小程序轻量版",
+  "packOptions": {"ignore": []},
+  "setting": {
+    "urlCheck": true,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true
+  },
+  "compileType": "miniprogram",
+  "appid": "touristappid",
+  "projectname": "pixel-memory-v9",
+  "miniprogramRoot": "./"
+}

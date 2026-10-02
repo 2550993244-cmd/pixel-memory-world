@@ -1,0 +1,1 @@
+.panel{margin-top:40rpx}.tabs{display:flex;background:#efe2d5;padding:6rpx;border-radius:10rpx}.tab{flex:1;text-align:center;padding:18rpx;color:#8d7c72}.tab.on{background:#fffaf2;color:#554841;font-weight:700;box-shadow:0 4rpx 0 #d3c1b1}.code{font-size:42rpx;letter-spacing:12rpx;text-align:center;text-transform:uppercase}
