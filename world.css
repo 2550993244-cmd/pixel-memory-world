@@ -487,3 +487,33 @@ body.pm-world .world-stage:focus{box-shadow:0 0 0 4px rgba(236,201,116,.28),9px 
   body.pm-world .pm-sprite-core,
   body.pm-world .quest-memory .treasure-sprite{animation:none!important}
 }
+
+
+/* ---------- touch controls: mobile web should remain playable ---------- */
+.pm-touch-pad{
+  position:fixed;left:14px;bottom:86px;z-index:320;
+  width:132px;height:132px;display:none;grid-template-columns:repeat(3,42px);grid-template-rows:repeat(3,42px);gap:3px;
+  user-select:none;-webkit-user-select:none;touch-action:none;
+}
+.pm-touch-pad.show{display:none}
+.pm-touch-pad button{
+  border:2px solid #6f5949;background:rgba(250,243,226,.92);color:#56463d;
+  box-shadow:3px 3px 0 rgba(70,52,42,.22);font-weight:800;font-size:14px;padding:0;
+}
+.pm-touch-pad button[data-key="w"]{grid-column:2;grid-row:1}
+.pm-touch-pad button[data-key="a"]{grid-column:1;grid-row:2}
+.pm-touch-pad button[data-key="s"]{grid-column:2;grid-row:2}
+.pm-touch-pad button[data-key="d"]{grid-column:3;grid-row:2}
+.pm-touch-pad .pm-touch-action{
+  grid-column:3;grid-row:3;border-color:#9e7442;background:#eed188;color:#624a31;
+}
+.pm-touch-pad button.pressed{
+  transform:translate(2px,2px);box-shadow:1px 1px 0 rgba(70,52,42,.22);background:#f0d9a5;
+}
+@media (max-width:900px) and (pointer:coarse){
+  .pm-touch-pad.show{display:grid}
+  body.pm-world .movement-tip,
+  body.pm-world .quest-map-caption{display:none}
+  body.pm-world .world-dock{bottom:10px;max-width:calc(100vw - 22px);overflow-x:auto;justify-content:flex-start}
+  body.pm-world .dock-button{min-width:68px}
+}
