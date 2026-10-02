@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#f7f1e8" />
   <title>小小世界 · Pixel Memory V12</title>
-  <link rel="stylesheet" href="./styles.css?v=12" />
+  <link rel="stylesheet" href="./styles.css?v=12" />\n  <link rel="stylesheet" href="./landing.css?v=12" />
   <link rel="stylesheet" href="./world.css?v=12" />
 </head>
 <body>
@@ -24,65 +24,77 @@
     <main>
       <!-- LANDING -->
       <section id="landing" class="screen active landing-screen">
-        <div class="hero-grid">
+        <div class="landing-aura" aria-hidden="true">
+          <i class="aura-a"></i><i class="aura-b"></i><i class="aura-c"></i>
+        </div>
+        <div class="landing-noise" aria-hidden="true"></div>
+        <div class="landing-symbols" aria-hidden="true">
+          <span>✦</span><span>MEMORY · 20:08 · KEEP THIS NIGHT</span><span>⌁</span><span>◌</span>
+        </div>
+
+        <div class="landing-hero">
           <div class="hero-copy">
-            <span class="eyebrow">FOR THE DAYS WE WANT TO KEEP</span>
-            <h1>把重要的日子，<br><em>变成一个可以走进去的地方。</em></h1>
-            <p>朋友不在同一座城市，也能在同一间像素小屋里等你。生日、纪念日、毕业，或者任何值得认真记住的一天。</p>
+            <div class="hero-kicker">A PLACE MADE FOR SOMEONE</div>
+            <h1>把重要的日子，<span class="soft-line">变成一个可以走进去的地方<span class="glyph">✦</span></span></h1>
+            <p>朋友不在同一座城市，也能在同一间像素小屋里等你。生日、纪念日、毕业，或者任何值得认真留下的一天。</p>
             <div class="hero-cta">
               <button id="createWorldBtn" class="button primary xl press"><span>✦</span><b>创建一个世界</b><kbd>↵</kbd></button>
               <button id="joinWorldBtn" class="button secondary xl press"><span>⌁</span><b>输入邀请码</b></button>
             </div>
             <div class="hero-proof">
               <div class="mini-people"><span>羽</span><span>哲</span><span>夏</span><i>+9</i></div>
-              <small>不需要注册 · 一条链接就能来</small>
+              <small>NO SIGN-UP · SHARE ONE LINK · MEET INSIDE</small>
             </div>
+            <div class="hero-side-note" aria-hidden="true">A SMALL WORLD FOR A DAY WORTH KEEPING</div>
           </div>
 
           <div class="hero-preview-wrap">
             <div class="preview-label"><span class="live-dot"></span> LIVE ROOM · 20:08</div>
-            <div id="heroRoom" class="hero-room pixel-frame">
-              <div class="hero-wall">
-                <div class="hero-photo"></div>
-                <div class="hero-window"><i></i><i></i></div>
-                <div class="hero-lights"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            <div class="hero-scene-shell">
+              <div id="heroRoom" class="hero-room pixel-frame">
+                <div class="hero-wall">
+                  <div class="hero-photo"></div>
+                  <div class="hero-window"><i></i><i></i></div>
+                  <div class="hero-lights"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+                </div>
+                <div class="hero-floor"></div>
+                <div class="hero-rug"></div>
+                <div class="hero-sofa"></div>
+                <div class="hero-table"><div class="hero-cake"><i></i></div></div>
+                <div class="hero-plant"></div>
+                <div class="hero-gifts"><i></i><i></i></div>
+                <div class="hero-person hp1"><span></span><b>羽</b></div>
+                <div class="hero-person hp2"><span></span><b>哲</b></div>
+                <div class="hero-person hp3"><span></span><b>夏</b></div>
+                <div class="hero-bubble bubble-a">她快到了吗？</div>
+                <div class="hero-bubble bubble-b">嘘，再等等 ✦</div>
+                <button id="heroDoorbell" class="doorbell press"><span>按门铃</span><i></i></button>
+                <div id="heroArrival" class="hero-person arrival hidden"><span></span><b>你</b></div>
               </div>
-              <div class="hero-floor"></div>
-              <div class="hero-rug"></div>
-              <div class="hero-sofa"></div>
-              <div class="hero-table"><div class="hero-cake"><i></i></div></div>
-              <div class="hero-plant"></div>
-              <div class="hero-gifts"><i></i><i></i></div>
-              <div class="hero-person hp1"><span></span><b>羽</b></div>
-              <div class="hero-person hp2"><span></span><b>哲</b></div>
-              <div class="hero-person hp3"><span></span><b>夏</b></div>
-              <div class="hero-bubble bubble-a">她快到了吗？</div>
-              <div class="hero-bubble bubble-b">嘘，再等等 ✦</div>
-              <button id="heroDoorbell" class="doorbell press"><span>按门铃</span><i></i></button>
-              <div id="heroArrival" class="hero-person arrival hidden"><span></span><b>你</b></div>
             </div>
-            <p class="preview-tip">↳ 试试按一下门铃</p>
+            <p class="preview-tip">MOVE YOUR CURSOR · THEN RING THE BELL</p>
+            <div class="landing-orbit" aria-hidden="true"></div>
           </div>
         </div>
 
         <div class="compact-features">
-          <article><span class="feature-icon coral">01</span><div><h3>一起进入</h3><p>每个人都用自己的像素小人来到同一个房间。</p></div></article>
-          <article><span class="feature-icon blue">02</span><div><h3>一起留下痕迹</h3><p>留言、照片、礼物和纪念物，会真的散落在大厅里。</p></div></article>
-          <article><span class="feature-icon green">03</span><div><h3>最后一起纪念</h3><p>所有人按下庆祝，这一晚会被定格成一张纪念卡。</p></div></article>
+          <article><span class="feature-icon coral">1</span><div><h3>一起进入</h3><p>每个人都用自己的像素小人来到同一个房间。</p></div></article>
+          <article><span class="feature-icon blue">2</span><div><h3>一起留下痕迹</h3><p>留言、照片、礼物和纪念物，会真的散落在空间里。</p></div></article>
+          <article><span class="feature-icon green">3</span><div><h3>再一起走出去</h3><p>从小屋推门出去，把共同回忆藏进一张可以探索的地图。</p></div></article>
         </div>
 
         <section class="story-band">
           <div class="story-copy">
-            <span class="eyebrow">A ROOM THAT REMEMBERS</span>
-            <h2>不是功能列表。<br>是一间<strong>被大家慢慢填满的房间。</strong></h2>
-            <p>有人下午先来，把一张旧照片放在窗边；有人晚点经过，在地毯旁留下一封信。晚上你走进来时，会发现每个角落都藏着别人想对你说的话。</p>
+            <span class="eyebrow">A ROOM THAT REMEMBERS · ✦</span>
+            <h2>不是一张电子贺卡。<br>是一间<strong>会被大家慢慢填满的房间。</strong></h2>
+            <p>有人提前来，把一张旧照片放在窗边；有人经过地毯，留下只属于你们的一句话。等主角推门进来，房间已经有了大家来过的痕迹。</p>
             <button class="button warm press" data-go="creator">为重要的人留一盏灯 <span>→</span></button>
           </div>
           <div class="memory-strip pixel-frame">
-            <div class="memory-tile photo-tile"><span>2019</span><b>第一次旅行</b></div>
+            <div class="memory-tile photo-tile"><span>2019 · 05</span><b>第一次旅行</b></div>
             <div class="memory-tile letter-tile"><span>✉</span><b>给 21 岁的你</b></div>
-            <div class="memory-tile flower-tile"><span>🌷</span><b>那天买的花</b></div>
-            <div class="memory-tile ticket-tile"><span>🎫</span><b>旧电影票</b></div>
+            <div class="memory-tile flower-tile"><span>✦</span><b>那天买的花</b></div>
+            <div class="memory-tile ticket-tile"><span>⌁ 20:08</span><b>旧电影票</b></div>
           </div>
         </section>
       </section>
@@ -389,7 +401,7 @@
     <div id="pressFx" class="press-fx-layer"></div>
   </div>
   <script src="./network.js?v=12"></script>
-  <script src="./app.js?v=12"></script>
+  <script src="./app.js?v=12"></script>\n  <script src="./landing.js?v=12"></script>
   <script src="./quest.js?v=12"></script>
   <script src="./world.js?v=12"></script>
 </body>
