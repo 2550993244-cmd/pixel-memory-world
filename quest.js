@@ -1,4 +1,4 @@
-/* Pixel Memory V9 · Memory Quest
+/* Pixel Memory World · Memory Quest
    Adds the "想去看看外面？" door, playable memory trail, photo→pixel clues,
    map placement, voice recording, discovery, and room↔outside transitions.
 */
@@ -32,8 +32,8 @@
     completedShown: false
   };
 
-  const questKey = () => `pixel-memory-v9-quest-${state.roomCode || 'draft'}`;
-  const questLiveKey = () => `pixel-memory-v10-quest-live-${state.roomCode || 'draft'}`;
+  // Historical localStorage key is intentionally retained for backward compatibility.\n  const questKey = () => `pixel-memory-v9-quest-${state.roomCode || 'draft'}`;
+  const questLiveKey = () => `pixel-memory-quest-live-${state.roomCode || 'draft'}`;
 
   // The door is a real object in the original room rather than a menu item.
   if (!fixedObjects.some(o => o.id === 'quest')) {
@@ -530,7 +530,7 @@
   questStage?.addEventListener('pointercancel',endDrag);
 
   // ---------- voice recording ----------
-  const DB_NAME='pixel-memory-v8-voices', STORE='voices';
+  // Keep the historical IndexedDB name so existing local recordings remain readable.\n  const DB_NAME='pixel-memory-v8-voices', STORE='voices';
   function openVoiceDB(){return new Promise((resolve,reject)=>{const r=indexedDB.open(DB_NAME,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(STORE))r.result.createObjectStore(STORE)};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
   async function voiceDBPut(key,blob){const db=await openVoiceDB();return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put(blob,key);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)})}
   async function voiceDBGet(key){const db=await openVoiceDB();return new Promise((resolve,reject)=>{const r=db.transaction(STORE,'readonly').objectStore(STORE).get(key);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
