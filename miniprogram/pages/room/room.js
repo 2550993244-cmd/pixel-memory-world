@@ -15,7 +15,7 @@ Page({
   onUnload(){try{this.send({type:'leave',sender:this.player.id,player:this.player});this.socket?.close({})}catch(e){}},
   connect(){
     const base=app.globalData.serverUrl.replace(/^http:/,'ws:').replace(/^https:/,'wss:');
-    const channel=`pixel-memory-v9-live-${this.data.code}`;
+    const channel=`pixel-memory-live-${this.data.code}`;
     this.socket=wx.connectSocket({url:`${base}/ws?room=${this.data.code}&channel=${encodeURIComponent(channel)}&player=${encodeURIComponent(this.player.id)}`});
     this.socket.onOpen(()=>this.send({type:'hello',sender:this.player.id,player:this.player}));
     this.socket.onMessage(e=>{let m;try{m=JSON.parse(e.data)}catch(_){return}if(m.sender===this.player.id)return;this.receive(m)});
