@@ -1,7 +1,7 @@
-/* Pixel Memory V9 · shared realtime network adapter
+/* Pixel Memory World · shared realtime network adapter
    - Uses a real WebSocket server when a server URL is configured.
    - Falls back to BroadcastChannel so the prototype still works offline.
-   Configure with ?server=https://YOUR-SERVER or localStorage pixel-memory-server-url.
+   Current V12 front end uses this stable adapter. Configure with ?server=https://YOUR-SERVER or localStorage pixel-memory-server-url.
 */
 (() => {
   const qs = new URLSearchParams(location.search);
