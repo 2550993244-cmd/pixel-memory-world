@@ -98,8 +98,68 @@ function openMusicDrawer(){showDrawer('房间音乐',`<div class="drawer-section
 // collective celebration
 function openCelebrationPrep(){toast('大家都准备好时，从底部按下「庆祝」')}let celebrationCompleted=false;function renderCelebrateStatus(){const ps=[...state.players.values()],n=ps.filter(p=>p.celebrated).length;$('#celebrateDockStatus').textContent=`${n}/${Math.max(ps.length,1)}`;if(n<ps.length)celebrationCompleted=false;if(ps.length>0&&n===ps.length&&!celebrationCompleted){celebrationCompleted=true;triggerCelebration(false)}}
 let celebrationShown=false;function pressCelebrate(){state.player.celebrated=!state.player.celebrated;state.players.set(state.player.id,{...state.player,lastSeen:Date.now()});broadcast('celebrate');renderPlayers();renderCelebrateStatus();reaction(state.player.id,state.player.celebrated?'✦':'·');toast(state.player.celebrated?'你按下了庆祝，等其他人一起。':'你取消了准备')}
-function triggerCelebration(force){if(celebrationShown&&!force)return;celebrationShown=true;$('#celebrationPeople').innerHTML=[...state.players.values()].map(p=>`<span>${escapeHTML(p.name.slice(0,2))}</span>`).join('');$('#celebrationOverlay').classList.remove('hidden');$('#celebrationOverlay').setAttribute('aria-hidden','false');confetti();addActivity('所有人一起按下了「庆祝」');setTimeout(()=>{celebrationShown=false},4000)}
-function confetti(){const layer=$('#confettiLayer');layer.innerHTML='';const cs=['#e98f92','#f3c969','#8fb6c9','#9bb59c','#fffaf2'];for(let i=0;i<75;i++){const x=document.createElement('i');x.className='confetti';x.style.left=`${Math.random()*100}%`;x.style.background=cs[i%cs.length];x.style.animationDelay=`${Math.random()*.8}s`;x.style.animationDuration=`${2+Math.random()*1.5}s`;layer.appendChild(x)}}
+function celebrationCopy(){
+  const who=(state.world.honoree||'你').trim()||'你';
+  const occasion=state.world.occasion||'生日';
+  if(occasion==='生日')return {title:`祝${who}生日快乐`,subtitle:'今晚所有人都在这里，等这一刻一起发生。'};
+  if(occasion==='纪念日')return {title:`${who}，纪念日快乐`,subtitle:'有些日子值得被大家一起重新走一遍。'};
+  if(occasion==='毕业')return {title:`祝${who}毕业快乐`,subtitle:'这一程走到这里，下一程也有人替你高兴。'};
+  if(occasion==='告别')return {title:`${who}，愿这一程被好好记住`,subtitle:'不是把故事关掉，只是把这一页认真地留下来。'};
+  return {title:`${who} · ${occasion}`,subtitle:'今晚所有人都在这里。'};
+}
+function triggerCelebration(force){
+  if(celebrationShown&&!force)return;
+  celebrationShown=true;
+  const copy=celebrationCopy();
+  $('#celebrationTitle').textContent=copy.title;
+  $('#celebrationSubtitle').textContent=copy.subtitle;
+  $('#celebrationPeople').innerHTML=[...state.players.values()].map(p=>`<span title="${escapeHTML(p.name)}">${escapeHTML(p.name.slice(0,2))}</span>`).join('');
+  $('#celebrationOverlay').classList.remove('hidden');
+  $('#celebrationOverlay').setAttribute('aria-hidden','false');
+  confetti();
+  addActivity(`所有人一起按下了「庆祝」 · ${copy.title}`);
+  setTimeout(()=>{celebrationShown=false},4200);
+}
+function confetti(){
+  const layer=$('#confettiLayer');
+  layer.innerHTML='';
+  const colors=['#e8bd67','#e28b82','#8bb5c2','#9cb59a','#f7eddb','#c9a8c7'];
+  const frag=document.createDocumentFragment();
+  for(let i=0;i<54;i++){
+    const x=document.createElement('i');
+    x.className=`celebration-streamer${i%7===0?' thick':''}${i%9===0?' soft':''}`;
+    x.style.left=`${1+Math.random()*98}%`;
+    x.style.setProperty('--stream-color',colors[i%colors.length]);
+    x.style.setProperty('--stream-delay',`${(Math.random()*1.3).toFixed(2)}s`);
+    x.style.setProperty('--stream-duration',`${(2.8+Math.random()*2.2).toFixed(2)}s`);
+    x.style.setProperty('--stream-drift',`${(-55+Math.random()*110).toFixed(0)}px`);
+    x.style.setProperty('--stream-rotate',`${(-12+Math.random()*24).toFixed(1)}deg`);
+    x.style.setProperty('--stream-opacity',(0.42+Math.random()*.45).toFixed(2));
+    x.style.setProperty('--stream-blur',i%9===0?'1px':'0px');
+    frag.appendChild(x);
+  }
+  for(let i=0;i<34;i++){
+    const s=document.createElement('i');
+    s.className='celebration-spark';
+    s.style.left=`${Math.random()*100}%`;
+    s.style.setProperty('--spark-color',colors[(i+2)%colors.length]);
+    s.style.setProperty('--spark-delay',`${(.15+Math.random()*1.8).toFixed(2)}s`);
+    s.style.setProperty('--spark-duration',`${(2.4+Math.random()*2).toFixed(2)}s`);
+    s.style.setProperty('--spark-drift',`${(-35+Math.random()*70).toFixed(0)}px`);
+    frag.appendChild(s);
+  }
+  for(let i=0;i<18;i++){
+    const a=document.createElement('i');
+    a.className='celebration-arc';
+    a.style.left=`${2+Math.random()*96}%`;
+    a.style.setProperty('--arc-color',colors[(i+4)%colors.length]);
+    a.style.setProperty('--arc-delay',`${(Math.random()*1.4).toFixed(2)}s`);
+    a.style.setProperty('--arc-duration',`${(3.2+Math.random()*2.1).toFixed(2)}s`);
+    a.style.setProperty('--arc-rotate',`${(-18+Math.random()*36).toFixed(1)}deg`);
+    frag.appendChild(a);
+  }
+  layer.appendChild(frag);
+}
 $('#closeCelebration').onclick=()=>{$('#celebrationOverlay').classList.add('hidden');$('#celebrationOverlay').setAttribute('aria-hidden','true')};$('#openKeepsakeFromCelebration').onclick=()=>{$('#celebrationOverlay').classList.add('hidden');openKeepsake()};
 
 // keepsake
