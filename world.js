@@ -135,10 +135,30 @@
 
   ensureRoomScenery(); ensureQuestScenery(); ensureV12Details(); upgradeSprites(); upgradeMementos();
   [$('#playersLayer'),$('#questPlayerLayer'),$('#mementoLayer'),$('#questAssetLayer')].filter(Boolean).forEach(function(layer){
-    new MutationObserver(function(){upgradeSprites();upgradeMementos();updateParallax()}).observe(layer,{childList:true,subtree:true,attributes:true,attributeFilter:['style','class']});
+    new MutationObserver(function(){upgradeSprites();upgradeMementos();updateParallax()}).observe(layer,{childList:true,subtree:true});
   });
+  function ensureTouchPad(){
+    if(document.querySelector('.pm-touch-pad'))return;
+    var pad=document.createElement('div');pad.className='pm-touch-pad';pad.setAttribute('aria-label','移动控制');
+    pad.innerHTML='<button data-key="w" aria-label="向上">▲</button><button data-key="a" aria-label="向左">◀</button><button data-key="s" aria-label="向下">▼</button><button data-key="d" aria-label="向右">▶</button><button class="pm-touch-action" data-key="e" aria-label="互动">E</button>';
+    document.body.appendChild(pad);
+    function target(){return document.querySelector('#quest.active #questStage')||document.querySelector('#world.active #worldStage')}
+    pad.querySelectorAll('button').forEach(function(btn){
+      var key=btn.dataset.key;
+      var down=function(ev){ev.preventDefault();var t=target();if(!t)return;t.focus();t.dispatchEvent(new KeyboardEvent('keydown',{key:key,bubbles:true}));btn.classList.add('pressed')};
+      var up=function(ev){ev.preventDefault();var t=target();if(t)t.dispatchEvent(new KeyboardEvent('keyup',{key:key,bubbles:true}));btn.classList.remove('pressed')};
+      btn.addEventListener('pointerdown',down);btn.addEventListener('pointerup',up);btn.addEventListener('pointercancel',up);btn.addEventListener('pointerleave',function(ev){if(btn.classList.contains('pressed'))up(ev)});
+    });
+  }
+  ensureTouchPad();
   var tick=0;
-  function visualLoop(){tick++;if(tick%3===0){upgradeSprites();upgradeMementos();updateParallax()}requestAnimationFrame(visualLoop)}
+  function visualLoop(){
+    tick++;
+    if(tick%6===0){upgradeSprites();upgradeMementos();updateParallax()}
+    var pad=document.querySelector('.pm-touch-pad');
+    if(pad)pad.classList.toggle('show',!!document.querySelector('#world.active,#quest.active'));
+    requestAnimationFrame(visualLoop);
+  }
   visualLoop();
   var brandSmall=$('.brand small');if(brandSmall)brandSmall.textContent='PIXEL MEMORY · V12 WORLD';
 })();
