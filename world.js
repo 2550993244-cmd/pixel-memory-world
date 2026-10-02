@@ -27,12 +27,22 @@
     }
   }
 
-  var trees=[[5,21,'large'],[10,16,''],[15,18,'small'],[23,13,'large'],[29,18,''],[4,49,''],[9,52,'small'],[16,50,'large'],[24,48,'small'],[56,14,''],[61,18,'small'],[67,15,'large'],[74,17,''],[81,14,'small'],[89,18,'large'],[95,14,''],[58,72,'large'],[64,76,''],[70,81,'small'],[77,77,'large'],[84,82,''],[93,76,'small'],[88,49,'large'],[94,44,''],[91,59,'small'],[72,35,'small'],[63,38,'']];
-  var rocks=[[13,40],[25,59],[33,71],[56,31],[61,58],[69,67],[81,30],[87,65],[31,22]];
-  var grass=[[7,36],[12,62],[20,30],[28,42],[31,84],[55,23],[59,49],[66,28],[72,62],[78,52],[86,36],[93,67],[53,86],[17,86]];
-  var flowers=[[18,24],[27,77],[57,64],[67,74],[76,23],[88,71]];
-  var stumps=[[33,39],[79,62]];
-  var routePts=[[10,80],[18,77],[27,73],[35,68],[43,63],[52,58],[59,51],[66,44],[74,38],[82,34],[89,31]];
+  var scene=(window.PixelSceneMap&&window.PixelSceneMap.outdoor)||null;
+  function sceneItems(key,fallback){
+    if(!scene||!Array.isArray(scene[key]))return fallback;
+    return scene[key].map(function(a){
+      var x=((a[0]+.5)/scene.cols)*100;
+      var y=((a[1]+.5)/scene.rows)*100;
+      return [x,y].concat(a.slice(2));
+    });
+  }
+  var trees=sceneItems('trees',[[5,21,'large'],[10,16,''],[15,18,'small'],[23,13,'large'],[29,18,''],[4,49,''],[9,52,'small'],[16,50,'large'],[24,48,'small'],[56,14,''],[61,18,'small'],[67,15,'large'],[74,17,''],[81,14,'small'],[89,18,'large'],[95,14,''],[58,72,'large'],[64,76,''],[70,81,'small'],[77,77,'large'],[84,82,''],[93,76,'small'],[88,49,'large'],[94,44,''],[91,59,'small'],[72,35,'small'],[63,38,'']]);
+  var rocks=sceneItems('rocks',[[13,40],[25,59],[33,71],[56,31],[61,58],[69,67],[81,30],[87,65],[31,22]]);
+  var grass=sceneItems('grass',[[7,36],[12,62],[20,30],[28,42],[31,84],[55,23],[59,49],[66,28],[72,62],[78,52],[86,36],[93,67],[53,86],[17,86]]);
+  var flowers=sceneItems('flowers',[[18,24],[27,77],[57,64],[67,74],[76,23],[88,71]]);
+  var stumps=sceneItems('stumps',[[33,39],[79,62]]);
+  var routePts=sceneItems('route',[[10,80],[18,77],[27,73],[35,68],[43,63],[52,58],[59,51],[66,44],[74,38],[82,34],[89,31]]);
+
 
   function place(parent,cls,x,y,extra){
     var e=document.createElement('i');
@@ -50,7 +60,8 @@
       grass.forEach(function(a){place(terrain,'pm-grass-tuft',a[0],a[1])});
       flowers.forEach(function(a){place(terrain,'pm-flower-patch',a[0],a[1])});
       stumps.forEach(function(a){place(terrain,'pm-stump',a[0],a[1])});
-      var sign=place(terrain,'pm-sign',22,67); sign.textContent='回忆路';
+      var signPos=(scene&&Array.isArray(scene.sign))?[((scene.sign[0]+.5)/scene.cols)*100,((scene.sign[1]+.5)/scene.rows)*100]:[22,67];
+      var sign=place(terrain,'pm-sign',signPos[0],signPos[1]); sign.textContent='回忆路';
       questStage.insertBefore(terrain,$('#questRouteLayer'));
     }
     if(!questStage.querySelector('.pm-route-dots')){
@@ -121,9 +132,9 @@
     }
     if(!questStage.querySelector('.pm-quest-details')){
       var d=document.createElement('div');d.className='pm-quest-details';
-      [[36,24],[37,31],[38,39],[52,18],[53,27],[52,77]].forEach(function(a){place(d,'pm-reed',a[0],a[1])});
-      [[7,63],[15,60],[23,57],[30,54]].forEach(function(a){place(d,'pm-stone-step',a[0],a[1])});
-      place(d,'pm-fence-post',72,72);place(d,'pm-fence-post',82,69);
+      sceneItems('reeds',[[36,24],[37,31],[38,39],[52,18],[53,27],[52,77]]).forEach(function(a){place(d,'pm-reed',a[0],a[1])});
+      sceneItems('stones',[[7,63],[15,60],[23,57],[30,54]]).forEach(function(a){place(d,'pm-stone-step',a[0],a[1])});
+      sceneItems('fences',[[72,72],[82,69]]).forEach(function(a){place(d,'pm-fence-post',a[0],a[1])});
       var cabin=document.createElement('i');cabin.className='pm-cabin-shadow';d.appendChild(cabin);
       questStage.insertBefore(d,$('#questAssetLayer'));
       var chip=document.createElement('div');chip.className='pm-location-chip';
