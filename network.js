@@ -31,7 +31,8 @@
       this.name = name;
       this.roomCode = roomCode;
       this.playerId = playerId;
-      this.onmessage = null;
+      this._onmessage = null;
+      this.inbound = [];
       this.ws = null;
       this.bc = null;
       this.queue = [];
@@ -51,7 +52,7 @@
             this.queue.splice(0).forEach(v => this.ws.send(JSON.stringify(v)));
           };
           this.ws.onmessage = e => {
-            try { this.onmessage?.({data: JSON.parse(e.data)}); } catch(_){}
+            try { this.deliver(JSON.parse(e.data)); } catch(_){}
           };
           this.ws.onerror = () => this.fallback();
           this.ws.onclose = () => {
@@ -70,9 +71,18 @@
       this.ws = null;
       if ('BroadcastChannel' in window) {
         this.bc = new BroadcastChannel(this.name);
-        this.bc.onmessage = e => this.onmessage?.(e);
+        this.bc.onmessage = e => this.deliver(e.data);
         notify({status:'local', room:this.roomCode});
       } else notify({status:'offline', room:this.roomCode});
+    }
+    set onmessage(fn) {
+      this._onmessage = fn;
+      if (fn && this.inbound.length) this.inbound.splice(0).forEach(data => fn({data}));
+    }
+    get onmessage(){ return this._onmessage; }
+    deliver(data) {
+      if (this._onmessage) this._onmessage({data});
+      else this.inbound.push(data);
     }
     postMessage(data) {
       if (this.mode === 'online' && this.ws?.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify(data));
@@ -96,6 +106,7 @@
     async createRoom(code, world, memory={}) { return api('/api/rooms',{method:'POST',body:JSON.stringify({code,world,memory})}); },
     async getRoom(code){ return api(`/api/rooms/${encodeURIComponent(code)}`); },
     async updateRoom(code, patch){ return api(`/api/rooms/${encodeURIComponent(code)}`,{method:'PUT',body:JSON.stringify(patch)}); },
+    async applyOp(code, scope, op){ return api(`/api/rooms/${encodeURIComponent(code)}/ops`,{method:'POST',body:JSON.stringify({scope,op})}); },
     async uploadBlob(blob, filename='voice.webm') {
       if (!baseUrl) throw new Error('NO_SERVER');
       const fd = new FormData(); fd.append('file', blob, filename);

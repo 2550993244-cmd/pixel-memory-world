@@ -26,12 +26,14 @@
     recordStartedAt: 0,
     recordObjectUrl: '',
     channel: null,
+    players: new Map(),
     stepTick: 0,
+    lastMoveSent: 0,
     completedShown: false
   };
 
   const questKey = () => `pixel-memory-v9-quest-${state.roomCode || 'draft'}`;
-  const questLiveKey = () => `pixel-memory-v9-quest-live-${state.roomCode || 'draft'}`;
+  const questLiveKey = () => `pixel-memory-v10-quest-live-${state.roomCode || 'draft'}`;
 
   // The door is a real object in the original room rather than a menu item.
   if (!fixedObjects.some(o => o.id === 'quest')) {
@@ -89,6 +91,7 @@
   }
 
   function returnToRoom() {
+    questBroadcast('quest-leave', { playerId: state.player.id });
     closeQuestEditor();
     stopRecording(true);
     transition('沿着灯光，回到小屋。', () => {
@@ -102,10 +105,24 @@
   $('#questReturnDoor')?.addEventListener('click', returnToRoom);
 
   // ---------- persistence + cross-tab sync ----------
-  function saveQuest(sync = true) {
+  function saveQuest() {
     if (!state.roomCode) return;
     localStorage.setItem(questKey(), JSON.stringify({ items: questState.items }));
-    if (sync) questBroadcast('quest-update', { items: questState.items });
+  }
+
+  function applyQuestOp(op) {
+    if (!op?.kind) return;
+    if (op.kind === 'add' && op.item && !questState.items.some(x => x.id === op.item.id)) questState.items.push(op.item);
+    if (op.kind === 'move') { const item = questState.items.find(x => x.id === op.id); if (item) { item.x = op.x; item.y = op.y; } }
+    if (op.kind === 'clear') { questState.items = []; questState.found.clear(); }
+    if (op.kind === 'set' && Array.isArray(op.items)) questState.items = op.items;
+    saveQuest();
+  }
+
+  function questOp(op) {
+    applyQuestOp(op);
+    questBroadcast('quest-op', { op });
+    PixelNet?.applyOp?.(state.roomCode,'quest',op).catch(()=>{});
   }
 
   function loadQuest() {
@@ -121,21 +138,28 @@
   function setupQuestChannel() {
     if (questState.channel) questState.channel.close();
     if (!state.roomCode) return;
+    questState.players.clear();
+    questState.players.set(state.player.id, { ...state.player, qx: questState.x, qy: questState.y, lastSeen: Date.now() });
     questState.channel = window.PixelNet ? PixelNet.createChannel(questLiveKey(), state.roomCode, state.player.id) : (('BroadcastChannel' in window) ? new BroadcastChannel(questLiveKey()) : null);
     if (!questState.channel) return;
     questState.channel.onmessage = e => {
       const m = e.data;
       if (!m || m.sender === state.player.id) return;
-      if (m.type === 'quest-update' && Array.isArray(m.items)) {
-        questState.items = m.items;
-        renderQuestItems();
-      }
+      if (m.type === 'quest-update' && Array.isArray(m.items)) { questState.items = m.items; saveQuest(); renderQuestItems(); }
+      if (m.type === 'quest-op' && m.op) { applyQuestOp(m.op); renderQuestItems(); }
+      if (m.type === 'quest-hello') { questBroadcast('quest-player', { player: questPlayerSnapshot() }); }
+      if (m.type === 'quest-player' && m.player) { questState.players.set(m.player.id, { ...m.player, lastSeen: Date.now() }); renderQuestPlayer(); }
+      if (m.type === 'quest-leave' && m.playerId) { questState.players.delete(m.playerId); renderQuestPlayer(); }
       if (m.type === 'quest-discovered') {
         const item = questState.items.find(x => x.id === m.id);
         if (item && state.screen === 'quest') pulseDiscovery(item.x, item.y);
       }
     };
+    questBroadcast('quest-hello');
+    setTimeout(() => questBroadcast('quest-player', { player: questPlayerSnapshot() }), 180);
   }
+
+  function questPlayerSnapshot() { return { id: state.player.id, name: state.player.name, hair: state.player.hair, outfit: state.player.outfit, item: state.player.item, qx: questState.x, qy: questState.y }; }
 
   function questBroadcast(type, extra = {}) {
     questState.channel?.postMessage({ type, sender: state.player.id, ...extra });
@@ -151,14 +175,20 @@
   function renderQuestPlayer() {
     const layer = $('#questPlayerLayer');
     if (!layer) return;
+    questState.players.set(state.player.id, { ...questPlayerSnapshot(), lastSeen: Date.now() });
+    const now = Date.now();
+    for (const [id,p] of questState.players) if (id !== state.player.id && now - (p.lastSeen || 0) > 16000) questState.players.delete(id);
     layer.innerHTML = '';
-    const el = document.createElement('div');
-    el.className = `quest-player hair-${state.player.hair}${questState.walking ? ' walking' : ''}`;
-    el.style.left = `${questState.x}%`;
-    el.style.top = `${questState.y}%`;
-    el.style.setProperty('--shirt', colors[state.player.outfit] || colors.coral);
-    el.innerHTML = `<span class="quest-player-name">${escapeHTML(state.player.name)}</span><span class="player-item">${state.player.item}</span>`;
-    layer.appendChild(el);
+    $('#questOnlineCount') && ($('#questOnlineCount').textContent=questState.players.size);
+    for (const [id,p] of questState.players) {
+      const el = document.createElement('div');
+      el.className = `quest-player hair-${p.hair}${id===state.player.id&&questState.walking ? ' walking' : ''}${id===state.player.id?' me':''}`;
+      el.style.left = `${id===state.player.id?questState.x:p.qx}%`;
+      el.style.top = `${id===state.player.id?questState.y:p.qy}%`;
+      el.style.setProperty('--shirt', colors[p.outfit] || colors.coral);
+      el.innerHTML = `<span class="quest-player-name">${escapeHTML(p.name)}</span><span class="player-item">${p.item||'✦'}</span>`;
+      layer.appendChild(el);
+    }
   }
 
   function renderQuestItems() {
@@ -166,39 +196,37 @@
     if (!layer) return;
     layer.innerHTML = '';
     const ordered = questState.items.slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+    const next = ordered.find(item => !questState.found.has(item.id));
     ordered.forEach((item, idx) => {
-      const el = document.createElement('div');
       const found = questState.found.has(item.id);
+      const revealed = questState.editorOpen || found || item.id === next?.id;
+      if (!revealed) return;
       const near = questState.nearby?.id === item.id;
-      el.className = `quest-memory${found ? ' found' : ''}${near ? ' near' : ''}`;
+      const el = document.createElement('div');
+      el.className = `quest-memory${found ? ' found' : ' mystery'}${near ? ' near' : ''}`;
       el.dataset.id = item.id;
       el.style.left = `${item.x}%`;
       el.style.top = `${item.y}%`;
-      el.innerHTML = `<div class="treasure-sprite">${item.image ? `<img src="${item.image}" alt="">` : `<span>${item.icon || '✦'}</span>`}</div><i class="treasure-order">${idx + 1}</i><span class="treasure-tag">${escapeHTML(found ? item.title : '这里好像有什么')}</span>`;
+      const visual = found || questState.editorOpen ? (item.image ? `<img src="${item.image}" alt="">` : `<span>${item.icon || '✦'}</span>`) : '<span class="mystery-glint">✦</span>';
+      const label = found || questState.editorOpen ? item.title : '前方有一点微光';
+      el.innerHTML = `<div class="treasure-sprite">${visual}</div><i class="treasure-order">${idx + 1}</i><span class="treasure-tag">${escapeHTML(label)}</span>`;
       layer.appendChild(el);
     });
-    renderQuestRoute(ordered);
+    renderQuestRoute(ordered, next);
     renderQuestProgress();
     updateQuestNear();
   }
 
-  function renderQuestRoute(ordered = questState.items.slice().sort((a,b)=>(a.order||0)-(b.order||0))) {
+  function renderQuestRoute(ordered = questState.items.slice().sort((a,b)=>(a.order||0)-(b.order||0)), next = ordered.find(item=>!questState.found.has(item.id))) {
     const path = $('#questRoutePath');
     if (!path) return;
-    const pts = [{ x: 9, y: 82 }, ...ordered.map(i => ({ x: i.x, y: i.y }))];
-    if (pts.length < 2) {
-      path.setAttribute('d', '');
-      path.classList.remove('route-alive');
-      return;
-    }
+    const revealed = questState.editorOpen ? ordered : ordered.filter(i => questState.found.has(i.id) || i.id === next?.id);
+    const pts = [{ x: 9, y: 82 }, ...revealed.map(i => ({ x: i.x, y: i.y }))];
+    if (pts.length < 2) { path.setAttribute('d', ''); path.classList.remove('route-alive'); return; }
     let d = `M ${pts[0].x} ${pts[0].y}`;
-    for (let i = 1; i < pts.length; i++) {
-      const a = pts[i - 1], b = pts[i];
-      const mx = (a.x + b.x) / 2;
-      d += ` Q ${mx} ${a.y - 3 + (i % 2 ? -2 : 2)} ${b.x} ${b.y}`;
-    }
+    for (let i = 1; i < pts.length; i++) { const a = pts[i - 1], b = pts[i], mx = (a.x + b.x) / 2; d += ` Q ${mx} ${a.y - 3 + (i % 2 ? -2 : 2)} ${b.x} ${b.y}`; }
     path.setAttribute('d', d);
-    path.classList.toggle('route-alive', ordered.length > 0);
+    path.classList.toggle('route-alive', revealed.length > 0);
   }
 
   function renderQuestProgress() {
@@ -259,6 +287,7 @@
         if (questState.stepTick % 18 === 0) dropFootstep();
         questState.walking = true;
         renderQuestPlayer();
+        const now=performance.now();if(now-questState.lastMoveSent>75){questState.lastMoveSent=now;questBroadcast('quest-player',{player:questPlayerSnapshot()})}
         updateQuestNear();
       } else if (questState.walking) {
         questState.walking = false;
@@ -280,7 +309,10 @@
 
   function updateQuestNear() {
     let best = null, dist = 999;
-    for (const item of questState.items) {
+    const ordered = questState.items.slice().sort((a,b)=>(a.order||0)-(b.order||0));
+    const next = ordered.find(item => !questState.found.has(item.id));
+    for (const item of ordered) {
+      if (!questState.editorOpen && !questState.found.has(item.id) && item.id !== next?.id) continue;
       const d = Math.hypot(questState.x - item.x, questState.y - item.y);
       if (d < 7.5 && d < dist) { best = item; dist = d; }
     }
@@ -493,7 +525,7 @@
     dragItem.x=x;dragItem.y=y;
     renderQuestItems();
   });
-  const endDrag=()=>{if(!dragItem)return;saveQuest();toast(`「${dragItem.title}」换了一个藏宝位置。`);dragItem=null};
+  const endDrag=()=>{if(!dragItem)return;saveQuest();questBroadcast('quest-op',{op:{kind:'move',id:dragItem.id,x:dragItem.x,y:dragItem.y}});toast(`「${dragItem.title}」换了一个藏宝位置。`);dragItem=null};
   questStage?.addEventListener('pointerup',endDrag);
   questStage?.addEventListener('pointercancel',endDrag);
 
@@ -502,6 +534,8 @@
   function openVoiceDB(){return new Promise((resolve,reject)=>{const r=indexedDB.open(DB_NAME,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(STORE))r.result.createObjectStore(STORE)};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
   async function voiceDBPut(key,blob){const db=await openVoiceDB();return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put(blob,key);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)})}
   async function voiceDBGet(key){const db=await openVoiceDB();return new Promise((resolve,reject)=>{const r=db.transaction(STORE,'readonly').objectStore(STORE).get(key);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
+  function voiceExt(type=''){if(type.includes('mp4'))return 'm4a';if(type.includes('ogg'))return 'ogg';if(type.includes('mpeg'))return 'mp3';if(type.includes('wav'))return 'wav';return 'webm'}
+  async function uploadPendingVoice(){if(!questState.pendingVoiceBlob||!window.PixelNet?.enabled)return !!questState.pendingVoiceUrl;try{$('#questRecordState').textContent='正在把录音上传到房间…';const ext=voiceExt(questState.pendingVoiceBlob.type);const up=await PixelNet.uploadBlob(questState.pendingVoiceBlob,`memory-${Date.now()}.${ext}`);questState.pendingVoiceUrl=up.url;$('#questRecordState').textContent='云端已保存 · 其他人也可以听到';return true}catch(_){$('#questRecordState').textContent='云端上传失败 · 再点“放进地图”会重试';toast('录音已保存在本机，但还没传到房间');return false}}
 
   $('#questRecordBtn')?.addEventListener('click', () => {
     if (questState.recorder?.state === 'recording') stopRecording(false); else startRecording();
@@ -520,12 +554,13 @@
         questState.recordStream?.getTracks().forEach(t=>t.stop());
         const blob=new Blob(questState.recordChunks,{type:rec.mimeType||'audio/webm'});
         const key=`voice-${uid()}`;
-        try{await voiceDBPut(key,blob);questState.pendingVoiceKey=key;questState.pendingVoiceBlob=blob;questState.pendingVoiceUrl='';if(window.PixelNet?.enabled){try{const up=await PixelNet.uploadBlob(blob,`memory-${Date.now()}.webm`);questState.pendingVoiceUrl=up.url}catch(_){toast('录音已保存在本机；云端上传稍后可重试')}}}catch(_){return toast('录音保存失败，请再试一次。')}
+        if(!blob.size)return toast('没有录到声音，请重新试一次。');
+        try{await voiceDBPut(key,blob);questState.pendingVoiceKey=key;questState.pendingVoiceBlob=blob;questState.pendingVoiceUrl='';if(window.PixelNet?.enabled)await uploadPendingVoice()}catch(_){return toast('录音保存失败，请再试一次。')}
         if(questState.recordObjectUrl)URL.revokeObjectURL(questState.recordObjectUrl);
         questState.recordObjectUrl=URL.createObjectURL(blob);
         const prev=$('#questRecordPreview');prev.src=questState.recordObjectUrl;prev.classList.remove('hidden');
         $('#questRecordBtn').classList.remove('recording');$('#questRecordBtn span').textContent='重新录一段';
-        $('#questRecordState').textContent='录好了。它会和这段回忆一起被藏进地图。';
+        if(!questState.pendingVoiceUrl)$('#questRecordState').textContent=window.PixelNet?.enabled?'录好了 · 云端上传待重试':'录好了 · 当前仅保存在本机';
         clickSound(520,.055);
       };
       rec.start();
@@ -540,9 +575,13 @@
   function stopRecording(silent=false){if(questState.recorder?.state==='recording')questState.recorder.stop();else if(!silent)toast('还没有开始录音。')}
 
   // ---------- placement ----------
-  $('#questPlaceHintBtn')?.addEventListener('click', () => {
+  $('#questPlaceHintBtn')?.addEventListener('click', async () => {
     if (!questState.selectedAsset) return toast('先从照片里选一个像素线索。');
     if (questState.recorder?.state === 'recording') return toast('先点一下停止录音，再把它放进地图。');
+    if (questState.pendingVoiceBlob && window.PixelNet?.enabled && !questState.pendingVoiceUrl) {
+      const ok = await uploadPendingVoice();
+      if (!ok) return toast('这段录音还没有上传成功，先别把回忆放下。');
+    }
     questState.placing=true;
     $('#questStage').classList.add('placing');
     closeQuestEditor();
@@ -559,8 +598,8 @@
     const title=$('#questMemoryTitle').value.trim()||questState.selectedAsset.label;
     const text=$('#questMemoryText').value.trim()||'看到它的时候，希望你会想起那一天。';
     const item={id:uid(),order:questState.items.length+1,title,text,by:state.player.name,image:questState.selectedAsset.image,voiceKey:questState.pendingVoiceKey||'',voiceUrl:questState.pendingVoiceUrl||'',x,y,time:Date.now()};
-    questState.items.push(item);questState.placing=false;$('#questStage').classList.remove('placing');
-    saveQuest();renderQuestItems();pulseDiscovery(x,y);addActivity(`${state.player.name} 在门外藏下了「${title}」`);toast('藏好了。现在可以真的走过去找它。');
+    questState.placing=false;$('#questStage').classList.remove('placing');
+    questOp({kind:'add',item});renderQuestItems();pulseDiscovery(x,y);addActivity(`${state.player.name} 在门外藏下了「${title}」`);toast('藏好了。其他人现在也能在这条路上找到它。');
     resetEditorDraft();
   });
 
@@ -573,16 +612,16 @@
       {x:55,y:56,title:'一张没有拍好的照片',text:'有人闭眼，有人笑场，但后来它反而成了最舍不得删的一张。',icon:'📷'},
       {x:77,y:38,title:'最后一个小秘密',text:'如果你真的走到了这里——谢谢你出现在这段故事里。',icon:'✦'}
     ];
-    demo.forEach((d,i)=>questState.items.push({id:uid(),order:questState.items.length+1,by:state.player.name,time:Date.now(),voiceKey:'',image:'',...d}));
-    saveQuest();renderQuestItems();toast('三段示例回忆已经散落在路上。');
+    const items=questState.items.slice();demo.forEach((d,i)=>items.push({id:uid(),order:items.length+1,by:state.player.name,time:Date.now(),voiceKey:'',image:'',...d}));
+    questOp({kind:'set',items});renderQuestItems();toast('三段示例回忆已经散落在路上。');
   });
 
   $('#questClearBtn')?.addEventListener('click',()=>{
     if(!questState.items.length)return toast('地图现在就是空的。');
     if(!confirm('确定清空这张回忆地图吗？'))return;
-    questState.items=[];questState.found.clear();saveQuest();renderQuestItems();toast('回忆地图已经清空。');
+    questOp({kind:'clear'});renderQuestItems();toast('回忆地图已经清空。');
   });
 
   // Friendly default: if the map is empty, editor opens only when asked. The empty road remains explorable.
-  window.addEventListener('beforeunload',()=>{try{questState.channel?.close()}catch(_){}});
+  window.addEventListener('beforeunload',()=>{try{questBroadcast('quest-leave',{playerId:state.player.id});questState.channel?.close()}catch(_){}});
 })();
