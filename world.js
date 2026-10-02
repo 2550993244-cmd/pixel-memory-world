@@ -51,6 +51,58 @@
     parent.appendChild(e); return e;
   }
 
+  function ensureOrganicLandscape(){
+    if(questStage.querySelector('.pm-landscape-svg'))return;
+    var ns='http://www.w3.org/2000/svg';
+    var svg=document.createElementNS(ns,'svg');
+    svg.setAttribute('class','pm-landscape-svg');
+    svg.setAttribute('viewBox','0 0 100 100');
+    svg.setAttribute('preserveAspectRatio','none');
+    svg.setAttribute('aria-hidden','true');
+    svg.innerHTML=
+      '<defs>'+
+        '<linearGradient id="pmWater" x1="0" y1="0" x2="1" y2="1">'+
+          '<stop offset="0%" stop-color="#5f9eaa"/>'+
+          '<stop offset="42%" stop-color="#8ec8c8"/>'+
+          '<stop offset="100%" stop-color="#5d95a3"/>'+
+        '</linearGradient>'+
+        '<linearGradient id="pmPath" x1="0" y1="0" x2="1" y2="0">'+
+          '<stop offset="0%" stop-color="#d7bc8c"/>'+
+          '<stop offset="52%" stop-color="#e1c99c"/>'+
+          '<stop offset="100%" stop-color="#c8ab7a"/>'+
+        '</linearGradient>'+
+        '<filter id="pmSoft"><feGaussianBlur stdDeviation=".38"/></filter>'+
+      '</defs>'+
+      '<g class="pm-contours">'+
+        '<path d="M-6 31 C12 23 25 28 40 22 S73 16 106 24"/>'+
+        '<path d="M-8 36 C13 29 27 34 42 28 S77 23 108 31"/>'+
+        '<path d="M-3 86 C18 79 27 85 43 79 S75 72 104 82"/>'+
+      '</g>'+
+      '<g class="pm-path-ribbon">'+
+        '<path class="pm-path-bank" d="M3 80 C15 77 25 73 34 68 C45 62 52 56 59 49 C69 40 78 37 96 29"/>'+
+        '<path class="pm-path-core" d="M3 80 C15 77 25 73 34 68 C45 62 52 56 59 49 C69 40 78 37 96 29"/>'+
+        '<path class="pm-path-dashes" d="M3 80 C15 77 25 73 34 68 C45 62 52 56 59 49 C69 40 78 37 96 29"/>'+
+      '</g>'+
+      '<g class="pm-river-ribbon">'+
+        '<path class="pm-river-bank" d="M43 -8 C37 12 49 20 44 35 C38 50 50 61 44 74 C39 86 46 94 41 108"/>'+
+        '<path class="pm-river-deep" d="M43 -8 C37 12 49 20 44 35 C38 50 50 61 44 74 C39 86 46 94 41 108"/>'+
+        '<path class="pm-river-light" d="M43 -8 C37 12 49 20 44 35 C38 50 50 61 44 74 C39 86 46 94 41 108"/>'+
+        '<path class="pm-river-ripple r1" d="M39 17 C42 18 45 17 48 19"/>'+
+        '<path class="pm-river-ripple r2" d="M39 42 C43 44 46 43 49 45"/>'+
+        '<path class="pm-river-ripple r3" d="M39 68 C42 69 46 68 49 70"/>'+
+        '<path class="pm-river-ripple r4" d="M38 90 C41 92 44 91 47 93"/>'+
+      '</g>';
+    var grid=$('#questStage .quest-ground-grid');
+    if(grid&&grid.nextSibling)questStage.insertBefore(svg,grid.nextSibling);else questStage.appendChild(svg);
+
+    if(!questStage.querySelector('.pm-horizon-layer')){
+      var horizon=document.createElement('div');
+      horizon.className='pm-horizon-layer pm-parallax-far';
+      horizon.innerHTML='<i class="pm-hill-back"></i><i class="pm-hill-mid"></i><i class="pm-hill-front"></i><i class="pm-cloud c1"></i><i class="pm-cloud c2"></i><i class="pm-cloud c3"></i>';
+      questStage.insertBefore(horizon,questStage.firstChild);
+    }
+  }
+
   function ensureQuestScenery(){
     if(!questStage.querySelector('.pm-quest-terrain')){
       var terrain=document.createElement('div');
@@ -144,7 +196,7 @@
     }
   }
 
-  ensureRoomScenery(); ensureQuestScenery(); ensureV12Details(); upgradeSprites(); upgradeMementos();
+  ensureRoomScenery(); ensureOrganicLandscape(); ensureQuestScenery(); ensureV12Details(); upgradeSprites(); upgradeMementos();
   [$('#playersLayer'),$('#questPlayerLayer'),$('#mementoLayer'),$('#questAssetLayer')].filter(Boolean).forEach(function(layer){
     new MutationObserver(function(){upgradeSprites();upgradeMementos();updateParallax()}).observe(layer,{childList:true,subtree:true});
   });
