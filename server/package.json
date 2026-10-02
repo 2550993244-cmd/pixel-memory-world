@@ -1,9 +1,14 @@
 {
-  "name": "pixel-memory-v9-server",
-  "version": "1.0.0",
+  "name": "pixel-memory-world-server",
+  "version": "1.2.0",
   "private": true,
-  "description": "Dependency-free realtime room server for Pixel Memory V9",
+  "description": "Realtime room server for Pixel Memory World V12",
   "main": "server.js",
-  "scripts": {"start": "node server.js", "dev": "node --watch server.js"},
-  "engines": {"node": ">=20"}
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
 }
