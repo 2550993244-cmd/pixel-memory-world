@@ -517,3 +517,262 @@ body.pm-world .world-stage:focus{box-shadow:0 0 0 4px rgba(236,201,116,.28),9px 
   body.pm-world .world-dock{bottom:10px;max-width:calc(100vw - 22px);overflow-x:auto;justify-content:flex-start}
   body.pm-world .dock-button{min-width:68px}
 }
+
+
+/* ==========================================
+   V12.2 · ORGANIC OUTDOOR LANDSCAPE
+   Curved SVG ribbons + layered horizon + softer terrain
+   ========================================== */
+body.pm-world .quest-screen{
+  background:
+    radial-gradient(circle at 72% 4%,rgba(255,242,196,.28),transparent 22%),
+    linear-gradient(180deg,#c8ddd9 0%,#d9e0c8 40%,#ced6b8 100%);
+}
+body.pm-world .quest-stage{
+  background:
+    radial-gradient(circle at 12% 37%,rgba(211,226,170,.16),transparent 14%),
+    radial-gradient(circle at 82% 60%,rgba(63,104,64,.10),transparent 22%),
+    linear-gradient(180deg,
+      #8fb8c5 0%,
+      #abcbd0 7%,
+      #cadbd0 13%,
+      #d8dfc1 18%,
+      #90ad73 19%,
+      #84a56b 54%,
+      #789760 100%);
+  border-color:#677e5d;
+}
+
+/* sky / distant depth */
+body.pm-world .pm-horizon-layer{
+  position:absolute;left:0;right:0;top:0;height:25%;
+  z-index:2;pointer-events:none;overflow:hidden;
+  background:
+    radial-gradient(circle at 78% 18%,rgba(255,239,183,.32),transparent 18%),
+    linear-gradient(180deg,rgba(119,170,190,.24),rgba(214,224,201,.10) 72%,transparent);
+  mask-image:linear-gradient(180deg,#000 0%,#000 82%,transparent 100%);
+}
+body.pm-world .pm-horizon-layer>i{position:absolute;display:block}
+body.pm-world .pm-hill-back{
+  left:-8%;right:35%;bottom:-22%;height:72%;
+  border-radius:52% 58% 0 0 / 78% 72% 0 0;
+  background:linear-gradient(180deg,rgba(112,143,120,.38),rgba(91,126,94,.56));
+  filter:blur(1.6px);
+  transform:rotate(-2deg);
+}
+body.pm-world .pm-hill-mid{
+  left:28%;right:-10%;bottom:-29%;height:83%;
+  border-radius:53% 47% 0 0 / 76% 72% 0 0;
+  background:
+    linear-gradient(165deg,rgba(163,184,132,.72),rgba(102,139,91,.76));
+  transform:rotate(2deg);
+  box-shadow:inset 0 8px 0 rgba(230,235,196,.10);
+}
+body.pm-world .pm-hill-front{
+  left:-13%;right:-12%;bottom:-58%;height:92%;
+  border-radius:49% 52% 0 0 / 82% 80% 0 0;
+  background:
+    repeating-linear-gradient(168deg,rgba(255,255,255,.035) 0 3px,transparent 3px 10px),
+    linear-gradient(180deg,rgba(113,153,94,.74),rgba(90,129,76,.86));
+  border-top:1px dashed rgba(232,235,196,.26);
+}
+body.pm-world .pm-cloud{
+  height:10px;border-radius:999px;
+  background:linear-gradient(90deg,rgba(251,248,234,.18),rgba(251,248,234,.68),rgba(251,248,234,.12));
+  filter:blur(.25px);
+  opacity:.74;
+}
+body.pm-world .pm-cloud:before,
+body.pm-world .pm-cloud:after{
+  content:"";position:absolute;border-radius:50%;background:rgba(250,247,232,.48)
+}
+body.pm-world .pm-cloud:before{width:20px;height:14px;left:10px;top:-6px}
+body.pm-world .pm-cloud:after{width:15px;height:10px;left:27px;top:-3px}
+body.pm-world .pm-cloud.c1{left:10%;top:20%;width:54px}
+body.pm-world .pm-cloud.c2{left:50%;top:34%;width:75px;opacity:.48}
+body.pm-world .pm-cloud.c3{right:9%;top:14%;width:64px}
+
+/* old rectangular landscape pieces are superseded */
+body.pm-world .quest-sky,
+body.pm-world .quest-mountain-range,
+body.pm-world .quest-sun-glow{display:none!important}
+body.pm-world .quest-stream,
+body.pm-world .quest-path{display:none!important}
+
+/* ground starts after horizon so the sky can breathe */
+body.pm-world .quest-ground-grid{
+  inset:18% 0 0;
+  z-index:1;
+  opacity:.72;
+  background:
+    radial-gradient(circle at 15% 22%,rgba(204,225,160,.22) 0 2px,transparent 2.5px),
+    radial-gradient(circle at 73% 48%,rgba(65,108,62,.16) 0 2px,transparent 2.6px),
+    repeating-linear-gradient(6deg,rgba(255,255,255,.018) 0 1px,transparent 1px 10px),
+    linear-gradient(90deg,rgba(70,105,62,.055) 1px,transparent 1px),
+    linear-gradient(rgba(70,105,62,.045) 1px,transparent 1px);
+  background-size:52px 46px,70px 62px,auto,18px 18px,18px 18px;
+  mask-image:linear-gradient(180deg,transparent 0,#000 6%,#000 100%);
+}
+
+/* SVG terrain ribbons */
+body.pm-world .pm-landscape-svg{
+  position:absolute;inset:0;z-index:5;width:100%;height:100%;
+  overflow:visible;pointer-events:none;
+}
+body.pm-world .pm-contours path{
+  fill:none;
+  stroke:rgba(238,239,196,.22);
+  stroke-width:.18;
+  stroke-dasharray:1.2 1.8;
+  vector-effect:non-scaling-stroke;
+}
+body.pm-world .pm-path-bank{
+  fill:none;stroke:rgba(112,88,63,.28);stroke-width:11;
+  stroke-linecap:round;stroke-linejoin:round;
+  vector-effect:non-scaling-stroke;
+}
+body.pm-world .pm-path-core{
+  fill:none;stroke:url(#pmPath);stroke-width:8.4;
+  stroke-linecap:round;stroke-linejoin:round;
+  vector-effect:non-scaling-stroke;
+  filter:drop-shadow(0 2px 0 rgba(93,70,49,.11));
+}
+body.pm-world .pm-path-dashes{
+  fill:none;stroke:rgba(255,244,211,.30);stroke-width:.8;
+  stroke-linecap:round;stroke-dasharray:3 7;
+  vector-effect:non-scaling-stroke;
+}
+
+/* water = bank / body / moving broken highlight */
+body.pm-world .pm-river-bank{
+  fill:none;
+  stroke:rgba(68,105,83,.72);
+  stroke-width:17;
+  stroke-linecap:round;stroke-linejoin:round;
+  vector-effect:non-scaling-stroke;
+  filter:drop-shadow(2px 3px 0 rgba(47,76,66,.14));
+}
+body.pm-world .pm-river-deep{
+  fill:none;
+  stroke:url(#pmWater);
+  stroke-width:12.3;
+  stroke-linecap:round;stroke-linejoin:round;
+  vector-effect:non-scaling-stroke;
+}
+body.pm-world .pm-river-light{
+  fill:none;
+  stroke:rgba(230,249,239,.50);
+  stroke-width:1.15;
+  stroke-linecap:round;
+  stroke-dasharray:4 7 1 8;
+  vector-effect:non-scaling-stroke;
+  animation:pmWaterDashes 4.8s linear infinite;
+}
+body.pm-world .pm-river-ripple{
+  fill:none;
+  stroke:rgba(224,246,238,.50);
+  stroke-width:.7;
+  stroke-linecap:round;
+  stroke-dasharray:2.4 1.8;
+  vector-effect:non-scaling-stroke;
+}
+body.pm-world .pm-river-ripple.r2,
+body.pm-world .pm-river-ripple.r4{stroke:rgba(57,112,120,.32);stroke-dasharray:1 2.4}
+
+/* bridge now reads as an object above the river */
+body.pm-world .quest-bridge{
+  z-index:146;left:35.4%;top:57.4%;width:18.4%;height:8.6%;
+  border:0;
+  border-radius:14px 10px 15px 9px;
+  background:
+    repeating-linear-gradient(90deg,#a97852 0 9px,#8f6246 9px 11px);
+  box-shadow:
+    0 7px 0 rgba(61,43,32,.22),
+    0 10px 14px rgba(45,61,45,.10),
+    inset 0 3px 0 rgba(238,207,163,.20);
+  transform:rotate(-1.5deg);
+}
+body.pm-world .quest-bridge i{
+  background:transparent!important;border:0!important
+}
+body.pm-world .quest-bridge:before,
+body.pm-world .quest-bridge:after{
+  content:"";position:absolute;left:-2%;right:-2%;height:3px;
+  border-top:2px dashed rgba(79,54,40,.72);
+}
+body.pm-world .quest-bridge:before{top:5px}
+body.pm-world .quest-bridge:after{bottom:4px}
+
+/* soften the pond; no thick graphic ring */
+body.pm-world .quest-pond{
+  z-index:4;
+  border:0!important;
+  background:
+    radial-gradient(ellipse at 36% 32%,rgba(218,242,230,.44),transparent 24%),
+    repeating-linear-gradient(172deg,rgba(232,248,237,.14) 0 2px,transparent 2px 10px),
+    linear-gradient(135deg,#6eaeb4,#91c6c1 57%,#5f9aa5);
+  box-shadow:
+    0 0 0 3px rgba(82,119,80,.30),
+    0 0 0 7px rgba(103,137,91,.16),
+    inset 10px -8px 18px rgba(53,102,111,.14);
+  outline:1px dashed rgba(219,236,194,.26);
+  outline-offset:8px;
+}
+body.pm-world .quest-pond i{
+  height:1px!important;background:rgba(236,250,242,.48)!important;
+  border-radius:999px
+}
+
+/* trees and props get internal texture instead of flat blocks */
+body.pm-world .pm-tree:after{
+  background:
+    radial-gradient(circle at 34% 25%,rgba(202,222,155,.20) 0 3px,transparent 4px),
+    repeating-linear-gradient(135deg,rgba(255,255,255,.025) 0 3px,transparent 3px 8px),
+    linear-gradient(145deg,#6f985f,#527e53 66%,#466f4b);
+  border-color:#416445;
+  box-shadow:-11px 12px 0 #739a64,11px 13px 0 #4f7950,0 -7px 0 #668d59;
+}
+body.pm-world .pm-tree:before{
+  background:linear-gradient(90deg,#6b4a35,#876249 52%,#60442f);
+}
+body.pm-world .pm-rock{
+  border:0;
+  border-radius:48% 52% 43% 57%;
+  background:linear-gradient(145deg,#aaa98e 0 38%,#858876 39% 72%,#6f7264 73%);
+  box-shadow:2px 3px 0 rgba(53,65,50,.14);
+}
+body.pm-world .pm-sign{
+  border:0;
+  border-radius:3px;
+  background:
+    linear-gradient(180deg,rgba(255,232,184,.10),transparent 45%),
+    #b9895b;
+  box-shadow:0 27px 0 -17px #62452f,3px 4px 0 rgba(66,47,34,.17);
+}
+
+/* hill objects should read as terrain, not stickers */
+body.pm-world .quest-hill{
+  border:0!important;
+  border-radius:52% 48% 42% 58%;
+  background:
+    repeating-linear-gradient(170deg,rgba(230,236,192,.10) 0 2px,transparent 2px 8px),
+    linear-gradient(165deg,#7ea46d,#678d5e);
+  box-shadow:
+    inset 0 5px 0 rgba(220,231,181,.13),
+    5px 7px 0 rgba(57,91,56,.10);
+  outline:1px dashed rgba(225,232,188,.18);
+  outline-offset:-8px;
+}
+
+@keyframes pmWaterDashes{
+  to{stroke-dashoffset:-28}
+}
+
+@media(max-width:760px){
+  body.pm-world .pm-horizon-layer{height:22%}
+  body.pm-world .quest-ground-grid{inset:16% 0 0}
+  body.pm-world .quest-bridge{width:21%;left:34%}
+}
+@media(prefers-reduced-motion:reduce){
+  body.pm-world .pm-river-light{animation:none!important}
+}
