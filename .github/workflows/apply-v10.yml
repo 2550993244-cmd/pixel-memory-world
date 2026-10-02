@@ -1,0 +1,35 @@
+name: Apply V10 upgrade
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore V10 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d .v10-upload
+          cat .v10-upload/chunk_* | base64 -d > /tmp/pixel-memory-world-v10.zip
+          rm -rf /tmp/v10
+          mkdir -p /tmp/v10
+          unzip -q /tmp/pixel-memory-world-v10.zip -d /tmp/v10
+          cp -a /tmp/v10/. .
+          rm -rf .v10-upload
+          rm -f .github/workflows/apply-v10.yml
+
+      - name: Commit V10
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Upgrade to V10: reliable shared state, synced music and refined quest"
+          git push
