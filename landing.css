@@ -60,7 +60,6 @@ body.landing-mode .topbar{
     radial-gradient(circle at 48% 70%,rgba(134,174,191,.30),transparent 34%);
   filter:blur(46px) saturate(1.12);
   animation:landingAura 13s ease-in-out infinite alternate;
-  transform:translate3d(calc((var(--mx) - 50%) * .03),calc((var(--my) - 50%) * .03),0);
 }
 
 .landing-aura{
