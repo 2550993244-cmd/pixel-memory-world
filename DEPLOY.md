@@ -1,95 +1,251 @@
-# Pixel Memory V10 · 部署说明
+# Pixel Memory World V12 · 部署说明
 
-## 推荐架构
+这份文件只讲“怎么把它放到网上”。
 
-```text
-网页 / 微信小程序
-        │
-        ├── HTTPS REST：创建房间、读取房间、保存内容、上传录音
-        │
-        └── WSS：人物移动、聊天、庆祝、Memory Quest 实时同步
-                         │
-                   V9 Node Server
-```
+如果你只是想了解项目是什么、怎么玩，请先看根目录 README.md。
 
-## 方案 A：前后端一起部署（最省事）
+---
 
-V10 的 `server/server.js` 会直接托管项目根目录，因此部署整个 `pixel-memory-world-v9` 后，只需要一个域名：
+## 你实际需要部署两部分
 
-```text
-https://memory.example.com
-```
+~~~text
+1. 前端网页
+   index.html / CSS / JS
+   ↓
+   GitHub Pages
 
-网页、API、WSS、录音文件都在同域。
+2. 实时服务器
+   server/
+   ↓
+   Render / Railway / 云服务器
+~~~
 
-服务器命令：
+GitHub Pages 只能放静态网页，不能运行 Node WebSocket，所以多人公网联机必须另外有一个后端。
 
-```bash
-node server/server.js
-```
+---
 
-或用根目录旁提供的 Dockerfile：
+## 方案 A：GitHub Pages + Render
 
-```bash
-docker build -f server/Dockerfile -t pixel-memory-v9 .
-docker run -p 8787:8787 pixel-memory-v9
-```
+这是目前最容易维护的方案。
 
-## 方案 B：GitHub Pages + 独立实时服务器
+### 第一步：部署前端
 
-网页继续部署在 GitHub Pages：
+仓库开启 GitHub Pages 后，网页通常是：
 
-```text
-https://you.github.io/pixel-memory-world/
-```
+~~~text
+https://2550993244-cmd.github.io/pixel-memory-world/
+~~~
 
-Node 服务部署在：
+每次 main 分支更新，Pages 会重新构建。
 
-```text
-https://api.example.com
-```
+### 第二步：部署 Render 后端
 
-第一次访问网页加参数：
+在 Render 创建 Web Service。
 
-```text
-https://you.github.io/pixel-memory-world/?server=https://api.example.com
-```
+建议配置：
 
-V9 会把这个服务器地址保存在浏览器 localStorage，之后自动使用。
+~~~text
+Root Directory: server
+Runtime: Node
+Build Command: npm install
+Start Command: npm start
+~~~
 
-## 微信小程序
+Node 版本要求：20 或更高。
 
-1. 在微信公众平台注册小程序并取得 AppID。
-2. 微信开发者工具 → 导入项目 → 选择 `miniprogram/`。
-3. 将 `project.config.json` 的 `touristappid` 换成自己的 AppID。
-4. 把 `miniprogram/app.js` 的 `serverUrl` 换成公网 HTTPS 域名。
-5. 微信公众平台配置：
-   - request 合法域名：`https://api.example.com`
-   - socket 合法域名：`wss://api.example.com`
-6. 开发工具中测试创建房间、邀请码加入、移动、聊天、录音。
-7. 完成小程序隐私说明、类目和审核材料后提交体验版 / 审核版。
+部署成功后，你会得到类似：
 
-## 正式上线前的后端升级
+~~~text
+https://pixel-memory-world.onrender.com
+~~~
 
-当前 V9 是可跑的 Demo 服务，单实例就能测试真实联机。正式产品建议：
+### 第三步：检查服务器
 
-- rooms.json → CloudBase / PostgreSQL
-- uploads → COS / CloudBase Storage / R2
-- 游客 playerId → OpenID / 匿名账号体系
-- WebSocket 单实例 → 支持多实例广播的实时层
-- 给房间增加过期时间、房主权限、踢人/锁房、限流与文件安全校验
-- 照片/录音增加访问权限与删除机制
+打开：
 
+~~~text
+https://你的-render-域名/api/health
+~~~
 
-## V10 公网联机自检
+V12 正常应返回类似：
 
-部署后访问 `/api/health`，正常应返回 `version: "v10"`。网页进入同一邀请码后，顶部会显示类似 `2 人在线 · 公网联机 · 86ms`。
+~~~json
+{
+  "ok": true,
+  "version": "v12"
+}
+~~~
 
-测试顺序建议：
-1. 两台不同设备移动与聊天。
-2. A 放纪念物，B 应立即看到。
-3. A 播放预设音乐，B 应同步开始；再测试上传自定义音乐。
-4. 门外 Memory Quest 中两人应互相看到；A 放宝藏后 B 应出现下一处微光。
-5. 录一段 5 秒语音，放进宝藏后由另一台设备打开播放。
+### 第四步：让 GitHub Pages 使用这个服务器
 
-> Render Free 仍会休眠，首次唤醒可能很慢；同时 `server/uploads` 和 `rooms.json` 仍属于实例本地文件，重新部署后不保证永久保存。正式上线需接对象存储和数据库。
+第一次访问网页时加：
+
+~~~text
+https://2550993244-cmd.github.io/pixel-memory-world/?server=https://你的-render-域名
+~~~
+
+网页会把服务器地址写进浏览器 localStorage。
+
+之后再正常打开 Pages 地址，也会继续连接这个后端。
+
+如果以后换服务器，可以重新用新的 ?server= 地址打开一次。
+
+---
+
+## 方案 B：服务器直接托管整个网页
+
+server/server.js 也可以直接托管仓库根目录。
+
+这样前端、REST、WebSocket 和上传接口都在同一个域名，配置最简单。
+
+从仓库根目录启动：
+
+~~~bash
+cd server
+npm install
+npm start
+~~~
+
+然后打开：
+
+~~~text
+http://localhost:8787
+~~~
+
+如果把整个项目部署到一台可以运行 Node 的服务器，也可以直接让这个服务对公网开放。
+
+---
+
+## Docker
+
+Dockerfile 在 server/ 下。
+
+从仓库根目录构建：
+
+~~~bash
+docker build -f server/Dockerfile -t pixel-memory-world .
+docker run -p 8787:8787 pixel-memory-world
+~~~
+
+---
+
+## 怎么测试“真的联机了”
+
+不要只在一个浏览器开两个标签页。
+
+最好：
+
+- 电脑 + 手机；
+- 或两台电脑；
+- 或让一个朋友在另一张网络下加入。
+
+测试顺序：
+
+1. A 创建房间。
+2. B 输入相同 6 位邀请码。
+3. A 移动，B 看人物是否同步。
+4. B 聊天，A 是否立即看到。
+5. A 放纪念物，B 是否出现。
+6. A 播放音乐，B 是否同步。
+7. 两边一起进入 Memory Quest。
+8. A 藏一个宝藏，B 是否能发现。
+9. A 录一段声音，B 是否能播放。
+
+网页顶部出现类似：
+
+~~~text
+2 人在线 · 公网联机 · 86ms
+~~~
+
+说明当前正在走公网实时连接。
+
+---
+
+## Render 免费实例需要知道的事
+
+免费实例可能会休眠。
+
+因此第一次打开时可能会出现：
+
+~~~text
+网页已经打开
+但联机状态还没马上亮
+~~~
+
+这通常是服务器正在唤醒。
+
+另外，当前 Demo 如果把房间数据和上传文件放在实例本地磁盘：
+
+- 重新部署；
+- 实例重建；
+- 云平台清理；
+
+都有可能导致文件不再永久保留。
+
+所以真正长期保存纪念内容时，需要把：
+
+~~~text
+房间数据 → PostgreSQL / CloudBase
+照片录音 → R2 / COS / OSS / CloudBase Storage
+~~~
+
+---
+
+## 微信小程序部署
+
+微信小程序目录：
+
+~~~text
+miniprogram/
+~~~
+
+上线前：
+
+1. 微信开发者工具导入 miniprogram/。
+2. project.config.json 中填自己的 AppID。
+3. miniprogram/app.js 中把 serverUrl 改成公网 HTTPS 地址。
+4. 微信公众平台配置：
+   - request 合法域名；
+   - socket 合法域名。
+5. 生产环境必须使用 HTTPS / WSS。
+
+小程序当前是轻量入口，完整世界仍以网页端为主。
+
+---
+
+## 当前服务器接口
+
+主要接口：
+
+~~~text
+GET  /api/health
+POST /api/rooms
+GET  /api/rooms/:code
+PUT  /api/rooms/:code
+POST /api/rooms/:code/ops
+POST /api/uploads
+WS    /ws?room=...&channel=...&player=...
+~~~
+
+网页和微信小程序共用这一套后端。
+
+---
+
+## 正式上线前还要补什么
+
+当前后端适合 Demo 和小规模测试。
+
+正式产品至少建议继续做：
+
+- 数据库持久化；
+- 对象存储；
+- 房主权限；
+- 房间锁定 / 删除；
+- 上传文件类型与大小校验；
+- 内容删除机制；
+- 用户身份；
+- 限流；
+- 多实例 WebSocket 广播；
+- 隐私和数据保留策略。
+
+这些属于产品上线阶段，不需要为了当前像素世界视觉迭代提前全部做完。
