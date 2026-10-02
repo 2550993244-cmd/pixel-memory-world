@@ -295,4 +295,4 @@ server.on('upgrade', (req, socket) => {
   socket.on('close', close); socket.on('end', close); socket.on('error', close);
 });
 
-server.listen(PORT, () => console.log(`Pixel Memory V10 server: http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`Pixel Memory V12 server: http://localhost:${PORT}`));
