@@ -63,3 +63,191 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:
 .quest-stage{background:linear-gradient(#c3d8a7 0,#b9d29b 54%,#b2cb92 100%)}.quest-ground-grid{opacity:.4;mix-blend-mode:multiply}.quest-stage:before{z-index:6;background:linear-gradient(180deg,rgba(255,255,255,.12),transparent 22%),radial-gradient(circle at 50% 47%,transparent 0 39%,rgba(67,94,58,.06) 76%,rgba(58,82,53,.13) 100%)}
 .quest-map-caption{backdrop-filter:blur(7px);box-shadow:0 3px 12px rgba(70,87,62,.08)}
 @media(max-width:720px){.quest-online-chip{height:38px;padding:0 9px}.quest-stream{width:15%;left:37%}.quest-bridge{width:21%;left:34%}.quest-picnic{transform:scale(.78) rotate(-5deg);transform-origin:left bottom}.quest-mailbox{transform:scale(.8);transform-origin:right bottom}.quest-sun-glow{right:12%;width:52px;height:52px}}
+
+
+/* ==========================================
+   V12.2 · BLACKOUT CELEBRATION CEREMONY
+   ========================================== */
+.celebration-overlay{
+  position:fixed;inset:0;z-index:260;
+  display:grid;place-items:center;padding:24px;
+  background:#050505;
+  color:#fff;
+  overflow:hidden;
+  opacity:1;
+  animation:celebrationBlackIn .55s ease both;
+}
+.celebration-overlay:before,
+.celebration-overlay:after{
+  content:"";position:absolute;inset:auto;pointer-events:none;border-radius:50%;
+  filter:blur(56px);
+}
+.celebration-overlay:before{
+  width:min(72vw,900px);height:min(72vw,900px);
+  left:50%;top:48%;transform:translate(-50%,-50%);
+  background:radial-gradient(circle,rgba(228,179,92,.14),rgba(218,115,119,.055) 36%,transparent 68%);
+}
+.celebration-overlay:after{
+  width:46vw;height:46vw;right:-18vw;bottom:-24vw;
+  background:radial-gradient(circle,rgba(114,166,185,.10),transparent 68%);
+}
+.celebration-night-glow{
+  position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(circle at 50% 42%,rgba(255,231,175,.08),transparent 19%),
+    radial-gradient(circle at 50% 54%,rgba(225,126,130,.05),transparent 30%),
+    linear-gradient(180deg,rgba(255,255,255,.012),transparent 35%,rgba(255,255,255,.008));
+  opacity:.95;
+}
+.celebration-ceremony{
+  position:relative;z-index:5;
+  width:min(980px,94vw);
+  text-align:center;
+  padding:44px 20px 30px;
+  background:transparent;
+  border:0;
+  box-shadow:none;
+  color:#f8f3e9;
+}
+.celebration-overline{
+  display:inline-block;
+  font-size:8px;letter-spacing:.28em;
+  color:rgba(255,245,224,.53);
+  margin-bottom:22px;
+}
+.celebration-symbol{
+  width:auto;height:auto;margin:0 0 16px;
+  background:transparent;border:0;box-shadow:none;
+  color:#e7bd67;font-family:Georgia,"Times New Roman",serif;
+  font-size:30px;
+  animation:celebrationStarPulse 1.7s ease-in-out infinite;
+}
+.celebration-ceremony h2{
+  margin:0;
+  font-family:"Songti SC","STSong","PingFang SC","Microsoft YaHei",serif;
+  font-weight:500;
+  font-size:clamp(42px,7vw,96px);
+  line-height:1.08;
+  letter-spacing:-.06em;
+  color:#fff9ef;
+  text-shadow:
+    0 0 26px rgba(242,201,112,.10),
+    0 16px 60px rgba(0,0,0,.38);
+  animation:celebrationTitleIn .9s .15s cubic-bezier(.16,1,.3,1) both;
+}
+.celebration-ceremony>p{
+  max-width:640px;margin:20px auto 0;
+  color:rgba(255,247,235,.62);
+  font-size:11px;line-height:1.9;letter-spacing:.06em;
+  animation:celebrationFadeIn .8s .55s ease both;
+}
+.celebration-people{
+  min-height:42px;margin:24px 0 26px;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  animation:celebrationFadeIn .8s .8s ease both;
+}
+.celebration-people span{
+  width:36px;height:36px;border-radius:50%;
+  background:rgba(255,255,255,.055);
+  border:1px solid rgba(255,245,225,.20);
+  color:#f6e9d9;
+  display:grid;place-items:center;font-size:8px;
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,.018);
+}
+.celebration-actions{
+  display:flex;justify-content:center;gap:10px;
+  opacity:0;
+  animation:celebrationFadeIn .7s 1.8s ease forwards;
+}
+.celebration-actions .button{
+  border-radius:999px;
+  min-height:44px;
+}
+.celebration-actions .button.primary{
+  background:#efe0bd;color:#3c342f;border:0;
+  box-shadow:0 10px 30px rgba(230,190,105,.12);
+}
+.celebration-actions .celebration-quiet{
+  background:transparent;color:rgba(255,248,237,.68);
+  border:1px solid rgba(255,248,237,.18);box-shadow:none;
+}
+
+/* streamer curtain */
+.confetti-layer{
+  position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:2;
+  mask-image:linear-gradient(180deg,#000 0%,#000 88%,transparent 100%);
+}
+.confetti-layer .celebration-streamer{
+  position:absolute;top:-28vh;
+  width:2px;height:clamp(90px,17vh,180px);
+  border-radius:999px;
+  background:linear-gradient(180deg,transparent 0%,var(--stream-color,#e7bd67) 16%,var(--stream-color,#e7bd67) 76%,transparent 100%);
+  opacity:var(--stream-opacity,.72);
+  filter:blur(var(--stream-blur,0px));
+  transform:rotate(var(--stream-rotate,0deg));
+  animation:streamerCurtain var(--stream-duration,3.4s) var(--stream-delay,0s) cubic-bezier(.25,.72,.45,1) forwards;
+  box-shadow:0 0 8px color-mix(in srgb,var(--stream-color,#e7bd67) 25%,transparent);
+}
+.confetti-layer .celebration-streamer.thick{width:3px}
+.confetti-layer .celebration-streamer.soft{opacity:.34;filter:blur(1.2px)}
+.confetti-layer .celebration-spark{
+  position:absolute;top:-20px;width:4px;height:4px;
+  background:var(--spark-color,#fff2cf);
+  border-radius:50%;
+  box-shadow:0 0 9px currentColor;
+  animation:celebrationSparkFall var(--spark-duration,3s) var(--spark-delay,0s) linear forwards;
+}
+.confetti-layer .celebration-arc{
+  position:absolute;top:-90px;width:1px;height:120px;
+  border-left:1px dashed var(--arc-color,#d7b665);
+  opacity:.46;
+  transform-origin:bottom;
+  animation:celebrationArcFall var(--arc-duration,4.2s) var(--arc-delay,0s) ease-in forwards;
+}
+
+@keyframes celebrationBlackIn{
+  from{opacity:0;background:#17130f}
+  to{opacity:1;background:#050505}
+}
+@keyframes celebrationTitleIn{
+  from{opacity:0;filter:blur(16px);transform:translateY(16px) scale(.985)}
+  to{opacity:1;filter:blur(0);transform:none}
+}
+@keyframes celebrationFadeIn{
+  from{opacity:0;transform:translateY(8px)}
+  to{opacity:1;transform:none}
+}
+@keyframes celebrationStarPulse{
+  50%{opacity:.55;transform:scale(.88) rotate(10deg)}
+}
+@keyframes streamerCurtain{
+  0%{transform:translate3d(0,-6vh,0) rotate(var(--stream-rotate,0deg));opacity:0}
+  8%{opacity:var(--stream-opacity,.72)}
+  72%{opacity:var(--stream-opacity,.72)}
+  100%{transform:translate3d(var(--stream-drift,20px),132vh,0) rotate(calc(var(--stream-rotate,0deg) + 38deg));opacity:0}
+}
+@keyframes celebrationSparkFall{
+  0%{transform:translate3d(0,-4vh,0) scale(.6);opacity:0}
+  12%{opacity:.95}
+  100%{transform:translate3d(var(--spark-drift,10px),118vh,0) scale(.2);opacity:0}
+}
+@keyframes celebrationArcFall{
+  0%{transform:translateY(-5vh) rotate(var(--arc-rotate,0deg));opacity:0}
+  15%{opacity:.5}
+  100%{transform:translateY(126vh) rotate(calc(var(--arc-rotate,0deg) + 24deg));opacity:0}
+}
+
+@media(max-width:720px){
+  .celebration-overlay{padding:14px}
+  .celebration-ceremony{padding:32px 8px 24px}
+  .celebration-ceremony h2{font-size:clamp(40px,13vw,62px)}
+  .celebration-ceremony>p{font-size:10px}
+  .celebration-actions{flex-direction:column;align-items:stretch;max-width:300px;margin:0 auto}
+}
+@media(prefers-reduced-motion:reduce){
+  .celebration-overlay,.celebration-ceremony h2,.celebration-ceremony>p,.celebration-people,.celebration-actions,
+  .confetti-layer .celebration-streamer,.confetti-layer .celebration-spark,.confetti-layer .celebration-arc{
+    animation:none!important;
+  }
+  .celebration-actions{opacity:1}
+}
