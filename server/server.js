@@ -139,7 +139,7 @@ const server = http.createServer(async (req, res) => {
   const u = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = u.pathname;
   try {
-    if (pathname === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, version: 'v10', rooms: Object.keys(rooms).length, connections: connectionCount(), time: Date.now() });
+    if (pathname === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, version: 'v12', rooms: Object.keys(rooms).length, connections: connectionCount(), time: Date.now() });
     if (pathname === '/api/rooms' && req.method === 'POST') {
       const body = JSON.parse((await readBody(req)).toString('utf8') || '{}');
       const code = String(body.code || randomCode()).toUpperCase();
