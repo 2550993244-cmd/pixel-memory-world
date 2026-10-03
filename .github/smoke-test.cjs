@@ -33,6 +33,11 @@ const { chromium } = require('playwright');
   // Landing core buttons.
   await page.locator('#createWorldBtn').click();
   await active('creator');
+  const creatorType = await page.evaluate(() => ({
+    meta: parseFloat(getComputedStyle(document.querySelector('.creator-preview-meta small')).fontSize),
+    field: parseFloat(getComputedStyle(document.querySelector('#creator .field>span')).fontSize)
+  }));
+  if (creatorType.meta < 9.5 || creatorType.field < 11.5) throw new Error('creator typography is still too small');
 
   // Creator choices must remain clickable.
   console.log('DIAG before occasion', await page.evaluate(() => ({
@@ -52,6 +57,14 @@ const { chromium } = require('playwright');
   await page.locator('#honoreeInput').fill('测试主角');
   await page.locator('#continueCreateBtn').click();
   await active('avatarBuilder');
+  const avatarLayout = await page.evaluate(() => ({
+    trail: !!document.querySelector('.avatar-stage-trail'),
+    stageHeight: document.querySelector('.avatar-stage').getBoundingClientRect().height,
+    optionType: parseFloat(getComputedStyle(document.querySelector('.avatar-builder-screen .branch-choice>b')).fontSize)
+  }));
+  if (avatarLayout.trail) throw new Error('obsolete avatar trail is still visible');
+  if (avatarLayout.stageHeight > 700) throw new Error('avatar preview stage is still unnecessarily tall');
+  if (avatarLayout.optionType < 11) throw new Error('avatar option labels are still too small');
 
   // Avatar choices + enter room.
   await page.locator('[data-hair="2"]').click();
