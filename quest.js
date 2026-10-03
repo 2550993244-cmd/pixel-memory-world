@@ -29,7 +29,8 @@
     players: new Map(),
     stepTick: 0,
     lastMoveSent: 0,
-    completedShown: false
+    completedShown: false,
+    fishing: { casts: 0, catches: 0, waiting: false, biting: false }
   };
 
   // Historical localStorage key is intentionally retained for backward compatibility.\n  const questKey = () => `pixel-memory-v9-quest-${state.roomCode || 'draft'}`;
@@ -281,7 +282,7 @@
           questState.x = nx;
           questState.y = ny;
         } else {
-          clickSound(135, .018);
+          bumpSound();
         }
         questState.stepTick++;
         if (questState.stepTick % 18 === 0) dropFootstep();
@@ -307,6 +308,8 @@
     setTimeout(() => f.remove(), 700);
   }
 
+  const fishingSpot = { id:'fishing', type:'fishing', x:30, y:44, r:8, title:'湖边钓一会儿' };
+
   function updateQuestNear() {
     let best = null, dist = 999;
     const ordered = questState.items.slice().sort((a,b)=>(a.order||0)-(b.order||0));
@@ -316,19 +319,125 @@
       const d = Math.hypot(questState.x - item.x, questState.y - item.y);
       if (d < 7.5 && d < dist) { best = item; dist = d; }
     }
+    const fishDist = Math.hypot(questState.x - fishingSpot.x, questState.y - fishingSpot.y);
+    if (!questState.editorOpen && fishDist < fishingSpot.r && fishDist < dist) {
+      best = fishingSpot;
+      dist = fishDist;
+    }
     questState.nearby = best;
     const prompt = $('#questPrompt');
     if (best) {
       prompt.classList.remove('hidden');
-      $('span', prompt).textContent = questState.found.has(best.id) ? `再看看「${best.title}」` : '这里好像藏着一段回忆';
+      $('span', prompt).textContent = best.type === 'fishing'
+        ? '坐在湖边钓一会儿'
+        : (questState.found.has(best.id) ? `再看看「${best.title}」` : '这里好像藏着一段回忆');
     } else prompt.classList.add('hidden');
-    $$('.quest-memory').forEach(el => el.classList.toggle('near', el.dataset.id === best?.id));
+    $('.quest-memory').forEach(el => el.classList.toggle('near', best?.type !== 'fishing' && el.dataset.id === best?.id));
+    $('#questFishingSpot')?.classList.toggle('near', best?.type === 'fishing');
   }
 
   function interactQuestNear() {
     if (!questState.nearby) return toast('沿着小路再走走看。');
+    if (questState.nearby.type === 'fishing') return openFishing();
     discoverQuestItem(questState.nearby);
   }
+
+  function fishingSound(kind='cast') {
+    if (kind === 'cast') { clickSound(330,.055); setTimeout(()=>clickSound(440,.045),65); }
+    if (kind === 'bite') { clickSound(660,.05); setTimeout(()=>clickSound(880,.07),72); }
+    if (kind === 'catch') { clickSound(523,.07); setTimeout(()=>clickSound(659,.07),70); setTimeout(()=>clickSound(784,.09),140); }
+    if (kind === 'miss') { clickSound(260,.06); setTimeout(()=>clickSound(220,.08),75); }
+  }
+
+  function openFishing() {
+    if (questState.editorOpen) return;
+    const f = questState.fishing;
+    openModal('LAKESIDE FISHING · 湖边', '要不要坐下来钓一会儿？', `
+      <div class="fishing-game">
+        <div class="fishing-scene-mini" aria-hidden="true">
+          <span class="mini-water"><i></i><i></i><i></i></span>
+          <span class="mini-rod"></span>
+          <span class="mini-line"></span>
+          <span class="mini-float"></span>
+          <span class="mini-fish">><))°></span>
+        </div>
+        <div class="fishing-copy">
+          <b id="fishingStatus">湖面很安静。先甩一杆，等浮漂动起来。</b>
+          <small>不用赶进度，这里就是给人停一下的。</small>
+        </div>
+        <div class="fishing-stats"><span>甩杆 <b id="fishCasts">${f.casts}</b></span><i></i><span>钓到 <b id="fishCatches">${f.catches}</b></span></div>
+        <button id="fishingAction" class="button primary full press">甩一杆 <span>↗</span></button>
+        <button id="fishingLeave" class="button secondary full press">今天先坐到这里</button>
+      </div>`);
+    setTimeout(() => {
+      const action = $('#fishingAction');
+      const status = $('#fishingStatus');
+      const scene = $('.fishing-scene-mini');
+      if (!action || !status) return;
+      let biteTimer = 0, missTimer = 0;
+      const reset = (copy='湖面又安静下来了。还想再试一杆吗？') => {
+        clearTimeout(biteTimer); clearTimeout(missTimer);
+        f.waiting = false; f.biting = false;
+        scene?.classList.remove('waiting','bite','caught');
+        status.textContent = copy;
+        action.disabled = false;
+        action.innerHTML = '再甩一杆 <span>↗</span>';
+      };
+      action.onclick = () => {
+        if (f.biting) {
+          clearTimeout(missTimer);
+          f.biting = false; f.waiting = false; f.catches++;
+          const catches = ['一条小鲫鱼','一条亮闪闪的小鱼','一条很有精神的小白条','一条慢吞吞的小鱼'];
+          const fish = catches[Math.floor(Math.random()*catches.length)];
+          scene?.classList.remove('waiting','bite'); scene?.classList.add('caught');
+          status.textContent = `钓到了${fish}。拍了张“精神小鱼照”，又把它放回湖里。`;
+          $('#fishCatches').textContent = f.catches;
+          action.disabled = true;
+          fishingSound('catch');
+          reaction(state.player.id,'🐟');
+          addActivity(`${state.player.name} 在回忆路的湖边钓到了一条小鱼，又把它放回去了`);
+          setTimeout(() => reset('水面晃了两下。还想再坐一会儿吗？'), 1500);
+          return;
+        }
+        if (f.waiting) return;
+        f.casts++;
+        $('#fishCasts').textContent = f.casts;
+        f.waiting = true;
+        scene?.classList.remove('caught','bite'); scene?.classList.add('waiting');
+        status.textContent = '浮漂轻轻晃着……先别急。';
+        action.disabled = true;
+        action.textContent = '等一等…';
+        fishingSound('cast');
+        biteTimer = setTimeout(() => {
+          f.waiting = false; f.biting = true;
+          scene?.classList.remove('waiting'); scene?.classList.add('bite');
+          status.textContent = '咬钩了！现在收杆！';
+          action.disabled = false;
+          action.innerHTML = '收杆！ <span>!</span>';
+          fishingSound('bite');
+          missTimer = setTimeout(() => {
+            if (!f.biting) return;
+            f.biting = false;
+            scene?.classList.remove('bite');
+            status.textContent = '慢了一点，它把饵偷走了。';
+            fishingSound('miss');
+            setTimeout(() => reset('没关系，湖边不讲输赢。再试一杆？'), 850);
+          }, 1450);
+        }, 1200 + Math.random()*1500);
+      };
+      $('#fishingLeave').onclick = () => {
+        clearTimeout(biteTimer); clearTimeout(missTimer);
+        f.waiting = false; f.biting = false;
+        closeModal();
+        setTimeout(()=>$('#questStage')?.focus(),50);
+      };
+    },0);
+  }
+
+  $('#questFishingSpot')?.addEventListener('click', e => {
+    e.preventDefault();
+    openFishing();
+  });
 
   async function discoverQuestItem(item) {
     const fresh = !questState.found.has(item.id);
