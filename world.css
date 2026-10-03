@@ -776,3 +776,18 @@ body.pm-world .quest-hill{
 @media(prefers-reduced-motion:reduce){
   body.pm-world .pm-river-light{animation:none!important}
 }
+
+
+/* V12.3 · outdoor depth integration */
+body.pm-world .pm-quest-terrain{
+  z-index:auto!important;
+  transform:none!important;
+}
+body.pm-world .quest-player-layer{
+  z-index:auto!important;
+}
+body.pm-world .pm-tree,
+body.pm-world .pm-rock,
+body.pm-world .pm-stump{
+  position:absolute;
+}
