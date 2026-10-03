@@ -774,3 +774,16 @@ button:disabled{
   .side-drawer.drawer-music{width:calc(100vw - 24px);right:12px}
   .drawer-music .music-actions{grid-template-columns:1fr}
 }
+
+
+/* V13.1.1 · keep the preview panel from stretching to the taller form column */
+.avatar-builder-screen .avatar-layout{align-items:start}
+.avatar-builder-screen .avatar-stage{
+  min-height:620px;
+  height:620px;
+  align-self:start;
+}
+@media(max-width:720px){
+  .avatar-builder-screen .avatar-layout{align-items:stretch}
+  .avatar-builder-screen .avatar-stage{height:auto;min-height:560px}
+}
