@@ -43,9 +43,9 @@ function updateCreatorPreview(){
   $('#creatorPreviewTheme').textContent=themeNames[state.world.theme]||'暖灯客厅';
   $('#creatorPreviewMusic').textContent=musicNames[state.world.music]||'生日快乐 · 8-bit';
 }
-$('[data-occasion]').forEach(b=>b.onclick=()=>{$('[data-occasion]').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');state.world.occasion=b.dataset.occasion;updateCreatorPreview()});
-$('[data-theme]').forEach(b=>b.onclick=()=>{$('[data-theme]').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');state.world.theme=b.dataset.theme;updateCreatorPreview()});
-$('[data-music]').forEach(b=>b.onclick=()=>{$('[data-music]').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');state.world.music=b.dataset.music;updateCreatorPreview()});
+$$('[data-occasion]').forEach(b=>b.onclick=()=>{$$('[data-occasion]').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');state.world.occasion=b.dataset.occasion;updateCreatorPreview()});
+$$('[data-theme]').forEach(b=>b.onclick=()=>{$$('[data-theme]').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');state.world.theme=b.dataset.theme;updateCreatorPreview()});
+$$('[data-music]').forEach(b=>b.onclick=()=>{$$('[data-music]').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');state.world.music=b.dataset.music;updateCreatorPreview()});
 ['honoreeInput','dateInput','inviteInput'].forEach(id=>$('#'+id)?.addEventListener('input',updateCreatorPreview));
 updateCreatorPreview();
 $('#creatorUploadMusic').onclick=()=>$('#musicUploadInput').click();$('#musicUploadInput').onchange=async e=>{const f=e.target.files[0];if(!f)return;state.world.music='custom';state.world.customMusicName=f.name;$('#creatorMusicName').textContent=f.name;updateCreatorPreview();state.audio.customUrl=URL.createObjectURL(f);state.world.customMusicUrl='';let uploaded=false;if(window.PixelNet?.enabled){toast('正在把音乐上传到房间…');try{const up=await PixelNet.uploadBlob(f,f.name);state.world.customMusicUrl=up.url;uploaded=true;toast('音乐已上传，房间里的朋友都能听到')}catch(_){toast('上传失败，目前只有这台设备能播放')}}else toast('已经把这首歌带进房间了');if(state.roomCode&&state.screen==='world'){saveRoom();startMusic();openMusicDrawer()}else if(uploaded&&state.roomCode)saveRoom()};
