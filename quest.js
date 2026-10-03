@@ -33,7 +33,8 @@
     fishing: { casts: 0, catches: 0, waiting: false, biting: false }
   };
 
-  // Historical localStorage key is intentionally retained for backward compatibility.\n  const questKey = () => `pixel-memory-v9-quest-${state.roomCode || 'draft'}`;
+  // Historical localStorage key is intentionally retained for backward compatibility.
+  const questKey = () => `pixel-memory-v9-quest-${state.roomCode || 'draft'}`;
   const questLiveKey = () => `pixel-memory-quest-live-${state.roomCode || 'draft'}`;
 
   // The door is a real object in the original room rather than a menu item.
