@@ -791,3 +791,242 @@ body.pm-world .pm-rock,
 body.pm-world .pm-stump{
   position:absolute;
 }
+
+
+/* =========================================================
+   V12.4 · OUTSIDE PLAY: CURVED BRIDGE + FISHING
+   ========================================================= */
+
+/* long / curly hair should frame the face instead of covering it */
+body.pm-world .pm-head{z-index:6}
+body.pm-world .pm-hair{z-index:5}
+body.pm-world .hair-2 .pm-hair{
+  height:12px;
+  box-shadow:-5px 7px 0 -1px #604940,5px 7px 0 -1px #604940,-5px 12px 0 -2px #604940,5px 12px 0 -2px #604940;
+}
+body.pm-world .hair-3 .pm-hair{
+  height:12px;
+  box-shadow:-5px 7px 0 #604940,5px 7px 0 #604940,-5px 15px 0 #604940,5px 15px 0 #604940;
+}
+body.pm-world [data-dir="up"] .pm-head{z-index:4}
+body.pm-world [data-dir="up"] .pm-hair{z-index:6;height:16px;box-shadow:none}
+
+/* old flat bridge becomes a collision/legacy marker only */
+body.pm-world .quest-bridge{display:none!important}
+body.pm-world .pm-bridge-svg{
+  position:absolute;
+  inset:0;
+  z-index:147;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+  overflow:visible;
+}
+body.pm-world .pm-bridge-svg path{
+  fill:none;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  vector-effect:non-scaling-stroke;
+}
+body.pm-world .pm-bridge-shadow{
+  stroke:rgba(65,45,32,.30);
+  stroke-width:15;
+  transform:translateY(1.3px);
+}
+body.pm-world .pm-bridge-deck{
+  stroke:#a97852;
+  stroke-width:11;
+  filter:drop-shadow(0 3px 0 rgba(74,50,35,.18));
+}
+body.pm-world .pm-bridge-planks{
+  stroke:#d0a173;
+  stroke-width:7.5;
+  stroke-dasharray:1.15 1.55;
+  opacity:.8;
+}
+body.pm-world .pm-bridge-rail{
+  stroke:#624633;
+  stroke-width:1.35;
+  stroke-dasharray:2.2 1.3;
+  opacity:.9;
+}
+body.pm-world .pm-bridge-rail.rail-b{opacity:.72}
+
+/* lakeside fishing spot */
+body.pm-world .quest-fishing-spot{
+  position:absolute;
+  left:27.5%;
+  top:40.5%;
+  z-index:154;
+  width:64px;
+  height:60px;
+  border:0;
+  background:transparent;
+  color:#554b43;
+  cursor:pointer;
+  transform:translate(-50%,-50%);
+}
+body.pm-world .quest-fishing-spot:before{
+  content:"";
+  position:absolute;
+  left:5px;bottom:8px;
+  width:34px;height:10px;
+  border-radius:50%;
+  background:rgba(83,112,78,.18);
+  filter:blur(1px);
+}
+body.pm-world .fishing-rod{
+  position:absolute;
+  left:19px;top:6px;
+  width:3px;height:45px;
+  background:linear-gradient(#79533a,#a6764e);
+  border-radius:999px;
+  transform:rotate(34deg);
+  transform-origin:bottom center;
+  box-shadow:1px 0 0 rgba(74,51,36,.16);
+}
+body.pm-world .fishing-line{
+  position:absolute;
+  left:40px;top:8px;
+  width:1px;height:35px;
+  background:rgba(239,245,230,.82);
+  transform:rotate(-9deg);
+  transform-origin:top;
+}
+body.pm-world .fishing-float{
+  position:absolute;
+  left:36px;top:40px;
+  width:6px;height:9px;
+  border-radius:5px;
+  background:linear-gradient(#f0d47d 0 45%,#d56f6f 46% 100%);
+  box-shadow:0 0 0 1px rgba(78,60,49,.24),0 2px 7px rgba(239,211,125,.3);
+  animation:pmBobber 2.2s ease-in-out infinite;
+}
+body.pm-world .quest-fishing-spot small{
+  position:absolute;
+  left:0;right:0;bottom:-9px;
+  font-size:7px;
+  opacity:0;
+  transform:translateY(3px);
+  color:#66594f;
+  transition:.2s ease;
+  white-space:nowrap;
+}
+body.pm-world .quest-fishing-spot:hover small,
+body.pm-world .quest-fishing-spot.near small{opacity:1;transform:none}
+body.pm-world .quest-fishing-spot.near .fishing-float{
+  animation-duration:.9s;
+  box-shadow:0 0 0 2px rgba(240,212,125,.25),0 0 11px rgba(240,212,125,.44);
+}
+body.pm-world .quest-fishing-spot.near:after{
+  content:"E";
+  position:absolute;
+  right:-1px;top:-4px;
+  width:17px;height:17px;
+  display:grid;place-items:center;
+  border-radius:50%;
+  background:#f7edda;
+  border:1px solid rgba(95,75,61,.25);
+  color:#6c5a4e;
+  font-size:7px;
+  box-shadow:2px 3px 0 rgba(72,55,44,.12);
+}
+@keyframes pmBobber{
+  50%{transform:translateY(3px) rotate(4deg)}
+}
+
+/* fishing modal */
+.fishing-game{
+  display:grid;
+  gap:14px;
+}
+.fishing-scene-mini{
+  position:relative;
+  height:180px;
+  overflow:hidden;
+  border-radius:14px;
+  background:
+    linear-gradient(180deg,#c7dddc 0 42%,#d8dcb9 43% 50%,#7da6a4 51% 100%);
+  box-shadow:inset 0 0 0 1px rgba(89,77,65,.12);
+}
+.fishing-scene-mini:before{
+  content:"";
+  position:absolute;left:-5%;right:-5%;top:36%;height:34%;
+  background:
+    radial-gradient(ellipse at 20% 90%,rgba(104,135,88,.85) 0 28%,transparent 29%),
+    radial-gradient(ellipse at 55% 95%,rgba(91,128,83,.78) 0 34%,transparent 35%),
+    radial-gradient(ellipse at 86% 88%,rgba(114,145,91,.72) 0 27%,transparent 28%);
+}
+.fishing-scene-mini .mini-water{
+  position:absolute;left:0;right:0;bottom:0;height:50%;
+  background:
+    repeating-linear-gradient(176deg,rgba(232,248,239,.22) 0 2px,transparent 2px 14px),
+    linear-gradient(180deg,#7db1b2,#6b9da4);
+}
+.fishing-scene-mini .mini-water i{
+  position:absolute;height:1px;background:rgba(238,250,242,.62);border-radius:999px
+}
+.fishing-scene-mini .mini-water i:nth-child(1){width:22%;left:12%;top:26%}
+.fishing-scene-mini .mini-water i:nth-child(2){width:15%;left:55%;top:48%}
+.fishing-scene-mini .mini-water i:nth-child(3){width:25%;right:8%;top:71%}
+.fishing-scene-mini .mini-rod{
+  position:absolute;left:28%;top:25%;width:5px;height:106px;
+  background:#765039;border-radius:999px;
+  transform:rotate(44deg);transform-origin:bottom;
+  z-index:4;
+}
+.fishing-scene-mini .mini-line{
+  position:absolute;left:52%;top:28%;width:1px;height:96px;
+  background:rgba(250,249,232,.85);
+  transform:rotate(-6deg);transform-origin:top;
+  z-index:3;
+}
+.fishing-scene-mini .mini-float{
+  position:absolute;left:49.5%;bottom:35px;width:8px;height:12px;
+  border-radius:5px;
+  background:linear-gradient(#efd37a 0 45%,#d66f70 46%);
+  z-index:5;
+  transition:.16s ease;
+}
+.fishing-scene-mini.waiting .mini-float{animation:miniFloat 1.35s ease-in-out infinite}
+.fishing-scene-mini.bite .mini-float{animation:miniBite .22s ease-in-out infinite}
+.fishing-scene-mini.caught .mini-float{transform:translate(-20px,-80px)}
+.fishing-scene-mini .mini-fish{
+  position:absolute;left:57%;bottom:20px;
+  color:rgba(47,83,88,.42);
+  font-family:monospace;font-size:14px;
+  opacity:0;
+  transform:translateX(30px);
+}
+.fishing-scene-mini.waiting .mini-fish{opacity:.45;animation:fishPass 1.8s linear infinite}
+.fishing-scene-mini.bite .mini-fish{opacity:.8;transform:translateX(0)}
+.fishing-scene-mini.caught .mini-fish{opacity:1;transform:translate(-35px,-68px) rotate(-15deg)}
+.fishing-copy{text-align:center}
+.fishing-copy b{display:block;font-size:12px;color:#574e47;line-height:1.7}
+.fishing-copy small{display:block;margin-top:5px;color:#978a80;font-size:8px}
+.fishing-stats{
+  display:flex;align-items:center;justify-content:center;gap:15px;
+  color:#82746a;font-size:8px;
+}
+.fishing-stats span{display:flex;gap:5px;align-items:center}
+.fishing-stats b{font-size:11px;color:#5c524b}
+.fishing-stats i{width:22px;border-top:1px dashed rgba(104,85,72,.3)}
+.fishing-game .button{border-radius:999px}
+@keyframes miniFloat{50%{transform:translateY(4px)}}
+@keyframes miniBite{50%{transform:translateY(9px) rotate(8deg)}}
+@keyframes fishPass{
+  0%{transform:translateX(50px);opacity:0}
+  20%{opacity:.45}
+  80%{opacity:.45}
+  100%{transform:translateX(-80px);opacity:0}
+}
+
+@media(max-width:760px){
+  body.pm-world .quest-fishing-spot{left:28%;top:41%;transform:translate(-50%,-50%) scale(.9)}
+  .fishing-scene-mini{height:155px}
+}
+@media(prefers-reduced-motion:reduce){
+  body.pm-world .fishing-float,
+  .fishing-scene-mini .mini-float,
+  .fishing-scene-mini .mini-fish{animation:none!important}
+}
