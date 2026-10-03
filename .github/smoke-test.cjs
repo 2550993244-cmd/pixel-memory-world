@@ -65,7 +65,7 @@ const { chromium } = require('playwright');
   await page.locator('#worldSettingsBtn').click();
   await page.waitForSelector('#roomDrawer:not(.hidden)', { timeout: 3000 });
   await page.locator('#closeRoomDrawer').click();
-  await page.waitForSelector('#roomDrawer.hidden', { timeout: 3000 });
+  await page.waitForFunction(() => document.querySelector('#roomDrawer')?.classList.contains('hidden'));
   await page.locator('[data-dock="talk"]').click();
   await page.waitForSelector('#talkPopover:not(.hidden)', { timeout: 3000 });
   await page.locator('[data-say="生日快乐 🎂"]').click();
