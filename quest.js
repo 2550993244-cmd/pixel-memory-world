@@ -642,7 +642,8 @@
   questStage?.addEventListener('pointercancel',endDrag);
 
   // ---------- voice recording ----------
-  // Keep the historical IndexedDB name so existing local recordings remain readable.\n  const DB_NAME='pixel-memory-v8-voices', STORE='voices';
+  // Keep the historical IndexedDB name so existing local recordings remain readable.
+  const DB_NAME='pixel-memory-v8-voices', STORE='voices';
   function openVoiceDB(){return new Promise((resolve,reject)=>{const r=indexedDB.open(DB_NAME,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(STORE))r.result.createObjectStore(STORE)};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
   async function voiceDBPut(key,blob){const db=await openVoiceDB();return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put(blob,key);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)})}
   async function voiceDBGet(key){const db=await openVoiceDB();return new Promise((resolve,reject)=>{const r=db.transaction(STORE,'readonly').objectStore(STORE).get(key);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
