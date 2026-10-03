@@ -26,10 +26,29 @@ document.addEventListener('pointerdown',e=>{const b=e.target.closest('.press');i
 // navigation
 $$('[data-go]').forEach(b=>b.onclick=()=>showScreen(b.dataset.go));$('#createWorldBtn').onclick=()=>showScreen('creator');$('#joinWorldBtn').onclick=()=>showScreen('joiner');
 $('#heroDoorbell').onclick=()=>{const a=$('#heroArrival');a.classList.remove('hidden');$('#heroDoorbell').innerHTML='<span>门开了</span><i></i>';toast('里面的人听见门铃了。');setTimeout(()=>a.classList.add('hidden'),2600)};
-$$('[data-occasion]').forEach(b=>b.onclick=()=>{$$('[data-occasion]').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');state.world.occasion=b.dataset.occasion});
-$$('[data-theme]').forEach(b=>b.onclick=()=>{$$('[data-theme]').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');state.world.theme=b.dataset.theme});
-$$('[data-music]').forEach(b=>b.onclick=()=>{$$('[data-music]').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');state.world.music=b.dataset.music});
-$('#creatorUploadMusic').onclick=()=>$('#musicUploadInput').click();$('#musicUploadInput').onchange=async e=>{const f=e.target.files[0];if(!f)return;state.world.music='custom';state.world.customMusicName=f.name;$('#creatorMusicName').textContent=f.name;state.audio.customUrl=URL.createObjectURL(f);state.world.customMusicUrl='';let uploaded=false;if(window.PixelNet?.enabled){toast('正在把音乐上传到房间…');try{const up=await PixelNet.uploadBlob(f,f.name);state.world.customMusicUrl=up.url;uploaded=true;toast('音乐已上传，房间里的朋友都能听到')}catch(_){toast('上传失败，目前只有这台设备能播放')}}else toast('已经把这首歌带进房间了');if(state.roomCode&&state.screen==='world'){saveRoom();startMusic();openMusicDrawer()}else if(uploaded&&state.roomCode)saveRoom()};
+function updateCreatorPreview(){
+  const scene=$('#creatorScenePreview');
+  if(!scene)return;
+  const honoree=$('#honoreeInput')?.value.trim()||state.world.honoree||'重要的人';
+  const occasion=state.world.occasion||'生日';
+  const date=$('#dateInput')?.value||'';
+  const invite=$('#inviteInput')?.value.trim()||state.world.invite||'今晚，我们偷偷在这里等你。';
+  scene.className=`creator-scene-preview theme-${state.world.theme||'cream'}`;
+  $('#creatorPreviewOccasion').textContent=occasion;
+  $('#creatorPreviewHonoree').textContent=honoree;
+  $('#creatorPreviewInvite').textContent=invite;
+  $('#creatorPreviewDate').textContent=date?date.replaceAll('-',' · '):'今晚 · 20:08';
+  const themeNames={cream:'暖灯客厅',garden:'萤火花园',bluehour:'蓝调天台'};
+  const musicNames={birthday:'生日快乐 · 8-bit',starlight:'夜晚微光',cozy:'暖灯客厅',custom:state.world.customMusicName||'自己的音乐'};
+  $('#creatorPreviewTheme').textContent=themeNames[state.world.theme]||'暖灯客厅';
+  $('#creatorPreviewMusic').textContent=musicNames[state.world.music]||'生日快乐 · 8-bit';
+}
+$('[data-occasion]').forEach(b=>b.onclick=()=>{$('[data-occasion]').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');state.world.occasion=b.dataset.occasion;updateCreatorPreview()});
+$('[data-theme]').forEach(b=>b.onclick=()=>{$('[data-theme]').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');state.world.theme=b.dataset.theme;updateCreatorPreview()});
+$('[data-music]').forEach(b=>b.onclick=()=>{$('[data-music]').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');state.world.music=b.dataset.music;updateCreatorPreview()});
+['honoreeInput','dateInput','inviteInput'].forEach(id=>$('#'+id)?.addEventListener('input',updateCreatorPreview));
+updateCreatorPreview();
+$('#creatorUploadMusic').onclick=()=>$('#musicUploadInput').click();$('#musicUploadInput').onchange=async e=>{const f=e.target.files[0];if(!f)return;state.world.music='custom';state.world.customMusicName=f.name;$('#creatorMusicName').textContent=f.name;updateCreatorPreview();state.audio.customUrl=URL.createObjectURL(f);state.world.customMusicUrl='';let uploaded=false;if(window.PixelNet?.enabled){toast('正在把音乐上传到房间…');try{const up=await PixelNet.uploadBlob(f,f.name);state.world.customMusicUrl=up.url;uploaded=true;toast('音乐已上传，房间里的朋友都能听到')}catch(_){toast('上传失败，目前只有这台设备能播放')}}else toast('已经把这首歌带进房间了');if(state.roomCode&&state.screen==='world'){saveRoom();startMusic();openMusicDrawer()}else if(uploaded&&state.roomCode)saveRoom()};
 $('#continueCreateBtn').onclick=async()=>{state.world.honoree=$('#honoreeInput').value.trim()||'重要的人';state.world.date=$('#dateInput').value;state.world.invite=$('#inviteInput').value.trim()||'今晚，我们偷偷在这里等你。';state.roomCode=randomCode();state.mementos=[];state.notes=[];state.photos=[];state.activity=[];localStorage.setItem(roomKey(state.roomCode),JSON.stringify(state.world));localStorage.setItem(memoryKey(state.roomCode),JSON.stringify(currentMemory()));if(window.PixelNet?.enabled){try{await PixelNet.createRoom(state.roomCode,state.world,currentMemory());toast(`联网房间 ${state.roomCode} 已创建`)}catch(e){toast(`门牌号 ${state.roomCode} 已生成 · 当前使用本地模式`)}}else toast(`门牌号 ${state.roomCode} 已生成`);showScreen('avatarBuilder')};
 $('#joinCodeBtn').onclick=async()=>{const code=$('#joinCodeInput').value.trim().toUpperCase();if(code.length!==6)return toast('请输入 6 位门牌号');state.roomCode=code;const remote=await loadRoomRemote(code);if(window.PixelNet?.enabled&&!remote)return toast('没有找到这个联网房间，请检查邀请码或服务器地址');showScreen('avatarBuilder')};
 
