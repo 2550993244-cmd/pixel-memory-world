@@ -353,7 +353,7 @@
   function openFishing() {
     if (questState.editorOpen) return;
     const f = questState.fishing;
-    openModal('LAKESIDE FISHING · 湖边', '坐下来，真的钓一条像素鱼。', \`
+    openModal('LAKESIDE FISHING · 湖边', '坐下来，真的钓一条像素鱼。', `
       <div class="fishing-game">
         <div class="fishing-scene-mini" aria-label="像素湖面钓鱼场景">
           <span class="mini-water"><i></i><i></i><i></i></span>
@@ -380,10 +380,10 @@
           <b id="fishingStatus">湖里真的有鱼在游。先甩一杆。</b>
           <small id="fishingHint">咬钩后点一下进入收线；按住按钮让捕捉区追着鱼走。</small>
         </div>
-        <div class="fishing-stats"><span>甩杆 <b id="fishCasts">\${f.casts}</b></span><i></i><span>钓到 <b id="fishCatches">\${f.catches}</b></span></div>
+        <div class="fishing-stats"><span>甩杆 <b id="fishCasts">${f.casts}</b></span><i></i><span>钓到 <b id="fishCatches">${f.catches}</b></span></div>
         <button id="fishingAction" class="button primary full press">甩一杆 <span>↗</span></button>
         <button id="fishingLeave" class="button secondary full press">今天先坐到这里</button>
-      </div>\`);
+      </div>`);
 
     setTimeout(() => {
       const action=$('#fishingAction'),status=$('#fishingStatus'),hint=$('#fishingHint');
@@ -404,10 +404,10 @@
 
       const clearAll=()=>{clearTimeout(biteTimer);clearTimeout(approachTimer);clearTimeout(missTimer);cancelAnimationFrame(raf);raf=0;holding=false};
       const paintReel=()=>{
-        zone.style.top=\`\${zonePos*100}%\`;
-        zone.style.height=\`\${zoneHeight*100}%\`;
-        fishMarker.style.top=\`\${fishPos*100}%\`;
-        progressEl.style.width=\`\${Math.max(0,Math.min(1,progress))*100}%\`;
+        zone.style.top=`${zonePos*100}%`;
+        zone.style.height=`${zoneHeight*100}%`;
+        fishMarker.style.top=`${fishPos*100}%`;
+        progressEl.style.width=`${Math.max(0,Math.min(1,progress))*100}%`;
       };
       const reset=(copy='水面慢慢安静下来。还想再试一杆吗？')=>{
         clearAll();phase='idle';f.waiting=false;f.biting=false;
@@ -420,12 +420,12 @@
       const landCatch=()=>{
         clearAll();phase='caught';f.waiting=false;f.biting=false;f.catches++;
         scene.classList.remove('reeling','bite');scene.classList.add('caught');panel.classList.add('hidden');
-        caughtSprite.className=\`pixel-fish caught-fish \${hooked.cls}\`;
-        status.textContent=\`钓到了\${hooked.name}！它真的从水里跳出来了。\`;
+        caughtSprite.className=`pixel-fish caught-fish ${hooked.cls}`;
+        status.textContent=`钓到了${hooked.name}！它真的从水里跳出来了。`;
         hint.textContent='拍完“精神小鱼照”，又把它轻轻放回湖里。';
         $('#fishCatches').textContent=f.catches;action.disabled=true;
         fishingSound('catch');reaction(state.player.id,'🐟');
-        addActivity(\`\${state.player.name} 在湖边钓到了一条\${hooked.name}，又把它放回去了\`);
+        addActivity(`${state.player.name} 在湖边钓到了一条${hooked.name}，又把它放回去了`);
         setTimeout(()=>reset('水花散开了。还想再钓一条吗？'),1900);
       };
       const loseFish=()=>{
@@ -456,10 +456,10 @@
         clearTimeout(missTimer);phase='reel';f.biting=false;
         scene.classList.remove('bite','approach');scene.classList.add('reeling');panel.classList.remove('hidden');
         hooked=fishPool[Math.floor(Math.random()*fishPool.length)];
-        fishMarker.className=\`reel-fish-marker \${hooked.cls}\`;
+        fishMarker.className=`reel-fish-marker ${hooked.cls}`;
         fishPos=.45+Math.random()*.22;fishTarget=.2+Math.random()*.6;fishVel=0;targetClock=.45;
         zonePos=.52;zoneVel=0;progress=.38;lastFrame=0;reelStarted=performance.now();paintReel();
-        status.textContent=\`\${hooked.name}上钩了——别让它跑掉。\`;
+        status.textContent=`${hooked.name}上钩了——别让它跑掉。`;
         hint.textContent='按住“收线”让浅色捕捉区往上；松开会下落。让鱼尽量待在区域里。';
         action.disabled=false;action.textContent='按住收线';fishingSound('bite');
         raf=requestAnimationFrame(reelFrame);
