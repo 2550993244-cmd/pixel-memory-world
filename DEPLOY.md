@@ -249,3 +249,40 @@ WS    /ws?room=...&channel=...&player=...
 - 隐私和数据保留策略。
 
 这些属于产品上线阶段，不需要为了当前像素世界视觉迭代提前全部做完。
+
+
+---
+
+## 自定义域名
+
+如果不希望网址显示默认的 GitHub 用户名前缀，例如：
+
+~~~text
+https://USERNAME.github.io/pixel-memory-world/
+~~~
+
+可以给 GitHub Pages 绑定自己拥有的域名，例如：
+
+~~~text
+https://memory.example.com
+~~~
+
+在仓库中打开：
+
+~~~text
+Settings → Pages → Custom domain
+~~~
+
+填入自己的域名并保存，然后在域名服务商处配置 DNS。
+
+如果使用子域名（例如 `memory.example.com`），通常配置 CNAME 指向：
+
+~~~text
+USERNAME.github.io
+~~~
+
+如果使用根域名（例如 `example.com`），按 GitHub Pages 当前文档配置 A / AAAA 或 ALIAS / ANAME 记录。
+
+域名生效后建议开启 **Enforce HTTPS**。
+
+如果只是想让默认的 `USERNAME.github.io` 本身变得好看，也可以修改 GitHub 用户名，但这会同时影响 GitHub 账号地址和仓库 remote，通常不建议仅为了网站网址这么做。
