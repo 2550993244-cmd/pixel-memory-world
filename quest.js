@@ -436,6 +436,8 @@
 
   $('#questFishingSpot')?.addEventListener('click', e => {
     e.preventDefault();
+    const d = Math.hypot(questState.x - fishingSpot.x, questState.y - fishingSpot.y);
+    if (d >= fishingSpot.r) return toast('先走到湖边，靠近浮漂一点。');
     openFishing();
   });
 
