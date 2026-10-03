@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#f7f1e8" />
   <title>小小世界 · Pixel Memory V12</title>
-  <link rel="stylesheet" href="./styles.css?v=12.2" />
-  <link rel="stylesheet" href="./world.css?v=12.3" />
+  <link rel="stylesheet" href="./styles.css?v=12.4" />
+  <link rel="stylesheet" href="./world.css?v=12.4" />
   <link rel="stylesheet" href="./landing.css?v=12.3" />
 </head>
 <body>
@@ -199,26 +199,78 @@
       </section>
 
       <!-- AVATAR -->
-      <section id="avatarBuilder" class="screen flow-screen">
+      <section id="avatarBuilder" class="screen avatar-builder-screen">
         <div class="avatar-layout">
           <div class="avatar-stage pixel-frame">
-            <span class="eyebrow">YOU, IN PIXELS</span>
-            <div id="avatarPreview" class="avatar-preview hair-1 outfit-coral"><div class="hair"></div><div class="face"><i></i><i></i></div><div class="body"></div><div class="held">🎁</div></div>
-            <div class="avatar-shadow"></div>
-            <p>今晚，你想以什么样子出现？</p>
+            <div class="avatar-stage-head">
+              <span class="eyebrow">YOU, IN PIXELS</span>
+              <small>LIVE PREVIEW · 01</small>
+            </div>
+            <div class="avatar-stage-orbit" aria-hidden="true"><i></i><i></i><i></i></div>
+            <div class="avatar-preview-wrap">
+              <div id="avatarPreview" class="avatar-preview hair-1 outfit-coral"><div class="hair"></div><div class="face"><i></i><i></i></div><div class="body"></div><div class="held">🎁</div></div>
+              <div class="avatar-shadow"></div>
+            </div>
+            <div class="avatar-stage-copy">
+              <b>今晚，你想以什么样子出现？</b>
+              <p>发型、衣服和手里带着的小东西，会一起进入房间。</p>
+            </div>
+            <div class="avatar-stage-trail" aria-label="造型预览">
+              <span><i>01</i><b>做自己</b><small>先选一个顺眼的样子</small></span>
+              <span><i>02</i><b>去见朋友</b><small>名字会显示在小人头顶</small></span>
+              <span><i>03</i><b>留下痕迹</b><small>带着礼物去房间里逛逛</small></span>
+            </div>
           </div>
+
           <div class="avatar-controls pixel-frame">
-            <button class="text-link press-lite" data-go="landing">← 暂时离开</button>
-            <div class="section-head"><div><span>01</span><h3>给小人起个名字</h3></div></div>
-            <label class="field"><span>别人会在你头顶看到它</span><input id="playerNameInput" maxlength="10" placeholder="例如：小林"></label>
-            <label class="host-switch press-lite"><input id="hostToggle" type="checkbox"><span><i></i></span><div><b>我是今晚的主角 / 寿星</b><small>入场时会有一个小小的欢迎动画</small></div></label>
+            <div class="avatar-control-top">
+              <button class="text-link press-lite" data-go="landing">← 暂时离开</button>
+              <span>CHARACTER SETUP · 02</span>
+            </div>
 
-            <div class="section-head space-top"><div><span>02</span><h3>简单打扮一下</h3></div></div>
-            <div class="builder-row"><span>发型</span><div id="hairChoices" class="mini-choices"><button class="mini-choice selected press" data-hair="1">短发</button><button class="mini-choice press" data-hair="2">卷发</button><button class="mini-choice press" data-hair="3">长发</button></div></div>
-            <div class="builder-row"><span>衣服</span><div id="outfitChoices" class="swatches"><button class="swatch coral selected press" data-outfit="coral"></button><button class="swatch blue press" data-outfit="blue"></button><button class="swatch sage press" data-outfit="sage"></button><button class="swatch butter press" data-outfit="butter"></button></div></div>
-            <div class="builder-row"><span>带点什么</span><div id="itemChoices" class="mini-choices"><button class="mini-choice selected press" data-item="🎁">🎁</button><button class="mini-choice press" data-item="🌷">🌷</button><button class="mini-choice press" data-item="📷">📷</button><button class="mini-choice press" data-item="🎈">🎈</button></div></div>
+            <div class="avatar-name-block">
+              <div class="section-head"><div><span>01</span><h3>先告诉大家怎么叫你</h3></div></div>
+              <label class="field avatar-name-field"><span>这个名字会跟着你一起走</span><input id="playerNameInput" maxlength="10" placeholder="例如：小林"></label>
+              <label class="host-switch press-lite"><input id="hostToggle" type="checkbox"><span><i></i></span><div><b>我是今晚的主角 / 寿星</b><small>进门的时候，会收到一个小小的欢迎</small></div></label>
+            </div>
 
-            <button id="enterWorldBtn" class="button primary xl full press"><b>推开门，进去看看</b><span>→</span></button>
+            <div class="avatar-style-block">
+              <div class="section-head"><div><span>02</span><h3>沿着分支选一个喜欢的样子</h3></div><small>点亮你喜欢的节点</small></div>
+
+              <div class="builder-row branch-row hair-row">
+                <span>发型</span>
+                <div id="hairChoices" class="mini-choices branch-choices">
+                  <button class="mini-choice branch-choice selected press" data-hair="1"><i class="hair-choice-icon short"></i><b>短发</b><small>利落</small></button>
+                  <button class="mini-choice branch-choice press" data-hair="2"><i class="hair-choice-icon curl"></i><b>卷发</b><small>蓬松</small></button>
+                  <button class="mini-choice branch-choice press" data-hair="3"><i class="hair-choice-icon long"></i><b>长发</b><small>柔软</small></button>
+                </div>
+              </div>
+
+              <div class="builder-row branch-row outfit-row">
+                <span>衣服</span>
+                <div id="outfitChoices" class="swatches outfit-choices">
+                  <button class="swatch coral selected press" data-outfit="coral" aria-label="珊瑚红"><i></i><b>珊瑚</b></button>
+                  <button class="swatch blue press" data-outfit="blue" aria-label="湖水蓝"><i></i><b>湖蓝</b></button>
+                  <button class="swatch sage press" data-outfit="sage" aria-label="鼠尾草绿"><i></i><b>草绿</b></button>
+                  <button class="swatch butter press" data-outfit="butter" aria-label="奶油黄"><i></i><b>奶油</b></button>
+                </div>
+              </div>
+
+              <div class="builder-row branch-row item-row">
+                <span>带什么</span>
+                <div id="itemChoices" class="mini-choices branch-choices item-choices">
+                  <button class="mini-choice branch-choice selected press" data-item="🎁"><i>🎁</i><b>礼物</b></button>
+                  <button class="mini-choice branch-choice press" data-item="🌷"><i>🌷</i><b>一枝花</b></button>
+                  <button class="mini-choice branch-choice press" data-item="📷"><i>📷</i><b>相机</b></button>
+                  <button class="mini-choice branch-choice press" data-item="🎈"><i>🎈</i><b>气球</b></button>
+                </div>
+              </div>
+            </div>
+
+            <div class="avatar-enter-row">
+              <div><span>READY?</span><small>选好了就推门，大家会在里面看到这个你。</small></div>
+              <button id="enterWorldBtn" class="button primary xl press"><b>推开门，进去看看</b><span>→</span></button>
+            </div>
           </div>
         </div>
       </section>
@@ -318,6 +370,7 @@
             <div class="quest-path path-b"></div>
             <div class="quest-path path-c"></div>
             <div class="quest-pond"><i></i><i></i><i></i></div>
+            <button id="questFishingSpot" class="quest-fishing-spot press" type="button" aria-label="坐在湖边钓鱼"><i class="fishing-rod"></i><i class="fishing-line"></i><i class="fishing-float"></i><small>钓一会儿</small></button>
             <div class="quest-hill hill-a"></div><div class="quest-hill hill-b"></div>
             <div class="quest-tree tree-a"><i></i></div><div class="quest-tree tree-b"><i></i></div><div class="quest-tree tree-c"><i></i></div>
             <div class="quest-lamp lamp-a"></div><div class="quest-lamp lamp-b"></div>
@@ -446,9 +499,9 @@
     <div id="pressFx" class="press-fx-layer"></div>
   </div>
   <script src="./network.js?v=12"></script>
-  <script src="./app.js?v=12.2"></script>
+  <script src="./app.js?v=12.4"></script>
   <script src="./landing.js?v=12.3"></script>
-  <script src="./quest.js?v=12"></script>
+  <script src="./quest.js?v=12.4"></script>
   <script src="./scene-map.js?v=12"></script>
   <script src="./world.js?v=12.3"></script>
 </body>
