@@ -23,7 +23,7 @@ const { chromium } = require('playwright');
     };
   });
   if (!v13Styles.v13Script || !v13Styles.v13Css) throw new Error('V13 assets not loaded');
-  if (document.querySelector('.avatar-stage-trail')) throw new Error('obsolete avatar three-step trail still present');
+  if (await page.locator('.avatar-stage-trail').count()) throw new Error('obsolete avatar three-step trail still present');
   if (v13Styles.primaryRadius === '0px' || v13Styles.iconRadius === '0px') throw new Error('V13 rounded control styling missing');
 
   async function active(id) {
@@ -62,6 +62,17 @@ const { chromium } = require('playwright');
   await active('world');
   await page.waitForSelector('#playersLayer .player', { timeout: 5000 });
 
+  // V13.1 music drawer should be compact, readable and clickable.
+  await page.locator('#globalSoundBtn').click();
+  await page.waitForFunction(() => document.querySelector('#roomDrawer')?.classList.contains('drawer-music'));
+  if (!(await page.locator('.music-now').count())) throw new Error('V13.1 music now-playing block missing');
+  const trackFont = await page.locator('.track-button').first().evaluate(el => parseFloat(getComputedStyle(el).fontSize));
+  if (trackFont < 11) throw new Error('music track type is still too small');
+  await page.locator('#fxBtn').click();
+  await page.waitForFunction(() => document.querySelector('#roomDrawer')?.classList.contains('drawer-music'));
+  await page.locator('#closeRoomDrawer').click();
+  await page.waitForFunction(() => document.querySelector('#roomDrawer')?.classList.contains('hidden'));
+
   // Room controls: dock + settings should still be clickable after the visual rewrite.
   await page.locator('#worldSettingsBtn').click();
   await page.waitForSelector('#roomDrawer:not(.hidden)', { timeout: 3000 });
@@ -89,6 +100,8 @@ const { chromium } = require('playwright');
   })), errors);
   await active('quest');
   await page.waitForSelector('#questPlayerLayer .quest-player', { timeout: 5000 });
+  if (await page.locator('.quest-signpost,.pm-sign').count()) throw new Error('duplicate memory-road signs still visible');
+  if (!(await page.locator('#questFishingSpot').count())) throw new Error('fishing spot missing');
   await page.locator('#returnRoomBtn').click();
   await active('world');
 
