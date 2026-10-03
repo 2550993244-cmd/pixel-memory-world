@@ -10,6 +10,21 @@ const { chromium } = require('playwright');
   const base = 'http://127.0.0.1:8787';
   await page.goto(base, { waitUntil: 'networkidle' });
 
+  // V13 control language must be loaded.
+  const v13Styles = await page.evaluate(() => {
+    const primary = getComputedStyle(document.querySelector('#createWorldBtn'));
+    const icon = getComputedStyle(document.querySelector('#globalSoundBtn'));
+    return {
+      primaryRadius: primary.borderRadius,
+      primaryMinHeight: primary.minHeight,
+      iconRadius: icon.borderRadius,
+      v13Script: !!document.querySelector('script[src*="ui-v13.js"]'),
+      v13Css: !!document.querySelector('link[href*="controls-v13.css"]')
+    };
+  });
+  if (!v13Styles.v13Script || !v13Styles.v13Css) throw new Error('V13 assets not loaded');
+  if (v13Styles.primaryRadius === '0px' || v13Styles.iconRadius === '0px') throw new Error('V13 rounded control styling missing');
+
   async function active(id) {
     await page.waitForFunction(id => document.getElementById(id)?.classList.contains('active'), id);
   }
@@ -45,6 +60,16 @@ const { chromium } = require('playwright');
   await page.locator('#enterWorldBtn').click();
   await active('world');
   await page.waitForSelector('#playersLayer .player', { timeout: 5000 });
+
+  // Room controls: dock + settings should still be clickable after the visual rewrite.
+  await page.locator('#worldSettingsBtn').click();
+  await page.waitForSelector('#roomDrawer:not(.hidden)', { timeout: 3000 });
+  await page.locator('#closeRoomDrawer').click();
+  await page.waitForSelector('#roomDrawer.hidden', { timeout: 3000 });
+  await page.locator('[data-dock="talk"]').click();
+  await page.waitForSelector('#talkPopover:not(.hidden)', { timeout: 3000 });
+  await page.locator('[data-say="生日快乐 🎂"]').click();
+  await page.locator('[data-dock="talk"]').click();
 
   // Outside must open and return.
   console.log('DIAG before quest', await page.evaluate(() => ({
