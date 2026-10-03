@@ -216,31 +216,31 @@ openMusicDrawer = function(){
     ? (state.world.customMusicName||'自己的音乐')
     : (tracks.find(([k])=>k===state.world.music)?.[1]||'生日快乐 · 8-bit');
 
-  showDrawer('房间音乐',\`
+  showDrawer('房间音乐',`
     <div class="drawer-section music-panel">
       <div class="music-now">
-        <div class="music-disc \${state.audio.playing?'spinning':''}"><i></i></div>
+        <div class="music-disc ${state.audio.playing?'spinning':''}"><i></i></div>
         <div>
           <small>NOW PLAYING</small>
-          <b>\${escapeHTML(currentName)}</b>
-          <span>\${state.audio.playing?'正在和房间里的大家同步':'已经选好，点播放后全房间同步'}</span>
+          <b>${escapeHTML(currentName)}</b>
+          <span>${state.audio.playing?'正在和房间里的大家同步':'已经选好，点播放后全房间同步'}</span>
         </div>
       </div>
       <h4>选一首今晚的背景音乐</h4>
       <div class="music-track-list">
-        \${tracks.map(([k,n])=>\`<button class="track-button press \${state.world.music===k?'selected':''}" data-track="\${k}"><span>\${n}</span><b>\${state.world.music===k&&state.audio.playing?'PLAYING':'▶'}</b></button>\`).join('')}
-        <button id="drawerUploadTrack" class="track-button press \${state.world.music==='custom'?'selected':''}"><span>＋ 上传自己的音乐</span><b>\${escapeHTML(state.world.customMusicName||'FILE')}</b></button>
+        ${tracks.map(([k,n])=>`<button class="track-button press ${state.world.music===k?'selected':''}" data-track="${k}"><span>${n}</span><b>${state.world.music===k&&state.audio.playing?'PLAYING':'▶'}</b></button>`).join('')}
+        <button id="drawerUploadTrack" class="track-button press ${state.world.music==='custom'?'selected':''}"><span>＋ 上传自己的音乐</span><b>${escapeHTML(state.world.customMusicName||'FILE')}</b></button>
       </div>
       <div class="music-actions">
-        <button id="musicPlayBtn" class="button primary full press">\${state.audio.playing?'暂停房间音乐':'播放给所有人'}</button>
-        <button id="fxBtn" class="button secondary full press">触感音 \${state.audio.fx?'开':'关'}</button>
+        <button id="musicPlayBtn" class="button primary full press">${state.audio.playing?'暂停房间音乐':'播放给所有人'}</button>
+        <button id="fxBtn" class="button secondary full press">触感音 ${state.audio.fx?'开':'关'}</button>
       </div>
       <div class="volume-card">
-        <div class="volume-row"><span>我的音量</span><input id="volumeRange" type="range" min="0" max="100" value="\${Math.round(state.audio.volume*100)}"><b>\${Math.round(state.audio.volume*100)}%</b></div>
+        <div class="volume-row"><span>我的音量</span><input id="volumeRange" type="range" min="0" max="100" value="${Math.round(state.audio.volume*100)}"><b>${Math.round(state.audio.volume*100)}%</b></div>
         <small class="music-footnote">曲目与播放 / 暂停会同步给房间；音量只影响你自己的设备。</small>
       </div>
     </div>
-  \`,'music');
+  `,'music');
 
   setTimeout(()=>{
     $$('[data-track]').forEach(b=>b.onclick=()=>{
@@ -257,7 +257,7 @@ openMusicDrawer = function(){
       state.audio.volume=+e.target.value/100;
       if(state.audio.master) state.audio.master.gain.value=state.audio.volume;
       if(state.audio.element) state.audio.element.volume=state.audio.volume;
-      e.target.nextElementSibling.textContent=\`\${e.target.value}%\`;
+      e.target.nextElementSibling.textContent=`${e.target.value}%`;
     };
     if(fx) fx.onclick=()=>{state.audio.fx=!state.audio.fx;openMusicDrawer()};
   },0);
