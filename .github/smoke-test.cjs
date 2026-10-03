@@ -23,6 +23,7 @@ const { chromium } = require('playwright');
     };
   });
   if (!v13Styles.v13Script || !v13Styles.v13Css) throw new Error('V13 assets not loaded');
+  if (document.querySelector('.avatar-stage-trail')) throw new Error('obsolete avatar three-step trail still present');
   if (v13Styles.primaryRadius === '0px' || v13Styles.iconRadius === '0px') throw new Error('V13 rounded control styling missing');
 
   async function active(id) {
