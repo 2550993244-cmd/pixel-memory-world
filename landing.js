@@ -88,6 +88,22 @@
     revealTargets.slice(0,2).forEach(function(el){el.classList.add('is-visible')});
   });
 
+  // Memory collage has a very small depth shift so it still feels like paper, not a 3D card wall.
+  var memoryStrip=landing.querySelector('.memory-strip');
+  if(memoryStrip && !prefersReduce && !coarse){
+    memoryStrip.addEventListener('pointermove',function(e){
+      var r=memoryStrip.getBoundingClientRect();
+      var nx=(e.clientX-(r.left+r.width/2))/Math.max(r.width,1);
+      var ny=(e.clientY-(r.top+r.height/2))/Math.max(r.height,1);
+      memoryStrip.style.setProperty('--collage-x',(nx*5).toFixed(1)+'px');
+      memoryStrip.style.setProperty('--collage-y',(ny*3).toFixed(1)+'px');
+    });
+    memoryStrip.addEventListener('pointerleave',function(){
+      memoryStrip.style.setProperty('--collage-x','0px');
+      memoryStrip.style.setProperty('--collage-y','0px');
+    });
+  }
+
   // Give the preview a tiny ambient life even before the visitor rings the bell.
   if(room && !prefersReduce){
     var people=Array.from(room.querySelectorAll('.hero-person:not(.arrival)'));
