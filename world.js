@@ -106,12 +106,21 @@
   function ensureQuestScenery(){
     if(!questStage.querySelector('.pm-quest-terrain')){
       var terrain=document.createElement('div');
-      terrain.className='pm-quest-terrain pm-parallax-far';
-      trees.forEach(function(a){place(terrain,'pm-tree',a[0],a[1],a[2])});
-      rocks.forEach(function(a){place(terrain,'pm-rock',a[0],a[1])});
+      terrain.className='pm-quest-terrain';
+      trees.forEach(function(a){
+        var e=place(terrain,'pm-tree',a[0],a[1],a[2]);
+        e.style.zIndex=String(100+Math.round(a[1]));
+      });
+      rocks.forEach(function(a){
+        var e=place(terrain,'pm-rock',a[0],a[1]);
+        e.style.zIndex=String(99+Math.round(a[1]));
+      });
       grass.forEach(function(a){place(terrain,'pm-grass-tuft',a[0],a[1])});
       flowers.forEach(function(a){place(terrain,'pm-flower-patch',a[0],a[1])});
-      stumps.forEach(function(a){place(terrain,'pm-stump',a[0],a[1])});
+      stumps.forEach(function(a){
+        var e=place(terrain,'pm-stump',a[0],a[1]);
+        e.style.zIndex=String(99+Math.round(a[1]));
+      });
       var signPos=(scene&&Array.isArray(scene.sign))?[((scene.sign[0]+.5)/scene.cols)*100,((scene.sign[1]+.5)/scene.rows)*100]:[22,67];
       var sign=place(terrain,'pm-sign',signPos[0],signPos[1]); sign.textContent='回忆路';
       questStage.insertBefore(terrain,$('#questRouteLayer'));
