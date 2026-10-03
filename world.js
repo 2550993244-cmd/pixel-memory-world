@@ -101,6 +101,21 @@
       horizon.innerHTML='<i class="pm-hill-back"></i><i class="pm-hill-mid"></i><i class="pm-hill-front"></i><i class="pm-cloud c1"></i><i class="pm-cloud c2"></i><i class="pm-cloud c3"></i>';
       questStage.insertBefore(horizon,questStage.firstChild);
     }
+
+    if(!questStage.querySelector('.pm-bridge-svg')){
+      var bridge=document.createElementNS(ns,'svg');
+      bridge.setAttribute('class','pm-bridge-svg');
+      bridge.setAttribute('viewBox','0 0 100 100');
+      bridge.setAttribute('preserveAspectRatio','none');
+      bridge.setAttribute('aria-hidden','true');
+      bridge.innerHTML=
+        '<path class="pm-bridge-shadow" d="M34 66 Q44 54 56 59"/>'+
+        '<path class="pm-bridge-deck" d="M34 64 Q44 52.8 56 58"/>'+
+        '<path class="pm-bridge-planks" d="M34 64 Q44 52.8 56 58"/>'+
+        '<path class="pm-bridge-rail rail-a" d="M33.8 61.8 Q44 50.6 56.4 55.8"/>'+
+        '<path class="pm-bridge-rail rail-b" d="M34.2 66.5 Q44 55.6 55.8 60.5"/>';
+      questStage.appendChild(bridge);
+    }
   }
 
   function ensureQuestScenery(){
