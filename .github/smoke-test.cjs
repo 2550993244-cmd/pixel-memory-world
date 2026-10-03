@@ -19,8 +19,15 @@ const { chromium } = require('playwright');
   await active('creator');
 
   // Creator choices must remain clickable.
+  console.log('DIAG before occasion', await page.evaluate(() => ({
+    updateCreatorPreview: typeof updateCreatorPreview,
+    occasionOnclick: typeof document.querySelector('[data-occasion="纪念日"]')?.onclick,
+    createOnclick: typeof document.querySelector('#createWorldBtn')?.onclick
+  })), errors);
   await page.locator('[data-occasion="纪念日"]').click();
-  if (!(await page.locator('[data-occasion="纪念日"]').evaluate(el => el.classList.contains('selected')))) throw new Error('occasion choice did not select');
+  const occasionSelected = await page.locator('[data-occasion="纪念日"]').evaluate(el => el.classList.contains('selected'));
+  console.log('DIAG after occasion', { occasionSelected, errors });
+  if (!occasionSelected) throw new Error('occasion choice did not select | ' + errors.join(' | '));
   await page.locator('[data-theme="garden"]').click();
   if (!(await page.locator('[data-theme="garden"]').evaluate(el => el.classList.contains('selected')))) throw new Error('theme choice did not select');
   await page.locator('[data-music="starlight"]').click();
