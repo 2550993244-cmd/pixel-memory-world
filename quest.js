@@ -333,7 +333,7 @@
         ? '坐在湖边钓一会儿'
         : (questState.found.has(best.id) ? `再看看「${best.title}」` : '这里好像藏着一段回忆');
     } else prompt.classList.add('hidden');
-    $('.quest-memory').forEach(el => el.classList.toggle('near', best?.type !== 'fishing' && el.dataset.id === best?.id));
+    $$('.quest-memory').forEach(el => el.classList.toggle('near', best?.type !== 'fishing' && el.dataset.id === best?.id));
     $('#questFishingSpot')?.classList.toggle('near', best?.type === 'fishing');
   }
 
