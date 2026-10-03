@@ -1,0 +1,43 @@
+name: Core UI smoke test
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install server dependencies
+        working-directory: server
+        run: npm install
+
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.52.0
+          npx playwright install --with-deps chromium
+
+      - name: Start Pixel Memory server
+        run: |
+          node server/server.js > /tmp/pixel-server.log 2>&1 &
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:8787/api/health >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/pixel-server.log
+          exit 1
+
+      - name: Click through core flow
+        run: node .github/smoke-test.cjs
+
+      - name: Print server log on failure
+        if: failure()
+        run: cat /tmp/pixel-server.log || true
