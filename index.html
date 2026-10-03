@@ -7,7 +7,7 @@
   <title>小小世界 · Pixel Memory V12</title>
   <link rel="stylesheet" href="./styles.css?v=12.2" />
   <link rel="stylesheet" href="./world.css?v=12.2" />
-  <link rel="stylesheet" href="./landing.css?v=12" />
+  <link rel="stylesheet" href="./landing.css?v=12.3" />
 </head>
 <body>
   <div id="app">
@@ -43,8 +43,14 @@
               <button id="joinWorldBtn" class="button secondary xl press"><span>⌁</span><b>输入邀请码</b></button>
             </div>
             <div class="hero-proof">
-              <div class="mini-people"><span>羽</span><span>哲</span><span>夏</span><i>+9</i></div>
-              <small>NO SIGN-UP · SHARE ONE LINK · MEET INSIDE</small>
+              <div class="visitor-stack" aria-label="已经有朋友来到这里">
+                <span class="visitor-card visitor-coral"><i></i><b>羽</b></span>
+                <span class="visitor-card visitor-blue"><i></i><b>哲</b></span>
+                <span class="visitor-card visitor-sage"><i></i><b>夏</b></span>
+                <span class="visitor-card visitor-gold"><i></i><b>林</b></span>
+                <em class="visitor-more">+9</em>
+              </div>
+              <div class="visitor-copy"><b>朋友们已经先到了</b><small>ONE LINK · MEET INSIDE</small></div>
             </div>
             <div class="hero-side-note" aria-hidden="true">A SMALL WORLD FOR A DAY WORTH KEEPING</div>
           </div>
@@ -92,10 +98,44 @@
             <button class="button warm press" data-go="creator">为重要的人留一盏灯 <span>→</span></button>
           </div>
           <div class="memory-strip pixel-frame">
-            <div class="memory-tile photo-tile"><span>2019 · 05</span><b>第一次旅行</b></div>
-            <div class="memory-tile letter-tile"><span>✉</span><b>给 21 岁的你</b></div>
-            <div class="memory-tile flower-tile"><span>✦</span><b>那天买的花</b></div>
-            <div class="memory-tile ticket-tile"><span>⌁ 20:08</span><b>旧电影票</b></div>
+            <article class="memory-tile group-photo-tile" data-depth="1.2">
+              <div class="memory-photo-scene">
+                <div class="photo-sky"></div>
+                <div class="photo-hills"></div>
+                <div class="photo-ground"></div>
+                <div class="photo-string"><i></i><i></i><i></i><i></i><i></i></div>
+                <div class="photo-people" aria-hidden="true">
+                  <span class="photo-person pp1"><i></i><b></b></span>
+                  <span class="photo-person pp2"><i></i><b></b></span>
+                  <span class="photo-person pp3"><i></i><b></b></span>
+                  <span class="photo-person pp4"><i></i><b></b></span>
+                  <span class="photo-person pp5"><i></i><b></b></span>
+                </div>
+                <span class="photo-flash">✦</span>
+              </div>
+              <div class="photo-caption"><span>2024 · 06 · 19</span><b>那天，大家都在</b><small>五个人挤进一张照片里</small></div>
+            </article>
+
+            <article class="memory-tile letter-tile" data-depth=".7">
+              <div class="memory-paper">
+                <span class="paper-mark">✉</span>
+                <p>“以后再看到这张照片的时候，记得我们那天笑了很久。”</p>
+                <small>写给 21 岁的你</small>
+              </div>
+            </article>
+
+            <article class="memory-tile ticket-tile" data-depth=".85">
+              <div class="memory-ticket">
+                <span>JUN 19 · 20:08</span>
+                <b>ONE NIGHT ONLY</b>
+                <small>ROW 05 · SEAT 21</small>
+              </div>
+            </article>
+
+            <article class="memory-tile flower-tile" data-depth=".65">
+              <div class="pressed-flower" aria-hidden="true"><i></i><i></i><i></i><i></i><b></b></div>
+              <div class="flower-note"><span>✦</span><b>那天买的花</b><small>夹在旧本子里留下来了</small></div>
+            </article>
           </div>
         </section>
       </section>
@@ -407,7 +447,7 @@
   </div>
   <script src="./network.js?v=12"></script>
   <script src="./app.js?v=12.2"></script>
-  <script src="./landing.js?v=12"></script>
+  <script src="./landing.js?v=12.3"></script>
   <script src="./quest.js?v=12"></script>
   <script src="./scene-map.js?v=12"></script>
   <script src="./world.js?v=12.2"></script>
