@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#f7f1e8" />
   <title>小小世界 · Pixel Memory V12</title>
-  <link rel="stylesheet" href="./styles.css?v=12.4" />
+  <link rel="stylesheet" href="./styles.css?v=12.5" />
   <link rel="stylesheet" href="./world.css?v=12.4" />
   <link rel="stylesheet" href="./landing.css?v=12.3" />
 </head>
@@ -143,12 +143,39 @@
       <!-- CREATE -->
       <section id="creator" class="screen flow-screen">
         <div class="flow-wrap">
-          <aside class="flow-intro">
-            <button class="text-link press-lite" data-go="landing">← 回到首页</button>
-            <span class="eyebrow">CREATE A WORLD</span>
-            <h2>今晚，想为谁<br><strong>留一间小屋？</strong></h2>
-            <p>先把最重要的几件事选好。剩下的，让朋友们进来以后一起完成。</p>
-            <div class="step-dots"><b class="on">1</b><i></i><b>2</b><i></i><b>3</b></div>
+          <aside class="flow-intro creator-preview-panel">
+            <div class="creator-preview-top">
+              <button class="text-link press-lite" data-go="landing">← 回到首页</button>
+              <span class="eyebrow">CREATE A WORLD · 01</span>
+            </div>
+            <h2>先把今晚的<br><strong>气氛定下来。</strong></h2>
+            <p>右边每选一步，左边这间小屋都会跟着变化。先不用把所有细节想完，给朋友留一点后来一起填满的空间。</p>
+
+            <div id="creatorScenePreview" class="creator-scene-preview theme-cream">
+              <div class="creator-preview-sky"><i></i></div>
+              <div class="creator-preview-wall">
+                <i class="creator-preview-window"></i>
+                <i class="creator-preview-frame"></i>
+                <span class="creator-preview-lights"><i></i><i></i><i></i><i></i></span>
+              </div>
+              <div class="creator-preview-floor"></div>
+              <div class="creator-preview-rug"></div>
+              <div class="creator-preview-sofa"></div>
+              <div class="creator-preview-table"><i></i></div>
+              <div class="creator-preview-people"><i></i><i></i><i></i></div>
+              <div class="creator-preview-card">
+                <span id="creatorPreviewOccasion">生日</span>
+                <b id="creatorPreviewHonoree">重要的人</b>
+                <small id="creatorPreviewDate">今晚 · 20:08</small>
+                <p id="creatorPreviewInvite">今晚，我们偷偷在这里等你。</p>
+              </div>
+            </div>
+
+            <div class="creator-preview-meta">
+              <span><i>01</i><b>场景</b><small id="creatorPreviewTheme">暖灯客厅</small></span>
+              <span><i>02</i><b>音乐</b><small id="creatorPreviewMusic">生日快乐 · 8-bit</small></span>
+              <span><i>03</i><b>下一步</b><small>做一个自己的小人</small></span>
+            </div>
           </aside>
           <div class="flow-card pixel-frame">
             <div class="section-head"><div><span>01</span><h3>这是怎样的一天？</h3></div><small>选一个最接近的就好</small></div>
@@ -499,9 +526,9 @@
     <div id="pressFx" class="press-fx-layer"></div>
   </div>
   <script src="./network.js?v=12"></script>
-  <script src="./app.js?v=12.4"></script>
+  <script src="./app.js?v=12.5"></script>
   <script src="./landing.js?v=12.3"></script>
-  <script src="./quest.js?v=12.4"></script>
+  <script src="./quest.js?v=12.5"></script>
   <script src="./scene-map.js?v=12"></script>
   <script src="./world.js?v=12.4"></script>
 </body>
