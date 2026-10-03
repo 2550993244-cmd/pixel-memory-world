@@ -4,7 +4,7 @@ const { chromium } = require('playwright');
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   const errors = [];
-  page.on('pageerror', e => errors.push('PAGEERROR: ' + e.message));
+  page.on('pageerror', e => errors.push('PAGEERROR: ' + (e.stack || e.message)));
   page.on('console', m => { if (m.type() === 'error') errors.push('CONSOLE: ' + m.text()); });
 
   const base = 'http://127.0.0.1:8787';
@@ -47,7 +47,20 @@ const { chromium } = require('playwright');
   await page.waitForSelector('#playersLayer .player', { timeout: 5000 });
 
   // Outside must open and return.
+  console.log('DIAG before quest', await page.evaluate(() => ({
+    screen: typeof state !== 'undefined' ? state.screen : 'no-state',
+    openQuestFromRoom: typeof openQuestFromRoom,
+    questDoorExists: !!document.querySelector('#questDoor'),
+    questActive: document.querySelector('#quest')?.classList.contains('active')
+  })), errors);
   await page.locator('#questDoor').click();
+  await page.waitForTimeout(1200);
+  console.log('DIAG after quest click', await page.evaluate(() => ({
+    screen: typeof state !== 'undefined' ? state.screen : 'no-state',
+    questActive: document.querySelector('#quest')?.classList.contains('active'),
+    worldActive: document.querySelector('#world')?.classList.contains('active'),
+    transitionHidden: document.querySelector('#doorTransition')?.classList.contains('hidden')
+  })), errors);
   await active('quest');
   await page.waitForSelector('#questPlayerLayer .quest-player', { timeout: 5000 });
   await page.locator('#returnRoomBtn').click();
