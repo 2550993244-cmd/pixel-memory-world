@@ -172,8 +172,9 @@
   function questPlayerSnapshot() { return { id: state.player.id, name: state.player.name, hair: state.player.hair, outfit: state.player.outfit, item: state.player.item, action: state.player.action || 'idle', qx: questState.x, qy: questState.y }; }
 
   function questBroadcast(type, extra = {}) {
-    if(typeof isViewOnly==='function'&&isViewOnly()&&!['quest-hello','quest-player','quest-leave'].includes(type))return;
+    if(typeof isViewOnly==='function'&&isViewOnly())return false;
     questState.channel?.postMessage({ type, sender: state.player.id, ...extra });
+    return true;
   }
 
   // ---------- map rendering ----------
@@ -190,7 +191,8 @@
     const now = Date.now();
     for (const [id,p] of questState.players) if (id !== state.player.id && now - (p.lastSeen || 0) > 16000) questState.players.delete(id);
     layer.innerHTML = '';
-    $('#questOnlineCount') && ($('#questOnlineCount').textContent=questState.players.size);
+    const visibleQuestCount=Math.max(0,questState.players.size-((typeof isViewOnly==='function'&&isViewOnly()&&questState.players.has(state.player.id))?1:0));
+    $('#questOnlineCount') && ($('#questOnlineCount').textContent=visibleQuestCount);
     for (const [id,p] of questState.players) {
       const el = document.createElement('div');
       el.className = `quest-player hair-${p.hair} outfit-${p.outfit||'coral'}${id===state.player.id&&questState.walking ? ' walking' : ''}${id===state.player.id?' me':''}`;
