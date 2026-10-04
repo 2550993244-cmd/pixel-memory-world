@@ -4,7 +4,7 @@
 
 生日、纪念日、毕业、告别，或者任何值得留下来的日子，都可以被做成一间多人在线的小屋。大家用自己的像素小人进入同一个房间，在里面走动、聊天、放照片和纪念物、播放音乐、一起庆祝，再从门外进入一张回忆寻宝地图。
 
-**当前版本：V14.2 · collage & keepsake refinement**
+**当前版本：V14.3 · white embossed keepsake & completion pass**
 
 ---
 
@@ -41,6 +41,14 @@
 - 修复 V12.4 中 Outside 因历史存储声明被注释而无法进入的问题
 - 木桥改为弧形 SVG 桥面，不再是一条平直矩形
 - 删除地图里两个重复的“回忆路”路牌，让小路和地形自己承担引导
+
+### V14.3 白色压纹纪念卡与完成度收口
+- 纪念卡从 V14.2 的香槟金礼盒方向改为暖白色高级纸张：细纤维纸纹、低对比浅灰盲压花纹、无明显硬边框
+- 卡面继续采用中轴居中排版，但标题、祝福语、参与者、统计、留言和房间信息改为更克制的纸面层级
+- 参与者从“金属宝石”改为浅灰纸质压印徽章；统计区保留开放式分隔，不重新回到四个硬方框
+- PNG 导出与网页端完全同步为白色压纹纸卡，并加入程序化纸张纤维、四角压花和浅灰浮雕分隔
+- 补充移动端纪念卡滚动、底部操作、抽屉与编辑器高度控制，降低小屏幕上的“桌面面板挤压感”
+- 增加 Esc 关闭顶层弹层、纪念卡可访问性标记与 V14.3 smoke test，避免后续迭代把视觉和交互退回旧版
 
 ### V14.2 回忆拼贴与礼盒纪念卡
 - 修复首页右侧信件、票根、压花纪念物的文本被固定高度和重叠层级遮挡的问题
@@ -148,7 +156,7 @@ pixel-memory-world/
 │   │   ├── landing.css         # 首页视觉
 │   │   ├── world.css           # 室内 / Outside / 像素钓鱼
 │   │   ├── controls-v13.css    # V13 控件与交互视觉
-│   │   └── experience-v14.css  # V14 排版与体验层
+│   │   ├── experience-v14.css  # V14 排版与体验层\n│   │   └── completion-v14-3.css # V14.3 白色压纹卡与响应式收口
 │   └── js/
 │       ├── app.js              # 房间、人物、聊天、音乐、纪念物
 │       ├── network.js          # REST / WebSocket 联网
@@ -157,7 +165,7 @@ pixel-memory-world/
 │       ├── scene-map.js        # 室外网格场景数据
 │       ├── world.js            # 场景渲染、人物方向与深度
 │       ├── ui-v13.js           # V13 指针 / 按压微交互
-│       └── experience-v14.js    # V14 Lenis / GSAP / 光场 / Spotlight / Pixel dissolve
+│       ├── experience-v14.js    # V14 Lenis / GSAP / 光场 / Spotlight / Pixel dissolve\n│       └── completion-v14-3.js # V14.3 导出一致性与交互收口
 ├── server/
 │   ├── server.js
 │   ├── package.json
@@ -231,7 +239,7 @@ V14 正常返回：
 ~~~json
 {
   "ok": true,
-  "version": "v14.0"
+  "version": "v14.3"
 }
 ~~~
 
