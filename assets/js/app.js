@@ -25,7 +25,11 @@ function applyAccessMode(role=window.PixelNet?.getInviteRole?.(state.roomCode)||
   const viewerPill=document.querySelector('#viewerPillV15');
   if(viewerPill)viewerPill.classList.toggle('hidden',view||!(state.net.viewerCount>0));
   const viewerSelf=document.querySelector('#viewerAvatarBtnV15');
-  if(viewerSelf)viewerSelf.classList.toggle('hidden',!view);
+  const contributorSelf=!view&&!window.PixelNet?.hasOwnerToken?.(state.roomCode)&&state.accessRole==='contributor';
+  if(viewerSelf){
+    viewerSelf.classList.toggle('hidden',!(view||contributorSelf));
+    viewerSelf.title=view?'只改变你自己的小人':'换造型会实时给房间里的朋友看到';
+  }
   let badge=document.querySelector('#viewOnlyBadgeV15');
   if(view&&!badge){
     badge=document.createElement('div');badge.id='viewOnlyBadgeV15';badge.className='pm-view-only-badge';
@@ -236,13 +240,45 @@ function openViewerAvatarCustomizer(){
   },0);
 }
 
+function openContributorAvatarCustomizer(){
+  if(isViewOnly()||window.PixelNet?.hasOwnerToken?.(state.roomCode)||state.accessRole!=='contributor')return;
+  const hair=state.player.hair,outfit=state.player.outfit,item=state.player.item;
+  openModal('MY PIXEL SELF','我的小人 · 房间里的朋友会看到',
+    '<div class="viewer-avatar-editor-v15 contributor-live-editor-v15">'+
+      '<div class="viewer-avatar-note contributor-live-note-v15"><b>名字这次保持不变：'+escapeHTML(state.player.name)+'</b><span>你可以随时换发型、衣服和手持物。保存后大家会立刻看到，新造型也会记到下次入场。</span></div>'+
+      '<section><h4>发型</h4><div class="viewer-avatar-grid">'+
+        ['1','2','3'].map((v,i)=>'<button class="mini-choice press '+(v===hair?'selected':'')+'" data-contributor-hair="'+v+'"><b>'+['短发','卷发','长发'][i]+'</b></button>').join('')+
+      '</div></section>'+
+      '<section><h4>衣服</h4><div class="viewer-avatar-grid outfit">'+
+        ['coral','blue','sage','butter'].map((v,i)=>'<button class="swatch '+v+' press '+(v===outfit?'selected':'')+'" data-contributor-outfit="'+v+'"><i></i><b>'+['珊瑚','湖蓝','草绿','奶油'][i]+'</b></button>').join('')+
+      '</div></section>'+
+      '<section><h4>手里拿着</h4><div class="viewer-avatar-grid">'+
+        ['🎁','🌷','📷','🎈'].map(v=>'<button class="mini-choice press '+(v===item?'selected':'')+'" data-contributor-item="'+v+'"><i>'+v+'</i></button>').join('')+
+      '</div></section>'+
+      '<button id="saveContributorAvatarV15" class="button primary full press">保存造型，让大家看到</button>'+
+    '</div>');
+  setTimeout(()=>{
+    $$('[data-contributor-hair]').forEach(b=>b.onclick=()=>{$$('[data-contributor-hair]').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');state.player.hair=b.dataset.contributorHair});
+    $$('[data-contributor-outfit]').forEach(b=>b.onclick=()=>{$$('[data-contributor-outfit]').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');state.player.outfit=b.dataset.contributorOutfit});
+    $$('[data-contributor-item]').forEach(b=>b.onclick=()=>{$$('[data-contributor-item]').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');state.player.item=b.dataset.contributorItem});
+    $('#saveContributorAvatarV15').onclick=()=>{
+      saveContributorProfile();
+      state.players.set(state.player.id,{...state.player,lastSeen:Date.now()});
+      renderPlayers();
+      broadcast('state');
+      closeModal();
+      toast('新造型已经同步给房间里的朋友');
+    };
+  },0);
+}
+
 // avatar
 $$('[data-hair]').forEach(b=>b.onclick=()=>{$$('[data-hair]').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');state.player.hair=b.dataset.hair;renderAvatar()});
 $$('[data-outfit]').forEach(b=>b.onclick=()=>{$$('[data-outfit]').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');state.player.outfit=b.dataset.outfit;renderAvatar()});
 $$('[data-item]').forEach(b=>b.onclick=()=>{$$('[data-item]').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');state.player.item=b.dataset.item;renderAvatar()});
 function renderAvatar(){const p=$('#avatarPreview');p.className=`avatar-preview hair-${state.player.hair} outfit-${state.player.outfit}`;$('.held',p).textContent=state.player.item}renderAvatar();
 $('#enterWorldBtn').onclick=()=>{ensureAudio();state.audio.ctx?.resume?.().catch(()=>{});state.player.name=$('#playerNameInput').value.trim()||'朋友';state.player.host=$('#hostToggle').checked;state.player.x=50+Math.random()*8-4;state.player.y=79+Math.random()*4-2;state.player.celebrated=false;saveContributorProfile();enterWorld()};
-$('#viewerAvatarBtnV15')?.addEventListener('click',openViewerAvatarCustomizer);
+$('#viewerAvatarBtnV15')?.addEventListener('click',()=>isViewOnly()?openViewerAvatarCustomizer():openContributorAvatarCustomizer());
 
 // room network
 function setupChannel(){if(state.channel)state.channel.close();state.channel=window.PixelNet?PixelNet.createChannel(`pixel-memory-live-${state.roomCode}`,state.roomCode,state.player.id):(('BroadcastChannel'in window)?new BroadcastChannel(`pixel-memory-live-${state.roomCode}`):null);if(!state.channel)return;state.channel.onmessage=e=>{const m=e.data;if(!m)return;if(m.type==='room-archived'){const code=m.room||state.roomCode;try{state.channel?.close()}catch(_){}showScreen('landing');if(PixelNet?.hasOwnerToken?.(code))PixelRetention?.showArchivedRoom?.({code,meta:m.meta||{}});else PixelRetention?.showGuestArchived?.(code,m.meta||{});return}if(m.type==='room-deleted'){const code=m.room||state.roomCode;try{state.channel?.close()}catch(_){}try{localStorage.removeItem(roomKey(code));localStorage.removeItem(memoryKey(code));PixelNet?.saveOwnerToken?.(code,'');PixelNet?.saveInviteToken?.(code,'')}catch(_){}showScreen('landing');openModal('WORLD DELETED','这个世界已经被永久删除','<div class="retention-panel-v15"><div class="retention-archive-card guest"><b>这里已经没有可恢复的房间了</b><span>房主执行了永久删除，原门牌号不能再加入。</span></div></div>');return}if(m.type==='invite-rotated'||m.type==='view-invite-rotated'){const code=m.room||state.roomCode;const rotatedRole=m.type==='view-invite-rotated'?'viewer':'contributor';try{state.channel?.close()}catch(_){}if(PixelNet?.hasOwnerToken?.(code)){if(PixelInvite?.rotatingRole!==rotatedRole){PixelNet?.clearInviteToken?.(code,rotatedRole);toast((rotatedRole==='viewer'?'只看链接':'参与链接')+'已在其他设备更新')}return}if(PixelNet?.getInviteRole?.(code)!==rotatedRole)return;PixelNet?.clearInviteToken?.(code,rotatedRole);showScreen('landing');openModal('INVITE EXPIRED','这个邀请链接已经失效','<div class="invite-panel-v15"><div class="invite-lock-card"><b>房主更换了秘密邀请链接</b><span>请向房主获取新的完整邀请链接后再进入。</span></div></div>');return}if(m.type==='pong'&&m.t){state.net.latency=Math.max(0,Date.now()-m.t);renderNetworkStatus();return}if(m.type==='viewer-count'){state.net.viewerCount=Math.max(0,Number(m.count)||0);const vc=$('#viewerCountV15');if(vc)vc.textContent=state.net.viewerCount;const vp=$('#viewerPillV15');if(vp)vp.classList.toggle('hidden',isViewOnly()||state.net.viewerCount<1);renderNetworkStatus();return}if(m.sender===state.player.id)return;if(['hello','state','move','celebrate'].includes(m.type)&&m.player){state.players.set(m.player.id,{...m.player,lastSeen:Date.now()});if(m.type==='hello')broadcast('state');renderPlayers();renderCelebrateStatus()}if(m.type==='chat'&&m.player){state.players.set(m.player.id,{...m.player,lastSeen:Date.now()});renderPlayers();bubble(m.player.id,m.text)}if(m.type==='voice'&&m.player){state.players.set(m.player.id,{...m.player,lastSeen:Date.now()});renderPlayers();bubble(m.player.id,'🎙️ 留了一段声音');if(m.url)showVoiceToast(m.player.name,m.url)}if(m.type==='reaction'&&m.player){state.players.set(m.player.id,{...m.player,lastSeen:Date.now()});renderPlayers();reaction(m.player.id,m.emoji)}if(m.type==='bump'){bumpPlayer(m.target)}if(m.type==='room-snapshot'||m.type==='memory'){if(m.accessRole)applyAccessMode(m.accessRole);if(m.world)state.world={...state.world,...m.world};if(m.memory){state.mementos=m.memory.mementos||[];state.notes=m.memory.notes||[];state.photos=m.memory.photos||[];state.activity=m.memory.activity||[];localStorage.setItem(memoryKey(state.roomCode),JSON.stringify(currentMemory()))}if(m.music)state.audio.pendingSync=m.music;applyBackdrop();renderMementos();if(m.music?.playing)setTimeout(()=>applyMusicSync(m.music),100)}if(m.type==='memory-op'&&m.op){applyMemoryOp(m.op);renderMementos()}if(m.type==='world-patch'&&m.patch){state.world={...state.world,...m.patch};localStorage.setItem(roomKey(state.roomCode),JSON.stringify(state.world));applyBackdrop()}if(m.type==='music-sync'&&m.music)applyMusicSync(m.music);if(m.type==='leave'&&m.player){state.players.delete(m.player.id);renderPlayers();renderCelebrateStatus()}};setTimeout(()=>sendPing(),500)}
