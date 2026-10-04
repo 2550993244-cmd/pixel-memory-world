@@ -565,7 +565,7 @@ The asymmetry is intentional: **viewer = open and explore immediately; contribut
 
 ## D011 · Returning contributor identity
 
-**Status:** needs owner decision  
+**Status:** decided — A · Remember and prefill, but still show the full builder  
 **Blocks:** whether repeat contributors must rebuild their character each visit, local contributor-profile persistence, how much friction remains after the first visit  
 **Does not block:** the full contributor builder itself, viewer fast entry, authorship credentials, room permissions or recovery keys
 
@@ -602,8 +602,50 @@ The next question is how much of the **visible contributor profile** should be r
 
 **Tradeoff:** weakens the D010 rule and makes “first visit” vs “return visit” behavior less predictable.
 
+### Decision
+
+Selected **A · Remember and prefill, but still show the full builder**.
+
+Implemented in V15.11:
+- contributor name, hair, outfit and held item are stored locally under the persistent actor identity
+- returning contributors still stop on the complete builder
+- prior choices are prefilled and visibly selected
+- the identity notice changes to “这台设备记得你” so the remembered state is explicit
+- nothing is auto-broadcast until the contributor presses the final enter button
+- viewer local profiles remain completely separate
+- owner / creator onboarding does not consume contributor profile state
+
+This preserves the entry ritual while making repeat visits continuous.
+
+
+---
+
+## D012 · In-room contributor avatar editing
+
+**Status:** needs owner decision  
+**Blocks:** whether a visible contributor can change their name / look without leaving and re-entering  
+**Does not block:** returning-profile prefill, authorship credentials, viewer customization or room permissions
+
+V15.11 remembers a contributor between visits, but once that contributor is already inside the room, their visible identity is effectively fixed until the next entry.
+
+### A · Allow in-room appearance editing, keep name stable — recommended
+
+Add a “我的小人” control for contributors too. Hair, outfit and held item can change live and broadcast to the room; the authored display name stays fixed for the current visit.
+
+**Why:** people can play with their look without making authorship confusing.
+
+### B · Allow full in-room identity editing
+
+Name, hair, outfit and held item can all change live.
+
+**Tradeoff:** old messages and memories may show one name while the current avatar shows another, which weakens social continuity.
+
+### C · Keep contributor identity fixed for the whole visit
+
+No in-room editor. To change anything, leave and re-enter through the builder.
+
+**Tradeoff:** strongest ceremony, but unnecessarily rigid for cosmetic changes.
+
 ### Default recommendation
 
-Choose **A · Remember and prefill, but still show the full builder**.
-
-It preserves the meaning of contributor entry while making the site feel like it remembers you.
+Choose **A**. Let appearance be playful and live, while keeping the current visit's name stable so authored memories remain easy to follow.
