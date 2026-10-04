@@ -226,7 +226,8 @@
     const path = $('#questRoutePath');
     if (!path) return;
     const revealed = questState.editorOpen ? ordered : ordered.filter(i => questState.found.has(i.id) || i.id === next?.id);
-    const pts = [{ x: 9, y: 82 }, ...revealed.map(i => ({ x: i.x, y: i.y }))];
+    const spawn=window.PixelMapRuntime?.spawn?.()||{x:9,y:82};
+    const pts = [{ x: spawn.x, y: spawn.y }, ...revealed.map(i => ({ x: i.x, y: i.y }))];
     if (pts.length < 2) { path.setAttribute('d', ''); path.classList.remove('route-alive'); return; }
     let d = `M ${pts[0].x} ${pts[0].y}`;
     for (let i = 1; i < pts.length; i++) { const a = pts[i - 1], b = pts[i], mx = (a.x + b.x) / 2; d += ` Q ${mx} ${a.y - 3 + (i % 2 ? -2 : 2)} ${b.x} ${b.y}`; }
@@ -694,6 +695,12 @@
   }
 
   // Existing memories stay editable: in edit mode, drag a treasure and the route redraws live.
+  function questPointerPercent(e){
+    const viaCamera=window.PixelCameraRuntime?.screenToWorldPercent?.(e.clientX,e.clientY);
+    if(viaCamera)return viaCamera;
+    const r=questStage.getBoundingClientRect();
+    return {x:(e.clientX-r.left)/r.width*100,y:(e.clientY-r.top)/r.height*100};
+  }
   let dragItem=null;
   questStage?.addEventListener('pointerdown', e => {
     if (!questState.editorOpen || questState.placing) return;
@@ -707,9 +714,9 @@
   });
   questStage?.addEventListener('pointermove', e => {
     if(!dragItem)return;
-    const r=questStage.getBoundingClientRect();
-    const x=Math.max(7,Math.min(95,(e.clientX-r.left)/r.width*100));
-    const y=Math.max(11,Math.min(91,(e.clientY-r.top)/r.height*100));
+    const p=questPointerPercent(e);
+    const x=Math.max(7,Math.min(95,p.x));
+    const y=Math.max(11,Math.min(91,p.y));
     if(questObstacle(x,y))return;
     dragItem.x=x;dragItem.y=y;
     renderQuestItems();
@@ -781,9 +788,9 @@
   questStage?.addEventListener('click', e => {
     if (!questState.placing) return;
     if (e.target.closest('#questReturnDoor')) return;
-    const r=questStage.getBoundingClientRect();
-    const x=Math.max(7,Math.min(95,(e.clientX-r.left)/r.width*100));
-    const y=Math.max(11,Math.min(91,(e.clientY-r.top)/r.height*100));
+    const p=questPointerPercent(e);
+    const x=Math.max(7,Math.min(95,p.x));
+    const y=Math.max(11,Math.min(91,p.y));
     if (questObstacle(x,y)) return toast('那里被水塘或小山挡住了，换个位置藏。');
     const title=$('#questMemoryTitle').value.trim()||questState.selectedAsset.label;
     const text=$('#questMemoryText').value.trim()||'看到它的时候，希望你会想起那一天。';
