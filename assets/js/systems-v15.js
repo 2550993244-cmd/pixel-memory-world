@@ -351,7 +351,7 @@
 
   function markEditableMementos(){
     if(!editor.active)return;
-    $('#mementoLayer .memento').forEach(el=>{
+    $$('#mementoLayer .memento').forEach(el=>{
       el.dataset.curatableMemento=el.dataset.id||'';
       el.setAttribute('tabindex','0');
       const m=state.mementos.find(x=>x.id===el.dataset.id);
@@ -443,8 +443,8 @@
     editor.drag=null;
     document.body.classList.remove('pm-room-editing-v15');
     $('.pm-room-editor-toolbar-v15')?.remove();
-    $('[data-room-object-v15]').forEach(el=>el.removeAttribute('tabindex'));
-    $('[data-curatable-memento]').forEach(el=>{el.removeAttribute('tabindex');delete el.dataset.curatableMemento});
+    $$('[data-room-object-v15]').forEach(el=>el.removeAttribute('tabindex'));
+    $$('[data-curatable-memento]').forEach(el=>{el.removeAttribute('tabindex');delete el.dataset.curatableMemento});
     persistRoomLayout();
     $('#worldStage')?.focus();
   }
