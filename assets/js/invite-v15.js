@@ -1,4 +1,4 @@
-/* Pixel Memory World · V15.10 ceremonial contributor entry + instant spectators */
+/* Pixel Memory World · V15.11 returning contributor profiles + contributor ceremony */
 (() => {
   const $=(s,r=document)=>r.querySelector(s);
 
@@ -177,7 +177,7 @@
   },0);
 
   const apiState={
-    version:'15.10',
+    version:'15.11',
     rotatingRole:'',
     tokenFromText,
     ensureToken,
