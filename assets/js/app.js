@@ -185,8 +185,96 @@ $('#closeCelebration').onclick=()=>{$('#celebrationOverlay').classList.add('hidd
 // keepsake
 function openKeepsake(){const ps=[...state.players.values()];$('#keepsakeDate').textContent=state.world.date?new Date(`${state.world.date}T00:00`).toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric'}):new Date().toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric'});$('#keepsakeTitle').textContent=`${state.world.honoree}的${state.world.occasion}`;$('#keepsakeQuote').textContent=`“${state.world.invite}”`;$('#keepsakePeople').innerHTML=ps.map(p=>`<span>${escapeHTML(p.name.slice(0,2))}</span>`).join('');$('#keepVisitors').textContent=ps.length;$('#keepNotes').textContent=state.notes.length;$('#keepMementos').textContent=state.mementos.length;$('#keepPhotos').textContent=state.photos.length;$('#keepLastLine').textContent=state.notes.length?`“${state.notes[state.notes.length-1].text}” — ${state.notes[state.notes.length-1].by}`:'这里还在等第一句话。';$('#keepCode').textContent=`ROOM · ${state.roomCode}`;$('#keepsakeOverlay').classList.remove('hidden');$('#keepsakeOverlay').setAttribute('aria-hidden','false')}$$('[data-close-keepsake]').forEach(x=>x.onclick=()=>$('#keepsakeOverlay').classList.add('hidden'));
 $('#copyKeepsakeInvite').onclick=$('#copyInviteBtn').onclick=async()=>{const u=`${location.origin}${location.pathname}?room=${state.roomCode}`,t=`来我的小小世界吧｜门牌号 ${state.roomCode}\n${u}`;try{await navigator.clipboard.writeText(t);toast('邀请链接和门牌号已复制')}catch(e){toast(`门牌号：${state.roomCode}`)}};
-$('#saveKeepsakeBtn').onclick=()=>{const c=document.createElement('canvas');c.width=1080;c.height=1350;const g=c.getContext('2d');g.fillStyle='#fff3e5';g.fillRect(0,0,c.width,c.height);g.fillStyle='#f3c969';g.fillRect(760,0,320,260);g.fillStyle='#9a705d';g.font='bold 28px monospace';g.fillText('PIXEL MEMORY',70,90);g.font='bold 62px sans-serif';g.fillStyle='#554841';g.fillText(`${state.world.honoree}的${state.world.occasion}`,70,240);g.font='28px sans-serif';g.fillStyle='#8c7d73';wrapText(g,`“${state.world.invite}”`,70,315,900,45);g.fillStyle='#e98f92';g.fillRect(70,470,940,4);const stats=[['来过',state.players.size],['留言',state.notes.length],['纪念物',state.mementos.length],['合影',state.photos.length]];stats.forEach((s,i)=>{const x=90+i*235;g.fillStyle='#554841';g.font='bold 58px monospace';g.fillText(String(s[1]),x,620);g.fillStyle='#8c7d73';g.font='24px sans-serif';g.fillText(s[0],x,660)});g.fillStyle='#f0dfcf';g.fillRect(70,760,940,250);g.fillStyle='#554841';g.font='28px sans-serif';wrapText(g,state.notes.length?`“${state.notes[state.notes.length-1].text}” — ${state.notes[state.notes.length-1].by}`:'这里还在等第一句话。',105,830,860,46);g.fillStyle='#8c7d73';g.font='22px monospace';g.fillText(`ROOM · ${state.roomCode}`,70,1260);const a=document.createElement('a');a.download=`pixel-memory-${state.roomCode}.png`;a.href=c.toDataURL('image/png');a.click();toast('纪念卡已经生成')};
+$('#saveKeepsakeBtn').onclick=()=>{
+  const c=document.createElement('canvas');
+  c.width=1080;c.height=1350;
+  const g=c.getContext('2d');
+  const W=c.width,H=c.height;
+  g.clearRect(0,0,W,H);
+
+  const card={x:58,y:60,w:964,h:1230,r:58};
+  g.save();
+  g.shadowColor='rgba(59,39,17,.28)';
+  g.shadowBlur=46;g.shadowOffsetY=28;
+  g.beginPath();g.roundRect(card.x,card.y,card.w,card.h,card.r);
+  const bg=g.createLinearGradient(card.x,card.y,card.x+card.w,card.y+card.h);
+  bg.addColorStop(0,'#f4dfad');bg.addColorStop(.46,'#d1ab66');bg.addColorStop(1,'#a77b3f');
+  g.fillStyle=bg;g.fill();g.restore();
+
+  g.save();
+  g.beginPath();g.roundRect(card.x,card.y,card.w,card.h,card.r);g.clip();
+  g.strokeStyle='rgba(84,57,24,.075)';g.lineWidth=1;
+  for(let d=-H;d<W+H;d+=28){g.beginPath();g.moveTo(d,card.y);g.lineTo(d-H,card.y+card.h);g.stroke()}
+  g.strokeStyle='rgba(255,250,226,.10)';
+  for(let d=0;d<W+H;d+=38){g.beginPath();g.moveTo(d,card.y);g.lineTo(d+H,card.y+card.h);g.stroke()}
+  g.fillStyle='rgba(255,244,201,.13)';g.fillRect(W/2-32,card.y,64,card.h);
+  g.fillStyle='rgba(91,62,25,.055)';g.fillRect(card.x,H/2-24,card.w,48);
+  const shine=g.createRadialGradient(350,190,10,350,190,420);
+  shine.addColorStop(0,'rgba(255,255,255,.44)');shine.addColorStop(1,'rgba(255,255,255,0)');
+  g.fillStyle=shine;g.fillRect(card.x,card.y,card.w,560);g.restore();
+
+  g.strokeStyle='rgba(102,70,29,.52)';g.lineWidth=3;
+  g.beginPath();g.roundRect(card.x,card.y,card.w,card.h,card.r);g.stroke();
+  g.strokeStyle='rgba(255,247,213,.65)';g.lineWidth=2;
+  g.beginPath();g.roundRect(card.x+22,card.y+22,card.w-44,card.h-44,38);g.stroke();
+
+  const med=g.createRadialGradient(W/2-10,128,3,W/2,142,48);
+  med.addColorStop(0,'#fff2bd');med.addColorStop(.45,'#deb35d');med.addColorStop(.7,'#8d672e');med.addColorStop(1,'#ddb25b');
+  g.fillStyle=med;g.beginPath();g.arc(W/2,142,42,0,Math.PI*2);g.fill();
+  g.fillStyle='#65471e';g.font='30px Georgia';g.textAlign='center';g.textBaseline='middle';g.fillText('✦',W/2,144);
+
+  const centerText=(txt,y,font,color='#493820')=>{g.textAlign='center';g.textBaseline='alphabetic';g.font=font;g.fillStyle=color;g.fillText(txt,W/2,y)};
+  centerText('A NIGHT TO REMEMBER',235,'600 22px monospace','#72582f');
+  const date=state.world.date?new Date(state.world.date+'T00:00').toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric'}):new Date().toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric'});
+  centerText(date,282,'500 22px sans-serif','#705a3b');
+  centerText(state.world.honoree+'的'+state.world.occasion,390,'700 64px "PingFang SC","Microsoft YaHei",sans-serif','#3f3020');
+  centerText('◆',438,'16px Georgia','#795723');
+
+  g.font='28px "Songti SC","STSong",serif';g.fillStyle='#58452e';g.textAlign='center';
+  wrapTextCentered(g,'“'+state.world.invite+'”',W/2,495,760,44);
+
+  const people=[...state.players.values()],gemCount=Math.min(people.length,8),gemGap=54,gemStart=W/2-((gemCount-1)*gemGap)/2;
+  people.slice(0,8).forEach((p,i)=>{
+    const x=gemStart+i*gemGap,y=595;
+    const gr=g.createRadialGradient(x-7,y-8,2,x,y,22);
+    gr.addColorStop(0,'#fff2c4');gr.addColorStop(.45,'#d2a558');gr.addColorStop(1,'#805b29');
+    g.fillStyle=gr;g.beginPath();g.arc(x,y,21,0,Math.PI*2);g.fill();
+    g.strokeStyle='rgba(255,247,218,.7)';g.lineWidth=2;g.stroke();
+    g.fillStyle='#3f2e1b';g.font='700 14px sans-serif';g.textAlign='center';g.textBaseline='middle';
+    g.fillText((p.name||'友').slice(0,2),x,y+1);
+  });
+
+  const stats=[['来过',state.players.size],['留言',state.notes.length],['纪念物',state.mementos.length],['合影',state.photos.length]];
+  const sy=715;
+  g.strokeStyle='rgba(92,63,26,.26)';g.lineWidth=1;
+  g.beginPath();g.moveTo(190,sy-58);g.lineTo(890,sy-58);g.stroke();
+  g.beginPath();g.moveTo(190,sy+80);g.lineTo(890,sy+80);g.stroke();
+  stats.forEach((s,i)=>{
+    const x=225+i*210;
+    if(i>0){g.strokeStyle='rgba(91,63,27,.16)';g.beginPath();g.moveTo(x-105,sy-30);g.lineTo(x-105,sy+52);g.stroke()}
+    g.textAlign='center';g.textBaseline='alphabetic';g.fillStyle='#43311c';g.font='700 48px Georgia';g.fillText(String(s[1]),x,sy);
+    g.fillStyle='#70593b';g.font='500 20px sans-serif';g.fillText(s[0],x,sy+43);
+  });
+
+  g.fillStyle='rgba(255,246,215,.22)';g.strokeStyle='rgba(255,247,216,.62)';g.lineWidth=2;
+  g.beginPath();g.roundRect(170,855,740,128,64);g.fill();g.stroke();
+  g.font='26px "Songti SC","STSong",serif';g.fillStyle='#4c3923';g.textAlign='center';
+  const last=state.notes.length?'“'+state.notes[state.notes.length-1].text+'” — '+state.notes[state.notes.length-1].by:'这里还在等第一句话。';
+  wrapTextCentered(g,last,W/2,910,650,38);
+
+  centerText('◇',1040,'18px Georgia','#765423');
+  centerText('ROOM · '+state.roomCode,1135,'500 20px monospace','#70583a');
+  centerText('小小世界 · PIXEL MEMORY',1180,'500 18px sans-serif','#70583a');
+  g.strokeStyle='rgba(99,69,30,.24)';g.lineWidth=1;g.beginPath();g.moveTo(310,1218);g.lineTo(770,1218);g.stroke();
+  centerText('✦',1225,'16px Georgia','#785520');
+
+  const a=document.createElement('a');
+  a.download='pixel-memory-'+state.roomCode+'.png';
+  a.href=c.toDataURL('image/png');a.click();
+  toast('礼盒纪念卡已经生成');
+};
 function wrapText(g,t,x,y,w,h){let line='';for(const ch of t){const test=line+ch;if(g.measureText(test).width>w){g.fillText(line,x,y);line=ch;y+=h}else line=test}g.fillText(line,x,y)}
+function wrapTextCentered(g,t,x,y,w,h){let line='';const lines=[];for(const ch of t){const test=line+ch;if(g.measureText(test).width>w&&line){lines.push(line);line=ch}else line=test}if(line)lines.push(line);lines.forEach((ln,i)=>g.fillText(ln,x,y+i*h))}
 
 $('#leaveWorldBtn').onclick=()=>{broadcast('leave');stopMusic();state.channel?.close();state.channel=null;showScreen('landing')};
 
