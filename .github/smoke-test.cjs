@@ -426,8 +426,9 @@ const { chromium } = require('playwright');
   if(!contributorVisibleAudit||contributorVisibleAudit.hair!=='3'||contributorVisibleAudit.outfit!=='butter'||contributorVisibleAudit.item!=='🎈'||!contributorVisibleAudit.actorId) {
     throw new Error('V15.10 contributor visible identity did not propagate '+JSON.stringify(contributorVisibleAudit));
   }
-  await contributorPage.close();
+  await contributorPage.evaluate(()=>broadcast('leave'));
   await page.waitForFunction(()=>![...state.players.values()].some(p=>p.name==='参与者测试'),null,{timeout:5000});
+  await contributorPage.close();
   console.log('V15_10_CONTRIBUTOR_ENTRY_AUDIT',{entry:contributorEntryAudit,visible:contributorVisibleAudit,errors:contributorErrors});
   if(contributorErrors.length)throw new Error('V15.10 contributor page errors '+JSON.stringify(contributorErrors));
 
