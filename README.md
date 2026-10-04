@@ -4,7 +4,7 @@
 
 生日、纪念日、毕业、告别，或者任何值得留下来的日子，都可以被做成一间多人在线的小屋。大家用自己的像素小人进入同一个房间，在里面走动、聊天、放照片和纪念物、播放音乐、一起庆祝，再从门外进入一张回忆寻宝地图。
 
-**当前版本：V15.0 · world systems foundation**
+**当前版本：V15.1 · editable world foundation**
 
 ---
 
@@ -41,6 +41,13 @@
 - 修复 V12.4 中 Outside 因历史存储声明被注释而无法进入的问题
 - 木桥改为弧形 SVG 桥面，不再是一条平直矩形
 - 删除地图里两个重复的“回忆路”路牌，让小路和地形自己承担引导
+
+### V15.1 可编辑世界基础
+- **Tiled 地图源文件**：新增 `assets/maps/outdoor-v15.tiled.json`，Outside 的路线、碰撞、地标和世界尺寸开始拥有标准 Tiled JSON 表达；`map-runtime-v15.js` 负责读取并在失败时退回内置 scene-map
+- **编辑器撤销 / 重做**：家具拖动加入 1% 网格吸附、40 步本地历史、Ctrl/⌘+Z 与重做；编辑器工具条提供明确按钮
+- **跨刷新版本恢复**：服务端最多保留 30 个布局历史版本；房主可恢复上一版云端家具布局，恢复前也会自动备份当前版本
+- **人物素材管线**：新增 `assets/characters/manifest-v1.json` 与 `character-runtime-v15.js`，正式规定 idle / walk / sit / wave / hug / celebrate、四方向、发型 / 衣服 / 手持物分层接口；最终 atlas 暂不生成，等待美术方向确认
+- **存储供应商解耦**：服务器新增 room storage / blob storage adapter；当前仍使用文件实现，但业务层已经不再依赖具体 JSON 文件或上传目录，为后续数据库与对象存储切换留出稳定接口
 
 ### V15.0 P1–P4 系统基础完成
 - **P1 地图系统**：`scene-map.js` 升级为 Ground / Path / Objects / Collision / Foreground 五层契约；Outside 碰撞直接读取地图层；加入跟随主角的摄像机画布，地图不再始终以完整一屏静态展示
@@ -176,6 +183,8 @@ pixel-memory-world/
 │       ├── ui-v13.js           # V13 指针 / 按压微交互
 │       ├── experience-v14.js    # V14 Lenis / GSAP / 光场 / Spotlight / Pixel dissolve
 │       ├── completion-v14-3.js  # V14.3 导出一致性与交互收口
+│       ├── map-runtime-v15.js   # V15.1 Tiled 地图读取与 fallback
+│       ├── character-runtime-v15.js # V15.1 人物 atlas 协议加载
 │       └── systems-v15.js       # V15 P1–P4 系统运行层
 ├── server/
 │   ├── server.js
@@ -250,7 +259,7 @@ V15 正常返回：
 ~~~json
 {
   "ok": true,
-  "version": "v15.0"
+  "version": "v15.1"
 }
 ~~~
 
