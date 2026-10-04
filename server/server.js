@@ -208,7 +208,10 @@ const server = http.createServer(async (req, res) => {
       const b = JSON.parse((await readBody(req)).toString('utf8') || '{}');
       if (b.scope === 'memory') applyMemoryOp(r, b.op);
       else if (b.scope === 'quest') applyQuestOp(r, b.op);
-      else if (b.scope === 'world' && b.op?.patch) applyMemoryOp(r, { kind: 'world:patch', patch: b.op.patch });
+      else if (b.scope === 'world' && b.op?.patch) {
+        const { layout, ...safePatch } = b.op.patch;
+        applyMemoryOp(r, { kind: 'world:patch', patch: safePatch });
+      }
       else return json(res, 400, { error: 'invalid_op' });
       return json(res, 200, { ok: true, updatedAt: r.updatedAt });
     }
@@ -225,7 +228,10 @@ const server = http.createServer(async (req, res) => {
       const r = rooms[rm[1]];
       if (!r) return json(res, 404, { error: 'room_not_found' });
       const b = JSON.parse((await readBody(req)).toString('utf8') || '{}');
-      if (b.world) r.world = { ...r.world, ...b.world };
+      if (b.world) {
+        const { layout, ...safeWorld } = b.world;
+        r.world = { ...r.world, ...safeWorld };
+      }
       if (b.memory) r.memory = b.memory;
       if (b.quest) r.quest = b.quest;
       if ('music' in b) r.music = b.music;
@@ -339,7 +345,10 @@ server.on('upgrade', (req, socket) => {
       normalizeRoom(rr);
       if (m.type === 'memory' && m.memory) { rr.memory = m.memory; normalizeRoom(rr); rr.updatedAt = Date.now(); saveDB(); }
       if (m.type === 'memory-op' && m.op) applyMemoryOp(rr, m.op);
-      if (m.type === 'world-patch' && m.patch) applyMemoryOp(rr, { kind: 'world:patch', patch: m.patch });
+      if (m.type === 'world-patch' && m.patch) {
+        const { layout, ...safePatch } = m.patch;
+        applyMemoryOp(rr, { kind: 'world:patch', patch: safePatch });
+      }
       if (m.type === 'music-sync' && m.music) { rr.music = m.music; rr.world = { ...rr.world, music: m.music.track || rr.world.music, customMusicName: m.music.name || rr.world.customMusicName, customMusicUrl: m.music.url || rr.world.customMusicUrl }; rr.updatedAt = Date.now(); saveDB(); }
       if (m.type === 'quest-update' && Array.isArray(m.items)) { rr.quest = { items: m.items }; rr.updatedAt = Date.now(); saveDB(); }
       if (m.type === 'quest-op' && m.op) applyQuestOp(rr, m.op);
