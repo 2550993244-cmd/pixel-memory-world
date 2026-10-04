@@ -87,12 +87,12 @@ https://pixel-memory-world.onrender.com
 https://你的-render-域名/api/health
 ~~~
 
-V15.5 正常应返回类似：
+V15.6 正常应返回类似：
 
 ~~~json
 {
   "ok": true,
-  "version": "v15.5"
+  "version": "v15.6"
 }
 ~~~
 
@@ -322,3 +322,18 @@ USERNAME.github.io
 - 永久删除会调用 blob adapter 清理与房间关联的上传资源
 
 如果后续把 file blob adapter 换成 S3 / R2，新的 adapter 必须实现与当前 `removeMany(keys)` 等价的删除语义，否则永久删除不能算完整实现。
+
+
+### V15.6 秘密邀请凭证
+
+新创建房间默认启用高熵 invite token。浏览器端通过：
+
+~~~text
+X-Room-Invite: <invite-token>
+~~~
+
+访问受保护房间。WebSocket 使用同一个 token 作为 `invite` 查询参数。普通请求缺少或提供错误 token 时，不应通过 GET 响应确认短门牌号对应的房间是否存在。
+
+邀请 token 在服务器只保存 SHA-256 hash；原始 token 只在创建 / 轮换响应中返回一次并保存在获得授权的浏览器。房主可通过 `POST /api/rooms/:code/invite/rotate` 更换 token，旧 token 随即失效。
+
+生产代理 / 日志配置应避免记录完整 WebSocket query string 或分享 URL 中的 `invite` 参数。
