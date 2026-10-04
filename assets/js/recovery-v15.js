@@ -213,7 +213,7 @@
   }
 
   window.PixelRecovery={
-    version:'15.4',
+    version:'15.7',
     createBundle,
     parseKey,
     importKey,
