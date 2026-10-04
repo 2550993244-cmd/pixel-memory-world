@@ -451,7 +451,7 @@ This makes the viewer link a true spectator credential rather than a muted parti
 
 ## D009 · Spectator entry flow
 
-**Status:** needs owner decision  
+**Status:** decided — A · Instant spectator entry + optional local customization  
 **Blocks:** whether view-only links retain full avatar customization, spectator onboarding friction, whether viewer names are collected at all  
 **Does not block:** viewer privacy, anonymous counts, content permissions, contributor onboarding, archive/recovery
 
@@ -488,8 +488,66 @@ V15.8 makes viewer avatars local-only. That raises a UX question: if nobody else
 
 **Tradeoff:** creates a second onboarding UI to maintain.
 
+### Decision
+
+Selected **A · Instant spectator entry + optional local customization**.
+
+Implemented in V15.9:
+- valid viewer links skip the contributor avatar-builder screen and open the world immediately
+- no viewer name is requested; the local-only label is simply “我”
+- a stable warm avatar is derived locally from the browser's persistent actor identity
+- a “我的小人” control lets the viewer change hair, outfit and held item after entering
+- viewer customization is stored only in a separate local browser profile and is never sent through room REST / WebSocket APIs
+- reopening or refreshing a room with saved viewer credentials continues directly into the world
+- contributor onboarding remains unchanged
+
+The view-only link now behaves like opening an interactive keepsake, while avatar customization remains available as an optional personal layer.
+
+
+---
+
+## D010 · Contributor entry flow
+
+**Status:** needs owner decision  
+**Blocks:** whether collaborator onboarding remains ceremonial, how quickly contributors can start leaving content, contributor identity expectations  
+**Does not block:** viewer instant entry, spectator privacy, room access controls, persistence or archive/recovery
+
+V15.9 deliberately makes viewer entry nearly frictionless, but contributors still complete the full avatar builder because their character is visible to others and their memories carry authorship.
+
+The next question is whether contributors should keep that richer entrance.
+
+### A · Keep the full contributor avatar builder — recommended
+
+- contributor chooses name, hair, outfit and held item before entering
+- the chosen identity is visible to collaborators
+- authored notes / memories retain a clearer social context
+- preserves the small ritual of “arriving as yourself” before contributing
+
+**Best fit:** the contributor link is for close friends who are actively helping build the keepsake.
+
+**Tradeoff:** a few more seconds before someone can leave their first memory.
+
+### B · Quick contributor presets
+
+- ask for a name, then choose one of 3–4 complete avatar presets
+- enter in one compact screen
+- detailed customization remains available later
+
+**Best fit:** larger contributor groups where speed matters.
+
+**Tradeoff:** loses some of the DIY character charm that the current site already supports.
+
+### C · Instant contributor entry too
+
+- assign a temporary visible identity and enter immediately
+- name / avatar can be edited later
+
+**Best fit:** absolute minimum friction.
+
+**Tradeoff:** visible temporary names and avatars can make a collaborative room feel anonymous or messy, especially when authored memories are being created immediately.
+
 ### Default recommendation
 
-Choose **A · Instant spectator entry + optional local customization**.
+Choose **A · Keep the full contributor avatar builder**.
 
-Once spectator presence is intentionally private, the cleanest experience is to make the view-only link feel like opening a finished keepsake rather than joining a live collaboration session.
+The asymmetry is useful: **viewer = open and explore immediately; contributor = deliberately arrive as a visible participant before leaving a trace.**
