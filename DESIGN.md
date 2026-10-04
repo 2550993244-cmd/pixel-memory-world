@@ -1,5 +1,5 @@
 ---
-version: 15.2
+version: 15.3
 name: Pixel Memory World
 description: A warm multiplayer pixel-memory space. The interface should feel like a keepsake box that became a tiny playable world: soft paper surfaces, restrained pastel accents, readable modern Chinese typography, pixel-art scenes, and motion that responds to people rather than decorating every surface.
 ---
@@ -150,6 +150,18 @@ The saved keepsake is a ceremonial paper object, not an analytics dashboard or a
 - One softly recessed paper panel is acceptable for the final quote; do not put every field in a box.
 - The exported PNG must match the on-screen keepsake language, including paper texture and embossed ornament.
 - On mobile, the card may scroll inside its shell and actions must remain reachable without covering content.
+
+## V15.3 curation contract
+
+Shared memories have two distinct concepts: **authorship** and **curation**.
+
+- Authorship is immutable. A host moving or hiding an object must never change its `authorId` or displayed attribution.
+- Authors may edit the content of their own memory.
+- Hosts may compose the shared space by moving, hiding or removing participant memories, but may not rewrite participant text.
+- Privileged mutations are server-authorized with private credentials; public actor IDs are not authentication.
+- WebSocket messages are presence/realtime transport, not a trusted persistence authority.
+- Host destructive curation must create recoverable history.
+- Online host UI must follow the real owner token, not a user-controlled "host" checkbox.
 
 ## V15.1 asset boundary
 
