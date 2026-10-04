@@ -1,4 +1,4 @@
-/* Pixel Memory World · V15.9 instant spectator entry */
+/* Pixel Memory World · V15.10 contributor identity + instant spectators */
 body.v14-ready .pm-invite-entry-v15>p{margin:0 0 10px;color:#7b716a;font-size:11px;line-height:1.55}
 body.v14-ready .invite-panel-v15{display:grid;gap:14px}
 body.v14-ready .invite-panel-v15 section{
@@ -90,3 +90,12 @@ body.v14-ready .viewer-avatar-grid .selected{
   body.v14-ready .viewer-avatar-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   body.v14-ready .viewer-avatar-grid:not(.outfit){grid-template-columns:repeat(3,minmax(0,1fr))}
 }
+
+body.v14-ready .contributor-identity-note-v15{
+  display:grid;gap:4px;margin:0 0 14px;padding:12px 14px;
+  border:1px solid rgba(153,116,83,.17);border-radius:14px;
+  background:linear-gradient(180deg,rgba(255,250,242,.95),rgba(248,241,230,.9));
+  color:#705f52
+}
+body.v14-ready .contributor-identity-note-v15 b{font-size:11px;letter-spacing:.04em}
+body.v14-ready .contributor-identity-note-v15 span{font-size:9px;line-height:1.55}
