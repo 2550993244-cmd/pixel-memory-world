@@ -64,6 +64,15 @@ PIXEL_UPLOAD_DIR=/var/data/pixel-memory/uploads
 
 服务器会把房间 JSON 和上传文件写到这两个目录；JSON 使用“临时文件 → rename”的原子替换方式，降低进程异常时写坏主数据文件的风险。若不配置这两个变量，仍回退到 `server/data` 与 `server/uploads`，适合本地开发但不建议作为长期线上保存方案。
 
+V15.1 又增加了供应商适配层。当前有效值仍只有 `file`：
+
+~~~text
+PIXEL_ROOM_STORE=file
+PIXEL_BLOB_STORE=file
+~~~
+
+未来切数据库或对象存储时，保持网页端 API 不变，只替换后端 adapter。不要在尚未确定供应商前把 Supabase / PostgreSQL / S3 / R2 的 SDK 直接写进房间业务逻辑。
+
 部署成功后，你会得到类似：
 
 ~~~text
@@ -78,12 +87,12 @@ https://pixel-memory-world.onrender.com
 https://你的-render-域名/api/health
 ~~~
 
-V15 正常应返回类似：
+V15.1 正常应返回类似：
 
 ~~~json
 {
   "ok": true,
-  "version": "v15.0"
+  "version": "v15.1"
 }
 ~~~
 
@@ -236,6 +245,8 @@ PUT  /api/rooms/:code
 POST /api/rooms/:code/ops
 POST /api/rooms/:code/claim
 PUT  /api/rooms/:code/layout    # 需要 X-Room-Owner
+GET  /api/rooms/:code/revisions # 需要 X-Room-Owner
+POST /api/rooms/:code/revisions/:id/restore # 需要 X-Room-Owner
 POST /api/uploads
 WS    /ws?room=...&channel=...&player=...
 ~~~
