@@ -838,3 +838,73 @@ Implemented / enforced in V15.15:
 - the host is not given a manual relink control in this version
 
 The product now has a consistent identity boundary: **history remembers what a person called themselves at that moment; only private credentials remember who that person is across time.**
+
+---
+
+## D020 · Author-centric continuity entry
+
+**Status:** decided — A · Put continuity next to “我的小人”
+
+Selected **A**.
+
+Implemented in V15.16:
+- Contributor “我的小人” adds **「我留下的」** and **「换设备继续」** shortcuts
+- the first opens the private authored-content space; the second opens the verified Recovery Center
+- viewers and hosts are not given this Contributor-only continuity surface
+
+---
+
+## D021 · Short undo after author deletion
+
+**Status:** decided — A · Offer a short undo window
+
+Selected **A**.
+
+Implemented in V15.16:
+- author deletions surface a short **「撤销」** action instead of becoming immediately irreversible from the author's perspective
+- undo restores the same record through the normal authenticated add operation
+- no permission bypass or public trash bin is introduced
+- host recovery revisions remain independent of the author's short undo window
+
+---
+
+## D022 · Cross-device author recovery
+
+**Status:** decided — A · Reuse verified personal recovery keys
+
+Selected **A**.
+
+Implemented in V15.16:
+- the product reuses the existing PMR personal identity recovery key
+- Contributor-facing shortcuts lead directly to the Recovery Center
+- importing a key is server-verified before actor credentials are restored
+- no email account, name matching, or public identity profile is added
+
+---
+
+## D023 · Private trace organization
+
+**Status:** decided — A · Organize by year, type and historical name
+
+Selected **A**.
+
+Implemented in V15.16:
+- type filters: all / notes / mementos / photos / Outside
+- historical-name filter uses immutable per-memory authorName snapshots
+- timeline sections group results by year
+- all filtering remains private to the verified author
+
+---
+
+## D024 · Private author timeline
+
+**Status:** decided — A · Make the private timeline the default view
+
+Selected **A**.
+
+Implemented in V15.16:
+- “我留下的” is now a chronological private timeline, newest first
+- each entry keeps its historical name, date, type and lightweight edited marker where applicable
+- the timeline is not a public contributor profile and does not expose same-person linkage to others
+
+The long-term return model is now consistent: **public memories preserve moments; private credentials preserve continuity; the returning author gets useful organization without publishing an identity dossier.**
