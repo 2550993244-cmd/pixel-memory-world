@@ -1,5 +1,5 @@
 ---
-version: 14.2
+version: 15.0
 name: Pixel Memory World
 description: A warm multiplayer pixel-memory space. The interface should feel like a keepsake box that became a tiny playable world: soft paper surfaces, restrained pastel accents, readable modern Chinese typography, pixel-art scenes, and motion that responds to people rather than decorating every surface.
 ---
@@ -150,6 +150,16 @@ The saved keepsake is a ceremonial paper object, not an analytics dashboard or a
 - One softly recessed paper panel is acceptable for the final quote; do not put every field in a box.
 - The exported PNG must match the on-screen keepsake language, including paper texture and embossed ornament.
 - On mobile, the card may scroll inside its shell and actions must remain reachable without covering content.
+
+## V15 system interaction contract
+
+P1–P4 are now product systems, not decorative experiments.
+
+- **Map / camera:** authored layers are Ground, Path, Objects, Collision and Foreground. Gameplay collision must come from the map contract instead of duplicated hard-coded geometry. Camera motion follows the local player and must disable itself while map placement needs 1:1 pointer coordinates.
+- **Character actions:** use one shared state vocabulary — idle, walk, sit, wave, hug, celebrate. New renderers or future spritesheets must map onto these names instead of inventing incompatible animation flags.
+- **Room editor:** editing is a deliberate owner mode. Editable props are visibly marked, keyboard-accessible, and save their world coordinates. Normal room play must not accidentally drag furniture.
+- **Ownership:** privileged layout writes require a room-owner token. Client-side hiding is not sufficient security; the server must reject unauthorised layout writes.
+- **Persistence:** local JSON storage remains a small-deployment adapter, but writes must be atomic and data/upload paths must be configurable so a persistent disk can be mounted without changing application code.
 
 ## Room & Outside
 
