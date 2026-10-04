@@ -121,9 +121,17 @@ function showScreen(id){$$('.screen').forEach(s=>s.classList.toggle('active',s.i
 function openAvatarBuilderForCurrentRole(){
   const owner=!!window.PixelNet?.hasOwnerToken?.(state.roomCode);
   const contributor=!owner&&state.accessRole==='contributor';
-  if(contributor)applyContributorProfileToBuilder();
+  const restored=contributor?applyContributorProfileToBuilder():false;
   const note=$('#contributorIdentityNoteV15');
-  if(note)note.classList.toggle('hidden',!contributor);
+  if(note){
+    note.classList.toggle('hidden',!contributor);
+    note.classList.toggle('returning',!!restored);
+    const title=note.querySelector('b'),copy=note.querySelector('span');
+    if(title)title.textContent=restored?'✦ 这台设备记得你':'✦ 参与身份';
+    if(copy)copy.textContent=restored
+      ?'已经替你填好上次的名字和小人。确认还是这个你，或者改一改，再正式推门进去。'
+      :'名字和小人会被房间里的朋友看到；之后留下的留言、照片和纪念物，也会沿用这个作者身份。';
+  }
   const heading=$('#avatarNameHeadingV15');
   if(heading)heading.textContent=contributor?'先告诉大家怎么叫你':'先决定大家怎么叫你';
   const enterCopy=$('.avatar-enter-row small');
