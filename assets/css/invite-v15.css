@@ -1,4 +1,4 @@
-/* Pixel Memory World · V15.8 invisible spectators */
+/* Pixel Memory World · V15.9 instant spectator entry */
 body.v14-ready .pm-invite-entry-v15>p{margin:0 0 10px;color:#7b716a;font-size:11px;line-height:1.55}
 body.v14-ready .invite-panel-v15{display:grid;gap:14px}
 body.v14-ready .invite-panel-v15 section{
@@ -59,3 +59,34 @@ body.v14-ready .spectator-chip-v15{
 body.v14-ready .spectator-chip-v15>span:first-child{font-size:10px;opacity:.72}
 body.v14-ready .spectator-chip-v15 b{font-variant-numeric:tabular-nums}
 body.pm-view-only #viewerPillV15{display:none!important}
+
+body.v14-ready .viewer-avatar-btn-v15{
+  border-color:rgba(129,113,98,.14);
+  background:rgba(251,247,241,.9);
+  color:#74685f
+}
+body.v14-ready .viewer-avatar-btn-v15 b{font-size:10px}
+body.v14-ready .viewer-avatar-editor-v15{display:grid;gap:12px}
+body.v14-ready .viewer-avatar-note{
+  display:grid;gap:4px;padding:12px 13px;border:1px solid rgba(96,124,140,.16);
+  border-radius:14px;background:#f0f5f7;color:#5f727e
+}
+body.v14-ready .viewer-avatar-note b{font-size:11px}
+body.v14-ready .viewer-avatar-note span{font-size:9px;line-height:1.5}
+body.v14-ready .viewer-avatar-editor-v15 section{
+  padding:12px;border:1px solid rgba(82,75,69,.09);border-radius:14px;background:rgba(250,248,244,.72)
+}
+body.v14-ready .viewer-avatar-editor-v15 h4{margin:0 0 8px;font-size:11px;color:#514a45}
+body.v14-ready .viewer-avatar-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+body.v14-ready .viewer-avatar-grid:not(.outfit){grid-template-columns:repeat(3,minmax(0,1fr))}
+body.v14-ready .viewer-avatar-grid .mini-choice{min-height:44px;padding:8px}
+body.v14-ready .viewer-avatar-grid .swatch{min-height:48px}
+body.v14-ready .viewer-avatar-grid .selected{
+  box-shadow:0 0 0 2px rgba(105,128,142,.18);
+  transform:translateY(-1px)
+}
+@media(max-width:520px){
+  body.v14-ready .viewer-avatar-btn-v15 b{display:none}
+  body.v14-ready .viewer-avatar-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  body.v14-ready .viewer-avatar-grid:not(.outfit){grid-template-columns:repeat(3,minmax(0,1fr))}
+}
