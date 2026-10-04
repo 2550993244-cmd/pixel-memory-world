@@ -294,7 +294,7 @@ const server = http.createServer(async (req, res) => {
   const u = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = u.pathname;
   try {
-    if (pathname === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, version: 'v15.3', rooms: Object.keys(rooms).length, connections: connectionCount(), roomStore: roomStore.info().kind, blobStore: blobStore.info().kind, durableDataDir: !!process.env.PIXEL_DATA_DIR, durableUploadDir: !!process.env.PIXEL_UPLOAD_DIR, time: Date.now() });
+    if (pathname === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, version: 'v15.4', rooms: Object.keys(rooms).length, connections: connectionCount(), roomStore: roomStore.info().kind, blobStore: blobStore.info().kind, durableDataDir: !!process.env.PIXEL_DATA_DIR, durableUploadDir: !!process.env.PIXEL_UPLOAD_DIR, time: Date.now() });
     if (pathname === '/api/rooms' && req.method === 'POST') {
       const body = JSON.parse((await readBody(req)).toString('utf8') || '{}');
       const code = String(body.code || randomCode()).toUpperCase();
@@ -314,6 +314,38 @@ const server = http.createServer(async (req, res) => {
       r.ownerHash = tokenHash(ownerToken);
       touchRoom(r);
       return json(res, 200, { ok: true, ownerToken, meta: r.meta });
+    }
+
+    const recoveryVerify = /^\/api\/rooms\/([A-Z0-9]{6})\/recovery\/verify$/.exec(pathname);
+    if (recoveryVerify && req.method === 'POST') {
+      const r = rooms[recoveryVerify[1]];
+      if (!r) return json(res, 404, { error: 'room_not_found' });
+      normalizeRoom(r);
+
+      const owner = isOwner(req, r);
+      const actor = actorCredential(req);
+      let actorStatus = 'missing';
+      if (actor.id || actor.token) {
+        if (!actor.id || !actor.token || actor.id.length > 120 || actor.token.length > 240) actorStatus = 'invalid';
+        else {
+          const known = r.actors[actor.id];
+          if (!known) actorStatus = 'unknown';
+          else {
+            const a = Buffer.from(tokenHash(actor.token));
+            const b = Buffer.from(known);
+            actorStatus = a.length === b.length && crypto.timingSafeEqual(a,b) ? 'valid' : 'invalid';
+          }
+        }
+      }
+
+      return json(res, 200, {
+        ok: true,
+        room: recoveryVerify[1],
+        owner,
+        actor: actorStatus,
+        canImportOwner: owner,
+        canImportActor: actorStatus === 'valid' || actorStatus === 'unknown' || actorStatus === 'missing'
+      });
     }
     const revisionsm = /^\/api\/rooms\/([A-Z0-9]{6})\/revisions$/.exec(pathname);
     if (revisionsm && req.method === 'GET') {
@@ -537,4 +569,4 @@ server.on('upgrade', (req, socket) => {
   socket.on('close', close); socket.on('end', close); socket.on('error', close);
 });
 
-server.listen(PORT, () => console.log(`Pixel Memory V15.3 server: http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`Pixel Memory V15.4 server: http://localhost:${PORT}`));
