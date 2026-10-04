@@ -267,3 +267,301 @@ body.v14-ready .avatar-enter-row>div small{font-size:11px}
   .v14-screen-enter *{animation:none!important}
   .v14-spotlight:after{display:none}
 }
+
+
+/* ==========================================================
+   V14.1 · TYPOGRAPHY + LAYOUT AUDIT
+   Warm editorial rules informed by DESIGN.md references:
+   generous consumer typography, clear 12/14/16px reading tiers,
+   centered macro-layout and left-aligned content blocks.
+   ========================================================== */
+
+body.v14-ready{
+  text-rendering:optimizeLegibility;
+  -webkit-font-smoothing:antialiased;
+  font-synthesis:none;
+}
+body.v14-ready .button{font-size:14px;line-height:1.25}
+body.v14-ready .button.small{font-size:12px}
+body.v14-ready .brand b{font-size:16px;line-height:1.12}
+body.v14-ready .brand small{font-size:10px;line-height:1.25;letter-spacing:.14em}
+body.v14-ready .soft-status{font-size:12px;line-height:1.25}
+body.v14-ready .eyebrow{font-size:11px;line-height:1.4;letter-spacing:.14em}
+body.v14-ready .field span{font-size:12px;line-height:1.4}
+body.v14-ready .field input,
+body.v14-ready .field textarea,
+body.v14-ready .field select{font-size:14px;line-height:1.45}
+
+/* Landing: keep the hero expressive, but make all supporting text readable. */
+body.v14-ready .hero-kicker{font-size:11px}
+body.v14-ready .hero-copy>p{font-size:16px;line-height:1.78}
+body.v14-ready .hero-cta .button{font-size:14px}
+body.v14-ready .visitor-copy b{font-size:12px}
+body.v14-ready .visitor-copy small{font-size:10px}
+body.v14-ready .preview-label{font-size:11px}
+body.v14-ready .preview-tip{font-size:10px}
+body.v14-ready .hero-bubble{font-size:11px;line-height:1.35}
+body.v14-ready .hero-person b{font-size:10px}
+
+/* Numbered feature markers: the 1 / 2 / 3 is a real navigation cue, not microcopy. */
+body.v14-ready .compact-features{gap:16px}
+body.v14-ready .compact-features article{
+  grid-template-columns:52px minmax(0,1fr);
+  align-items:start;
+  padding:24px 24px 22px;
+}
+body.v14-ready .feature-icon{
+  position:relative;
+  width:48px;height:48px;
+  display:flex;align-items:center;justify-content:center;
+  padding:4px 0 0 5px;
+  font:700 20px/1 var(--v14-sans);
+  color:#7d4c4e;
+}
+body.v14-ready .feature-icon:before{
+  content:"0";
+  position:absolute;
+  left:9px;top:8px;
+  font:600 10px/1 var(--v14-mono);
+  color:#a9988e;
+}
+body.v14-ready .compact-features h3{font-size:16px;line-height:1.3;margin:2px 0 7px}
+body.v14-ready .compact-features p{font-size:13px;line-height:1.65;max-width:330px}
+
+/* Fix the broken story section seen in the wide-screen screenshot.
+   Older landing.css used negative 5vw margins for a full-bleed band; V14 then
+   capped max-width without resetting those margins, which pulled the content
+   off the left edge. V14.1 makes it an intentional centered editorial panel. */
+body.v14-ready .story-band{
+  box-sizing:border-box;
+  width:100%;
+  max-width:1320px;
+  margin:96px auto 0;
+  padding:86px clamp(38px,4.4vw,64px) 94px;
+  grid-template-columns:minmax(390px,.82fr) minmax(0,1.18fr);
+  gap:clamp(48px,5vw,76px);
+  align-items:center;
+  overflow:hidden;
+  border:0;
+  border-radius:32px;
+  background:
+    radial-gradient(circle at 76% 38%,rgba(141,173,157,.23),transparent 31%),
+    radial-gradient(circle at 38% 82%,rgba(227,183,103,.13),transparent 27%),
+    linear-gradient(180deg,rgba(248,241,232,.92),rgba(232,222,208,.82));
+  box-shadow:
+    inset 0 0 0 1px rgba(99,78,65,.08),
+    0 28px 70px rgba(76,58,47,.07);
+}
+body.v14-ready .story-band:before{
+  top:28px;
+  left:clamp(34px,4.2vw,60px);
+  right:24px;
+  font-size:clamp(42px,4.8vw,68px);
+  letter-spacing:.065em;
+  color:rgba(95,78,68,.04);
+}
+body.v14-ready .story-copy{
+  min-width:0;
+  text-align:left;
+  align-self:center;
+}
+body.v14-ready .story-copy .eyebrow{display:block;margin-bottom:14px}
+body.v14-ready .story-copy h2{
+  max-width:470px;
+  margin:0 0 22px;
+  font-size:clamp(35px,2.75vw,44px);
+  line-height:1.17;
+  letter-spacing:-.04em;
+  text-wrap:balance;
+}
+body.v14-ready .story-copy p{
+  max-width:500px;
+  margin:0;
+  font-size:15px;
+  line-height:1.82;
+}
+body.v14-ready .story-copy .button.warm{font-size:14px;margin-top:24px}
+body.v14-ready .memory-strip{
+  min-width:0;
+  width:100%;
+  padding:24px 10px 18px;
+}
+body.v14-ready .photo-caption span{font-size:11px!important}
+body.v14-ready .photo-caption b{font-size:14px!important}
+body.v14-ready .photo-caption small{font-size:10px!important}
+body.v14-ready .memory-paper p{font-size:13px!important;line-height:1.72}
+body.v14-ready .memory-paper small{font-size:10px!important}
+body.v14-ready .memory-ticket span{font-size:10px}
+body.v14-ready .memory-ticket b{font-size:14px!important}
+body.v14-ready .memory-ticket small{font-size:9px}
+body.v14-ready .flower-note b{font-size:11px!important}
+body.v14-ready .flower-note small{font-size:9px}
+
+/* Creation flow: clear left-aligned hierarchy, larger order markers. */
+body.v14-ready #creator .flow-wrap{
+  max-width:1240px;
+  grid-template-columns:minmax(360px,.78fr) minmax(620px,1.22fr);
+  gap:38px;
+}
+body.v14-ready #creator .flow-intro{text-align:left}
+body.v14-ready #creator .flow-intro h2{font-size:40px;line-height:1.16}
+body.v14-ready #creator .creator-preview-panel>p{font-size:14px;line-height:1.72}
+body.v14-ready .section-head{align-items:center;gap:18px}
+body.v14-ready .section-head>div{align-items:center;gap:11px}
+body.v14-ready .section-head h3{font-size:17px;line-height:1.28;text-align:left}
+body.v14-ready .section-head small{font-size:11px;line-height:1.4;text-align:right}
+body.v14-ready .section-head>div>span{
+  width:34px;height:34px;
+  border-radius:50%;
+  flex:0 0 34px;
+  font:700 12px/1 var(--v14-mono);
+  background:#f3e8dd;
+  border:1px solid rgba(126,97,79,.16);
+  color:#765d50;
+}
+body.v14-ready #creator .choice-card>span{font-size:14px;line-height:1.3}
+body.v14-ready #creator .choice-card>small{font-size:11px;line-height:1.45}
+body.v14-ready #creator .theme-choice>b{font-size:13px;line-height:1.35}
+body.v14-ready #creator .theme-choice small{font-size:11px;line-height:1.45}
+body.v14-ready #creator .music-choice b{font-size:13px;line-height:1.35}
+body.v14-ready #creator .music-choice small{font-size:11px;line-height:1.45}
+body.v14-ready #creator .creator-preview-card>span{font-size:10px}
+body.v14-ready #creator .creator-preview-card>b{font-size:17px;line-height:1.25}
+body.v14-ready #creator .creator-preview-card>small{font-size:10px}
+body.v14-ready #creator .creator-preview-card>p{font-size:11px;line-height:1.5}
+body.v14-ready #creator .creator-preview-meta{gap:9px}
+body.v14-ready #creator .creator-preview-meta>span{min-height:60px;padding:10px 9px}
+body.v14-ready #creator .creator-preview-meta i{
+  width:24px;height:24px;
+  display:grid;place-items:center;
+  border-radius:50%;
+  font:700 10px/1 var(--v14-mono);
+  font-style:normal;
+}
+body.v14-ready #creator .creator-preview-meta b{font-size:11px}
+body.v14-ready #creator .creator-preview-meta small{font-size:10px;line-height:1.35}
+
+/* Join view stays centered; long explanatory text grows without becoming loud. */
+body.v14-ready .join-card{padding:38px 40px;text-align:center}
+body.v14-ready .join-card h2{font-size:36px;line-height:1.18}
+body.v14-ready .join-card p{font-size:14px;line-height:1.75}
+body.v14-ready .join-card .hint{font-size:11px;line-height:1.55}
+
+/* Avatar: character remains centered, configuration copy stays left aligned. */
+body.v14-ready .avatar-layout{
+  max-width:1120px;
+  grid-template-columns:minmax(380px,.88fr) minmax(0,1.12fr);
+  gap:30px;
+  align-items:start;
+}
+body.v14-ready .avatar-stage{min-height:600px}
+body.v14-ready .avatar-stage-copy{max-width:330px;text-align:center}
+body.v14-ready .avatar-stage-copy b{font-size:18px;line-height:1.3}
+body.v14-ready .avatar-stage-copy p{font-size:13px;line-height:1.6}
+body.v14-ready .avatar-controls{text-align:left}
+body.v14-ready .avatar-stage-head small,
+body.v14-ready .avatar-control-top>span{font-size:10px;letter-spacing:.1em}
+body.v14-ready .avatar-builder-screen .host-switch b{font-size:13px;line-height:1.35}
+body.v14-ready .avatar-builder-screen .host-switch small{font-size:11px;line-height:1.45}
+body.v14-ready .avatar-builder-screen .builder-row>span{font-size:12px}
+body.v14-ready .avatar-builder-screen .branch-choice>b{font-size:12px}
+body.v14-ready .avatar-builder-screen .branch-choice>small{font-size:10px}
+body.v14-ready .avatar-builder-screen .swatch>b{font-size:11px}
+body.v14-ready .avatar-enter-row>div span{font-size:10px}
+body.v14-ready .avatar-enter-row>div small{font-size:11px;line-height:1.45}
+
+/* Room chrome: operational text gets larger; tiny labels inside the pixel
+   stage remain compact so the world does not become visually crowded. */
+body.v14-ready .world-title-block h2{font-size:19px;line-height:1.25}
+body.v14-ready .world-title-block>div span{font-size:11px}
+body.v14-ready .status-chip{font-size:11px}
+body.v14-ready .status-chip b{font-size:12px}
+body.v14-ready .dock-button b{font-size:10px}
+body.v14-ready .dock-button small{font-size:9px}
+body.v14-ready .player-name{font-size:9px}
+body.v14-ready .chat-bubble{font-size:10px;line-height:1.4}
+body.v14-ready .near-prompt{font-size:10px}
+body.v14-ready .movement-tip{font-size:9px}
+body.v14-ready .quick-say button{font-size:11px}
+body.v14-ready .drawer-section h4{font-size:13px}
+body.v14-ready .side-drawer .person-row,
+body.v14-ready .side-drawer .activity-row{font-size:11px}
+body.v14-ready .settings-grid button{font-size:11px}
+body.v14-ready .drawer-music .track-button{font-size:11px}
+body.v14-ready .drawer-music .track-button b{font-size:12px}
+body.v14-ready .drawer-music .volume-row{font-size:11px}
+body.v14-ready .photo-upload-box span{font-size:11px}
+body.v14-ready .memory-detail-meta{font-size:10px}
+body.v14-ready .toast{font-size:11px}
+
+/* Keepsake + ceremony copy should be readable when exported or shared. */
+body.v14-ready .keepsake-date{font-size:11px}
+body.v14-ready .keepsake-people span{font-size:10px}
+body.v14-ready .keepsake-stats small{font-size:9px}
+body.v14-ready .keepsake-line{font-size:11px;line-height:1.5}
+body.v14-ready .keepsake-footer{font-size:9px}
+body.v14-ready .celebration-overline{font-size:10px}
+body.v14-ready .celebration-people span{font-size:9px}
+body.v14-ready .celebration-ceremony>p{font-size:12px;line-height:1.6}
+
+/* Outside / Memory Quest: editor and progress UI larger; scenery labels stay tiny. */
+body.v14-ready .quest-progress-chip{font-size:11px}
+body.v14-ready .quest-return-door small{font-size:9px}
+body.v14-ready .quest-player .quest-player-name{font-size:9px}
+body.v14-ready .quest-map-caption{font-size:9px}
+body.v14-ready .quest-step-title>b{font-size:10px}
+body.v14-ready .quest-step-title strong{font-size:13px;line-height:1.3}
+body.v14-ready .quest-step-title small{font-size:10px;line-height:1.45}
+body.v14-ready .quest-upload b{font-size:12px}
+body.v14-ready .quest-upload small{font-size:10px;line-height:1.4}
+body.v14-ready .quest-source-preview.empty span{font-size:10px}
+body.v14-ready .quest-empty-copy{font-size:11px;line-height:1.55}
+body.v14-ready .generated-asset small{font-size:9px}
+body.v14-ready .quest-selected-asset{font-size:11px}
+body.v14-ready .voice-status b{font-size:12px}
+body.v14-ready .voice-status span{font-size:10px}
+body.v14-ready .quest-stage.placing:after{font-size:10px}
+body.v14-ready .memory-found-copy{font-size:12px;line-height:1.7}
+body.v14-ready .memory-voice div b{font-size:11px}
+body.v14-ready .memory-voice div small{font-size:9px}
+body.v14-ready .quest-editor .editor-note{font-size:10px;line-height:1.5}
+body.v14-ready .quest-bar .button{font-size:11px}
+
+/* Responsive: collapse before the two-column layouts become cramped. */
+@media(max-width:1120px){
+  body.v14-ready .story-band{
+    grid-template-columns:1fr;
+    max-width:900px;
+    gap:42px;
+    padding-inline:clamp(30px,6vw,60px);
+  }
+  body.v14-ready .story-copy h2{max-width:620px}
+  body.v14-ready .story-copy p{max-width:650px}
+  body.v14-ready #creator .flow-wrap{grid-template-columns:1fr;max-width:820px}
+  body.v14-ready #creator .flow-intro{position:relative;top:auto;padding-right:0}
+  body.v14-ready .avatar-layout{grid-template-columns:1fr;max-width:760px}
+  body.v14-ready .avatar-stage{min-height:520px}
+}
+@media(max-width:720px){
+  body.v14-ready .hero-copy>p{font-size:15px}
+  body.v14-ready .compact-features article{
+    grid-template-columns:48px minmax(0,1fr);
+    padding:20px 18px;
+  }
+  body.v14-ready .feature-icon{width:44px;height:44px;font-size:18px}
+  body.v14-ready .story-band{
+    width:100%;
+    margin-top:72px;
+    padding:64px 22px 58px;
+    border-radius:24px;
+  }
+  body.v14-ready .story-band:before{left:24px;font-size:38px}
+  body.v14-ready .story-copy h2{font-size:32px}
+  body.v14-ready .story-copy p{font-size:14px}
+  body.v14-ready .section-head{align-items:flex-start}
+  body.v14-ready .section-head small{font-size:10px;text-align:right}
+  body.v14-ready .section-head>div>span{
+    width:32px;height:32px;flex-basis:32px;font-size:11px;
+  }
+  body.v14-ready .join-card{padding:30px 22px}
+}

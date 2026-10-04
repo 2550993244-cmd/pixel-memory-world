@@ -1,5 +1,5 @@
 ---
-version: 14.0
+version: 14.1
 name: Pixel Memory World
 description: A warm multiplayer pixel-memory space. The interface should feel like a keepsake box that became a tiny playable world: soft paper surfaces, restrained pastel accents, readable modern Chinese typography, pixel-art scenes, and motion that responds to people rather than decorating every surface.
 ---
@@ -56,6 +56,23 @@ Hierarchy:
 - Panel heading: 20–28px.
 - Field / option heading: 14–17px.
 - Body: 14–16px, line-height 1.6–1.8.
+
+
+## V14.1 Typography & geometry guardrails
+
+The visual references in awesome-design-md repeatedly separate readable product typography from truly decorative micro-labels. Pixel Memory follows that principle:
+
+- Default body copy: 14–16px.
+- Secondary explanatory copy: 12–14px.
+- Interactive labels and button text: 12px minimum.
+- Operational metadata: 10–11px minimum.
+- 8–9px is reserved for decorative labels inside the pixel scene itself.
+- Numbered workflow markers (01 / 02 / 03) are navigation cues: render them at 11–12px inside a 32–34px marker, never as 6–8px microtext.
+- Section headings should wrap by sentence or phrase, not every 2–4 Chinese characters.
+- Main content sections must be centered or intentionally left aligned. Accidental horizontal drift is a defect.
+- Do not combine a max-width container with inherited negative horizontal margins.
+- Any intentional full-bleed section must be tested at 1440px and 1728px widths for left/right clipping.
+- Macro layout uses generous warm-editorial spacing; micro UI stays compact enough for the playable world.
 
 ## Shape language
 

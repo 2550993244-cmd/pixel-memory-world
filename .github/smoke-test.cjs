@@ -19,7 +19,7 @@ const { chromium } = require('playwright');
     v14Ready: document.body.classList.contains('v14-ready')
   }));
   console.log('V14_DIAG', v14Diag, errors);
-  if (v14Diag.pixelV14?.version !== '14.0') throw new Error('V14 bootstrap missing | ' + errors.join(' | '));
+  if (v14Diag.pixelV14?.version !== '14.1') throw new Error('V14 bootstrap missing | ' + errors.join(' | '));
   const v14State = await page.evaluate(() => ({
     ready: document.body.classList.contains('v14-ready'),
     ambient: !!document.querySelector('.v14-ambient-canvas'),
@@ -31,6 +31,36 @@ const { chromium } = require('playwright');
   if (!v14State.ready || !v14State.ambient || !v14State.rail || !v14State.pixelWipe) throw new Error('V14 experience layer incomplete');
   if (/Courier New/i.test(v14State.bodyFont)) throw new Error('V14 readable UI font did not override Courier New');
   console.log('V14_FLAGS', v14State.flags);
+
+
+  // V14.1 layout regression guard: the editorial story panel must stay inside
+  // the viewport and typography/order markers must not shrink back to microtext.
+  const landingAudit = await page.evaluate(() => {
+    const band = document.querySelector('.story-band');
+    const bandRect = band.getBoundingClientRect();
+    const heading = document.querySelector('.story-copy h2');
+    const featureNo = document.querySelector('.feature-icon');
+    return {
+      viewport: innerWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+      left: bandRect.left,
+      right: bandRect.right,
+      width: bandRect.width,
+      headingFont: parseFloat(getComputedStyle(heading).fontSize),
+      bodyFont: parseFloat(getComputedStyle(document.querySelector('.story-copy p')).fontSize),
+      featureNumberFont: parseFloat(getComputedStyle(featureNo).fontSize)
+    };
+  });
+  console.log('V14_1_LANDING_AUDIT', landingAudit);
+  if (landingAudit.left < 18 || landingAudit.right > landingAudit.viewport - 18) {
+    throw new Error('story panel is clipped or shifted outside the viewport');
+  }
+  if (landingAudit.scrollWidth > landingAudit.viewport + 2) {
+    throw new Error('landing page has unintended horizontal overflow');
+  }
+  if (landingAudit.headingFont < 34 || landingAudit.bodyFont < 14 || landingAudit.featureNumberFont < 18) {
+    throw new Error('landing typography regressed to undersized text');
+  }
 
   // V13 control language must still be loaded underneath V14.
   const v13Styles = await page.evaluate(() => {
@@ -62,9 +92,14 @@ const { chromium } = require('playwright');
   await active('creator');
   const creatorType = await page.evaluate(() => ({
     meta: parseFloat(getComputedStyle(document.querySelector('.creator-preview-meta small')).fontSize),
-    field: parseFloat(getComputedStyle(document.querySelector('#creator .field>span')).fontSize)
+    field: parseFloat(getComputedStyle(document.querySelector('#creator .field>span')).fontSize),
+    marker: parseFloat(getComputedStyle(document.querySelector('#creator .section-head>div>span')).fontSize),
+    markerBox: document.querySelector('#creator .section-head>div>span').getBoundingClientRect().width,
+    choiceHelp: parseFloat(getComputedStyle(document.querySelector('#creator .choice-card>small')).fontSize)
   }));
-  if (creatorType.meta < 9.5 || creatorType.field < 11.5) throw new Error('creator typography is still too small');
+  if (creatorType.meta < 9.5 || creatorType.field < 11.5 || creatorType.marker < 11 || creatorType.markerBox < 31 || creatorType.choiceHelp < 10.5) {
+    throw new Error('creator typography/order markers are still too small');
+  }
 
   // Creator choices must remain clickable.
   console.log('DIAG before occasion', await page.evaluate(() => ({
