@@ -214,7 +214,7 @@
       if (!revealed) return;
       const near = questState.nearby?.id === item.id;
       const el = document.createElement('div');
-      const canCurate=!window.PixelNet?.enabled||!!window.PixelNet?.hasOwnerToken?.(state.roomCode)||item.authorId===state.player.actorId;
+      const canCurate=(window.PixelNet?.enabled?!!window.PixelNet?.hasOwnerToken?.(state.roomCode):!!state.player.host)||item.authorId===state.player.actorId;
       el.className = `quest-memory${found ? ' found' : ' mystery'}${near ? ' near' : ''}${canCurate ? ' curatable' : ' locked'}`;
       el.dataset.id = item.id;
       el.style.left = `${item.x}%`;
@@ -538,7 +538,7 @@
       addActivity(`${state.player.name} 找到了「${item.title}」`);
     }
     const voiceHtml = (item.voiceKey||item.voiceUrl) ? `<div class="memory-voice"><button id="questPlayVoice" class="press">▶</button><div><b>有人把声音留在这里</b><small>点一下，听听当时想说的话</small></div></div>` : '';
-    const owner=!window.PixelNet?.enabled||!!window.PixelNet?.hasOwnerToken?.(state.roomCode);
+    const owner=window.PixelNet?.enabled?!!window.PixelNet?.hasOwnerToken?.(state.roomCode):!!state.player.host;
     const author=item.authorId===state.player.actorId;
     const manage=(owner||author)?`<div class="memory-detail-actions">${author?'<button id="questEditOwn" class="button secondary small press">✎ 修改文字</button>':''}<button id="questHideMemory" class="button secondary small press">${item.hidden?'◉ 重新显示':'◌ 暂时收起'}</button><button id="questRemoveMemory" class="button danger small press">⌫ 移除</button></div>`:'';
     openModal('MEMORY FOUND', escapeHTML(item.title), `<div class="memory-found-card"><div class="memory-found-visual">${item.image ? `<img src="${item.image}" alt="">` : `<span>${item.icon || '✦'}</span>`}</div><div class="memory-found-copy">${escapeHTML(item.text || '有人觉得这一刻值得被留下。')}</div>${voiceHtml}<div class="memory-detail-meta">${escapeHTML(item.by || '朋友')} 把它藏在这条路上 · 第 ${item.order || 1} 站</div>${manage}</div>`);
@@ -741,7 +741,7 @@
     if(!node)return;
     dragItem=questState.items.find(x=>x.id===node.dataset.id)||null;
     if(!dragItem)return;
-    const canCurate=!window.PixelNet?.enabled||!!window.PixelNet?.hasOwnerToken?.(state.roomCode)||dragItem.authorId===state.player.actorId;
+    const canCurate=(window.PixelNet?.enabled?!!window.PixelNet?.hasOwnerToken?.(state.roomCode):!!state.player.host)||dragItem.authorId===state.player.actorId;
     if(!canCurate){dragItem=null;return toast('这段回忆只能由原作者或房主移动')}
     dragOrigin={x:dragItem.x,y:dragItem.y};
     e.preventDefault();
