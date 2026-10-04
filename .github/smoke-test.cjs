@@ -62,11 +62,12 @@ const { chromium } = require('playwright');
     hasEditorApi: !!window.PixelRoomEditor,
     hasActionApi: !!window.PixelCharacterActions,
     retentionVersion: window.PixelRetention?.version || null,
-    recoveryVersion: window.PixelRecovery?.version || null
+    recoveryVersion: window.PixelRecovery?.version || null,
+    inviteVersion: window.PixelInvite?.version || null
   }));
   console.log('V15_1_DIAG', v15Diag);
-  if (v15Diag.runtime?.version !== '15.5') throw new Error('V15.5 systems runtime missing');
-  if (v15Diag.retentionVersion !== '15.5' || v15Diag.recoveryVersion !== '15.4') throw new Error('V15.5 retention/recovery runtime missing');
+  if (v15Diag.runtime?.version !== '15.6') throw new Error('V15.6 systems runtime missing');
+  if (v15Diag.retentionVersion !== '15.5' || v15Diag.recoveryVersion !== '15.4' || v15Diag.inviteVersion !== '15.6') throw new Error('V15.6 invite/retention/recovery runtime missing');
   if (v15Diag.sceneVersion !== '15.0') throw new Error('V15 layered scene map missing');
   if (v15Diag.mapRuntime.source !== 'tiled-json' || v15Diag.mapRuntime.collisionCount < 3 || v15Diag.mapRuntime.pathCount < 6) {
     throw new Error('V15.1 Tiled map runtime did not load canonical JSON');
@@ -355,6 +356,50 @@ const { chromium } = require('playwright');
   if(recoveryAudit.badOwner!==false) throw new Error('V15.4 recovery verification accepts a wrong owner token');
   if(!recoveryAudit.corruptRejected) throw new Error('V15.4 corrupt recovery key was accepted');
 
+  // V15.6 D006=A: friendly room code + high-entropy secret invite token.
+  const inviteCode=('I'+Math.random().toString(36).slice(2,7)).toUpperCase();
+  const inviteCreateRes=await fetch(`${base}/api/rooms`,{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({code:inviteCode,world:{occasion:'邀请测试'},memory:{mementos:[],notes:[],photos:[],activity:[]}})
+  });
+  if(!inviteCreateRes.ok) throw new Error('V15.6 invite room create failed '+inviteCreateRes.status);
+  const inviteRoom=await inviteCreateRes.json();
+  if(!inviteRoom.inviteToken || inviteRoom.inviteToken.length<24) throw new Error('V15.6 high-entropy invite token missing');
+
+  let inviteRes=await fetch(`${base}/api/rooms/${inviteCode}`);
+  if(inviteRes.status!==404) throw new Error('V15.6 room code alone reveals or opens protected room');
+  inviteRes=await fetch(`${base}/api/rooms/${inviteCode}`,{headers:{'X-Room-Invite':'wrong-secret'}});
+  if(inviteRes.status!==404) throw new Error('V15.6 wrong invite token reveals protected room');
+  inviteRes=await fetch(`${base}/api/rooms/${inviteCode}`,{headers:{'X-Room-Invite':inviteRoom.inviteToken}});
+  if(inviteRes.status!==200) throw new Error('V15.6 valid secret invite cannot open room');
+  const invitePublic=await inviteRes.json();
+  if(invitePublic.inviteHash||invitePublic.inviteToken) throw new Error('V15.6 invite secret leaked in public room payload');
+
+  const inviteActor={'Content-Type':'application/json','X-Actor-Id':'invite-guest','X-Actor-Token':'invite-guest-secret'};
+  inviteRes=await fetch(`${base}/api/rooms/${inviteCode}/ops`,{
+    method:'POST',headers:inviteActor,
+    body:JSON.stringify({scope:'memory',op:{kind:'note:add',item:{id:'invite-note',text:'secret gate',by:'guest',time:Date.now()}}})
+  });
+  if(inviteRes.status!==403) throw new Error('V15.6 actor credential bypasses invite gate');
+  inviteRes=await fetch(`${base}/api/rooms/${inviteCode}/ops`,{
+    method:'POST',headers:{...inviteActor,'X-Room-Invite':inviteRoom.inviteToken},
+    body:JSON.stringify({scope:'memory',op:{kind:'note:add',item:{id:'invite-note',text:'secret gate',by:'guest',time:Date.now()}}})
+  });
+  if(inviteRes.status!==200) throw new Error('V15.6 invited guest cannot write');
+
+  const oldInvite=inviteRoom.inviteToken;
+  const rotateRes=await fetch(`${base}/api/rooms/${inviteCode}/invite/rotate`,{
+    method:'POST',headers:{'Content-Type':'application/json','X-Room-Owner':inviteRoom.ownerToken},body:'{}'
+  });
+  if(rotateRes.status!==200) throw new Error('V15.6 owner cannot rotate invite token');
+  const rotated=await rotateRes.json();
+  if(!rotated.inviteToken||rotated.inviteToken===oldInvite) throw new Error('V15.6 invite rotation did not issue a new token');
+  const oldAfterRotate=await fetch(`${base}/api/rooms/${inviteCode}`,{headers:{'X-Room-Invite':oldInvite}});
+  if(oldAfterRotate.status!==404) throw new Error('V15.6 old invite token still works after rotation');
+  const newAfterRotate=await fetch(`${base}/api/rooms/${inviteCode}`,{headers:{'X-Room-Invite':rotated.inviteToken}});
+  if(newAfterRotate.status!==200) throw new Error('V15.6 rotated invite token does not work');
+  console.log('V15_6_INVITE_AUDIT',{room:inviteCode,inviteVersion:rotated.inviteVersion,ok:true});
+
   // V15.5 D005=A: archive -> guest blocked -> owner restore -> permanent purge incl. uploads.
   const lifecycleCode=('R'+Math.random().toString(36).slice(2,7)).toUpperCase();
   const lifecycleCreateRes=await fetch(`${base}/api/rooms`,{
@@ -385,7 +430,7 @@ const { chromium } = require('playwright');
   const retentionMs=Number(archivedData.meta?.purgeAfter)-Number(archivedData.meta?.archivedAt);
   if(Math.abs(retentionMs-30*24*60*60*1000)>5000) throw new Error('V15.5 archive retention window is not 30 days');
 
-  const guestArchived=await fetch(`${base}/api/rooms/${lifecycleCode}`);
+  const guestArchived=await fetch(`${base}/api/rooms/${lifecycleCode}`,{headers:{'X-Room-Invite':lifecycleRoom.inviteToken}});
   if(guestArchived.status!==410) throw new Error('V15.5 archived room still allows guest GET');
   const ownerArchived=await fetch(`${base}/api/rooms/${lifecycleCode}`,{headers:{'X-Room-Owner':lifecycleRoom.ownerToken}});
   if(ownerArchived.status!==200) throw new Error('V15.5 owner cannot inspect archived room');
@@ -399,7 +444,7 @@ const { chromium } = require('playwright');
     method:'POST',headers:lifecycleOwner,body:'{}'
   });
   if(lifecycleRes.status!==200) throw new Error('V15.5 owner cannot restore archived room');
-  const guestRestored=await fetch(`${base}/api/rooms/${lifecycleCode}`);
+  const guestRestored=await fetch(`${base}/api/rooms/${lifecycleCode}`,{headers:{'X-Room-Invite':lifecycleRoom.inviteToken}});
   if(guestRestored.status!==200) throw new Error('V15.5 restored room is not joinable');
 
   lifecycleRes=await fetch(`${base}/api/rooms/${lifecycleCode}/archive`,{
@@ -439,8 +484,8 @@ const { chromium } = require('playwright');
     body:JSON.stringify({memory:{mementos:[{id:'bypass'}]}})
   });
   if(snapshotBypass.status!==400) throw new Error('V15.3 legacy snapshot write can bypass memory permissions');
-  const guestA={'Content-Type':'application/json','X-Actor-Id':'guest-author-a','X-Actor-Token':'guest-secret-a'};
-  const guestB={'Content-Type':'application/json','X-Actor-Id':'guest-intruder-b','X-Actor-Token':'guest-secret-b'};
+  const guestA={'Content-Type':'application/json','X-Room-Invite':curatorRoom.inviteToken,'X-Actor-Id':'guest-author-a','X-Actor-Token':'guest-secret-a'};
+  const guestB={'Content-Type':'application/json','X-Room-Invite':curatorRoom.inviteToken,'X-Actor-Id':'guest-intruder-b','X-Actor-Token':'guest-secret-b'};
   const hostH={'Content-Type':'application/json','X-Room-Owner':curatorRoom.ownerToken};
   const opRequest=(scope,op,headers)=>fetch(`${base}/api/rooms/${curatorCode}/ops`,{
     method:'POST',headers,body:JSON.stringify({scope,op})
@@ -448,7 +493,7 @@ const { chromium } = require('playwright');
 
   let authRes=await opRequest('memory',{kind:'memento:add',item:{id:'guest-memory',authorId:'spoofed',type:'📷',title:'原始标题',meaning:'原始内容',by:'访客A',x:22,y:66,time:Date.now()}},guestA);
   if(authRes.status!==200) throw new Error('V15.3 author could not add memento');
-  let authRoom=await fetch(`${base}/api/rooms/${curatorCode}`).then(r=>r.json());
+  let authRoom=await fetch(`${base}/api/rooms/${curatorCode}`,{headers:{'X-Room-Invite':curatorRoom.inviteToken}}).then(r=>r.json());
   if(authRoom.memory.mementos[0]?.authorId!=='guest-author-a') throw new Error('V15.3 server did not stamp canonical authorId');
 
   authRes=await opRequest('memory',{kind:'memento:move',id:'guest-memory',x:44,y:55},guestB);
@@ -486,7 +531,7 @@ const { chromium } = require('playwright');
 
   // Inject a real guest-authored memento into the active room so the host editor
   // must curate someone else's object, not merely its own.
-  const liveGuestHeaders={'Content-Type':'application/json','X-Actor-Id':'live-guest-author','X-Actor-Token':'live-guest-secret'};
+  const liveGuestHeaders={'Content-Type':'application/json','X-Room-Invite':await page.evaluate(()=>PixelNet.getInviteToken(state.roomCode)),'X-Actor-Id':'live-guest-author','X-Actor-Token':'live-guest-secret'};
   const liveGuestAdd=await fetch(`${base}/api/rooms/${ownerAudit.room}/ops`,{
     method:'POST',headers:liveGuestHeaders,
     body:JSON.stringify({scope:'memory',op:{kind:'memento:add',item:{id:'ci-guest-memento',type:'🌷',title:'访客留下的花',meaning:'给房主整理测试',by:'访客',x:67,y:67,time:Date.now()}}})
@@ -540,10 +585,15 @@ const { chromium } = require('playwright');
   await page.waitForSelector('#roomDrawer:not(.hidden)', { timeout: 3000 });
   await page.waitForSelector('#openRecoveryCenterV15',{timeout:3000});
   await page.waitForSelector('#openRetentionCenterV15',{timeout:3000});
+  await page.waitForSelector('#openInviteCenterV15',{timeout:3000});
   const recoveryEntry=await page.locator('#recoveryEntryV15').innerText();
   const retentionEntry=await page.locator('#retentionEntryV15').innerText();
+  const inviteEntry=await page.locator('#inviteEntryV15').innerText();
+  const shareUrlAudit=await page.evaluate(()=>PixelInvite.shareUrl(state.roomCode));
   if(!/换设备恢复/.test(recoveryEntry)) throw new Error('V15.4 recovery center entry missing from room settings');
   if(!/30 天/.test(retentionEntry)) throw new Error('V15.5 retention center entry missing from room settings');
+  if(!/秘密邀请/.test(inviteEntry)) throw new Error('V15.6 secret invite center missing from room settings');
+  if(!/[?&]invite=/.test(shareUrlAudit)||!/[?&]room=/.test(shareUrlAudit)) throw new Error('V15.6 share URL does not carry room + invite token');
   await page.waitForSelector('#startRoomEditorV15', { timeout: 3000 });
   const storageCopy = await page.locator('.pm-storage-state-v15').innerText();
   if (!storageCopy) throw new Error('V15 persistence status missing');
@@ -719,7 +769,7 @@ const { chromium } = require('playwright');
     throw new Error('Browser errors:\n' + errors.join('\n'));
   }
 
-  console.log('SMOKE_OK V15.5 archive retention -> account-free recovery -> A-curator -> participant memory editor -> warm atlas -> tiled camera -> revisions -> join');
+  console.log('SMOKE_OK V15.6 secret invite -> archive retention -> account-free recovery -> A-curator -> warm atlas -> tiled camera -> revisions -> join');
   await browser.close();
 })().catch(async err => {
   console.error(err);
