@@ -423,8 +423,8 @@ const { chromium } = require('playwright');
     const p=[...state.players.values()].find(p=>p.name==='参与者测试');
     return p?{name:p.name,hair:p.hair,outfit:p.outfit,item:p.item,actorId:p.actorId||''}:null;
   });
-  if(!contributorVisibleAudit||contributorVisibleAudit.hair!=='3'||contributorVisibleAudit.outfit!=='butter'||contributorVisibleAudit.item!=='🎈'||!contributorVisibleAudit.actorId) {
-    throw new Error('V15.10 contributor visible identity did not propagate '+JSON.stringify(contributorVisibleAudit));
+  if(!contributorVisibleAudit||contributorVisibleAudit.hair!=='3'||contributorVisibleAudit.outfit!=='butter'||contributorVisibleAudit.item!=='🎈'||contributorVisibleAudit.actorId) {
+    throw new Error('V15.14 contributor appearance did not propagate privately '+JSON.stringify(contributorVisibleAudit));
   }
 
   // V15.12 D012=A: contributor can change visible appearance live, but current visit name stays fixed.
