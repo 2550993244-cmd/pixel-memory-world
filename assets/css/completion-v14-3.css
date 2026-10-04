@@ -181,6 +181,7 @@ body.v14-ready .keepsake-stats{
   box-shadow:0 -1px 0 rgba(255,255,255,.76),0 1px 0 rgba(85,90,95,.055);
 }
 body.v14-ready .keepsake-stats>div{
+  position:relative;
   border:0!important;
   background:none!important;
   border-radius:0!important;
@@ -189,8 +190,9 @@ body.v14-ready .keepsake-stats>div{
 body.v14-ready .keepsake-stats>div+div:before{
   content:"";
   position:absolute;
+  left:0;top:50%;
   width:1px;height:35px;
-  margin-left:-1px;
+  transform:translateY(-50%);
   background:linear-gradient(to bottom,transparent,rgba(85,90,95,.10),transparent);
 }
 body.v14-ready .keepsake-stats b{
