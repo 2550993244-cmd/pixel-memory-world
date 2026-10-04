@@ -18,6 +18,8 @@ body.v14-ready .keepsake-shell{
   perspective:none;
 }
 body.v14-ready .keepsake-shell>.modal-close{
+  position:absolute;
+  z-index:20;
   top:-14px;right:-14px;
   background:rgba(255,255,255,.94);
   color:#62666a;
