@@ -1,5 +1,5 @@
 ---
-version: 14.1
+version: 14.2
 name: Pixel Memory World
 description: A warm multiplayer pixel-memory space. The interface should feel like a keepsake box that became a tiny playable world: soft paper surfaces, restrained pastel accents, readable modern Chinese typography, pixel-art scenes, and motion that responds to people rather than decorating every surface.
 ---
@@ -135,6 +135,18 @@ Visual content should replace empty whitespace. If a region feels empty, add mea
 - No redundant three-step infographic underneath the character.
 - Never stretch the preview column just because the form column is taller.
 - Hair / outfit / held-item choices should read as branches or tokens, not spreadsheet cells.
+
+## Keepsake / gift-card language
+
+The saved keepsake is a ceremonial object, not an analytics dashboard.
+
+- Think jewelry presentation case / gift packaging: champagne gold, translucent glass, fine dark-gold textile pattern, thin metallic frame.
+- Main title and invitation quote are centered.
+- A small medallion or seal may anchor the composition.
+- Stats must not be four hard rectangular cells. Use open spacing, fine separators, small jewels or medallions.
+- Participant tokens may resemble tiny mounted gems.
+- One frosted capsule or plaque is acceptable for the final quote; do not put every field in a box.
+- The exported PNG must match the on-screen keepsake language.
 
 ## Room & Outside
 
