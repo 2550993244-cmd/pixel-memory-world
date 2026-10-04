@@ -66,8 +66,8 @@ const { chromium } = require('playwright');
     inviteVersion: window.PixelInvite?.version || null
   }));
   console.log('V15_1_DIAG', v15Diag);
-  if (v15Diag.runtime?.version !== '15.12') throw new Error('V15.12 systems runtime missing');
-  if (v15Diag.retentionVersion !== '15.5' || v15Diag.recoveryVersion !== '15.7' || v15Diag.inviteVersion !== '15.12') throw new Error('V15.12 invite/retention/recovery runtime missing');
+  if (v15Diag.runtime?.version !== '15.13') throw new Error('V15.13 systems runtime missing');
+  if (v15Diag.retentionVersion !== '15.5' || v15Diag.recoveryVersion !== '15.7' || v15Diag.inviteVersion !== '15.13') throw new Error('V15.13 invite/retention/recovery runtime missing');
   if (v15Diag.sceneVersion !== '15.0') throw new Error('V15 layered scene map missing');
   if (v15Diag.mapRuntime.source !== 'tiled-json' || v15Diag.mapRuntime.collisionCount < 3 || v15Diag.mapRuntime.pathCount < 6) {
     throw new Error('V15.1 Tiled map runtime did not load canonical JSON');
@@ -465,6 +465,17 @@ const { chromium } = require('playwright');
   if(!liveAppearanceAudit||liveAppearanceAudit.name!=='参与者测试'||liveAppearanceAudit.hair!=='2'||liveAppearanceAudit.outfit!=='blue'||liveAppearanceAudit.item!=='📷'||contributorStoredProfile?.name!=='参与者测试'||contributorStoredProfile?.hair!=='2'||contributorStoredProfile?.outfit!=='blue'||contributorStoredProfile?.item!=='📷') {
     throw new Error('V15.12 live contributor appearance did not sync/persist '+JSON.stringify({liveAppearanceAudit,contributorStoredProfile}));
   }
+
+  // V15.13 D013=A: create a memory under the first visible name.
+  await contributorPage.evaluate(()=>openNoteModal());
+  await contributorPage.locator('#noteText').fill('旧名留言');
+  await contributorPage.locator('#saveNoteBtn').click();
+  await page.waitForFunction(()=>state.notes.some(n=>n.text==='旧名留言'),null,{timeout:5000});
+  const oldNameNote=await page.evaluate(()=>state.notes.find(n=>n.text==='旧名留言'));
+  if(oldNameNote?.authorName!=='参与者测试'||oldNameNote?.by!=='参与者测试'||!oldNameNote?.authorId) {
+    throw new Error('V15.13 first author snapshot missing '+JSON.stringify(oldNameNote));
+  }
+
   await contributorPage.evaluate(()=>broadcast('leave'));
   await page.waitForFunction(()=>![...state.players.values()].some(p=>p.name==='参与者测试'),null,{timeout:5000});
 
@@ -487,9 +498,41 @@ const { chromium } = require('playwright');
   }
   const ownerBeforeReturningConfirm=await page.evaluate(()=>[...state.players.values()].some(p=>p.name==='参与者测试'));
   if(ownerBeforeReturningConfirm)throw new Error('V15.11 returning contributor became visible before confirming builder');
+
+  await contributorPage.locator('#playerNameInput').fill('Lynn测试');
+  await contributorPage.locator('#enterWorldBtn').click();
+  await contributorPage.waitForFunction(()=>document.querySelector('#world')?.classList.contains('active'),null,{timeout:5000});
+  await page.waitForFunction(()=>[...state.players.values()].some(p=>p.name==='Lynn测试'),null,{timeout:5000});
+  await contributorPage.evaluate(()=>openNoteModal());
+  await contributorPage.locator('#noteText').fill('新名留言');
+  await contributorPage.locator('#saveNoteBtn').click();
+  await page.waitForFunction(()=>state.notes.some(n=>n.text==='新名留言'),null,{timeout:5000});
+
+  const historicalNameAudit=await page.evaluate(()=>{
+    const oldNote=state.notes.find(n=>n.text==='旧名留言');
+    const newNote=state.notes.find(n=>n.text==='新名留言');
+    openNotesDrawer();
+    return {
+      oldNote:oldNote?{authorId:oldNote.authorId,authorName:oldNote.authorName,by:oldNote.by}:null,
+      newNote:newNote?{authorId:newNote.authorId,authorName:newNote.authorName,by:newNote.by}:null,
+      drawerText:document.querySelector('#drawerBody')?.innerText||''
+    };
+  });
+  if(!historicalNameAudit.oldNote||!historicalNameAudit.newNote||
+     historicalNameAudit.oldNote.authorId!==historicalNameAudit.newNote.authorId||
+     historicalNameAudit.oldNote.authorName!=='参与者测试'||
+     historicalNameAudit.newNote.authorName!=='Lynn测试'||
+     historicalNameAudit.oldNote.by!=='参与者测试'||
+     historicalNameAudit.newNote.by!=='Lynn测试'||
+     !historicalNameAudit.drawerText.includes('参与者测试')||
+     !historicalNameAudit.drawerText.includes('Lynn测试')) {
+    throw new Error('V15.13 historical author-name snapshots failed '+JSON.stringify(historicalNameAudit));
+  }
+  await contributorPage.evaluate(()=>broadcast('leave'));
+  await page.waitForFunction(()=>![...state.players.values()].some(p=>p.name==='Lynn测试'),null,{timeout:5000});
   await contributorPage.close();
-  console.log('V15_12_CONTRIBUTOR_AVATAR_AUDIT',{entry:contributorEntryAudit,visible:contributorVisibleAudit,editor:contributorEditorAudit,live:liveAppearanceAudit,returning:returningContributorAudit,errors:contributorErrors});
-  if(contributorErrors.length)throw new Error('V15.11 contributor page errors '+JSON.stringify(contributorErrors));
+  console.log('V15_13_HISTORICAL_AUTHOR_AUDIT',{entry:contributorEntryAudit,live:liveAppearanceAudit,returning:returningContributorAudit,historical:historicalNameAudit,errors:contributorErrors});
+  if(contributorErrors.length)throw new Error('V15.13 contributor page errors '+JSON.stringify(contributorErrors));
 
     await page.evaluate(()=>addActivity('CI identity check'));
   await page.waitForTimeout(80);
@@ -600,6 +643,17 @@ const { chromium } = require('playwright');
     body:JSON.stringify({scope:'memory',op:{kind:'note:add',item:{id:'contrib-note',text:'allowed',by:'contributor',time:Date.now()}}})
   });
   if(inviteRes.status!==200) throw new Error('V15.7 contributor invite cannot write');
+
+  inviteRes=await fetch(`${base}/api/rooms/${inviteCode}/ops`,{
+    method:'POST',headers:contributorActor,
+    body:JSON.stringify({scope:'memory',op:{kind:'note:add',item:{id:'contrib-note',authorName:'替换名',by:'替换名',text:'replayed',time:Date.now()}}})
+  });
+  if(inviteRes.status!==200) throw new Error('V15.13 duplicate authored add request failed unexpectedly');
+  const immutableRoom=await fetch(`${base}/api/rooms/${inviteCode}`,{headers:{'X-Room-Invite':inviteRoom.inviteToken}}).then(r=>r.json());
+  const immutableNote=immutableRoom.memory.notes.find(n=>n.id==='contrib-note');
+  if(immutableNote?.authorName!=='contributor'||immutableNote?.by!=='contributor'||immutableNote?.authorId!=='contributor-a') {
+    throw new Error('V15.13 server allowed historical author snapshot rewrite '+JSON.stringify(immutableNote));
+  }
 
   const viewerUpload=new FormData();
   viewerUpload.append('file',new Blob(['viewer upload should fail'],{type:'text/plain'}),'viewer.txt');
@@ -1026,7 +1080,7 @@ const { chromium } = require('playwright');
     throw new Error('Browser errors:\n' + errors.join('\n'));
   }
 
-  console.log('SMOKE_OK V15.12 live contributor appearance -> returning prefill -> contributor ceremony -> instant spectators -> invisible viewers -> dual invite roles -> archive retention -> recovery -> curator -> warm atlas -> tiled camera -> revisions -> join');
+  console.log('SMOKE_OK V15.13 historical author snapshots -> live contributor appearance -> returning prefill -> contributor ceremony -> instant spectators -> invisible viewers -> dual invite roles -> archive retention -> recovery -> curator -> warm atlas -> tiled camera -> revisions -> join');
   await browser.close();
 })().catch(async err => {
   console.error(err);
