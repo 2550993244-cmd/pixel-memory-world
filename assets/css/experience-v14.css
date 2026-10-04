@@ -789,3 +789,9 @@ body.v14-ready #copyKeepsakeInvite{
   body.v14-ready .keepsake-footer{flex-direction:column;gap:6px}
   body.v14-ready .keepsake-footer span+span:before{display:none}
 }
+
+
+/* V14.2 collage positioning correction: preserve the absolute composition
+   inside the pressed-flower souvenir while keeping its text above overlays. */
+body.v14-ready .flower-tile .pressed-flower{position:absolute;z-index:2}
+body.v14-ready .flower-tile .flower-note{position:absolute;z-index:3}
