@@ -1,5 +1,5 @@
 ---
-version: 15.10
+version: 15.11
 name: Pixel Memory World
 description: A warm multiplayer pixel-memory space. The interface should feel like a keepsake box that became a tiny playable world: soft paper surfaces, restrained pastel accents, readable modern Chinese typography, pixel-art scenes, and motion that responds to people rather than decorating every surface.
 ---
@@ -174,6 +174,17 @@ The technical sprite contract is fixed and the production direction is now **War
 - The runtime must keep the current DOM sprite as a fallback until a real atlas is present.
 - Production atlas language: warm brown outlines, muted clothing, small facial features, restrained handmade irregularity, readable four-direction silhouettes, and expressive-but-not-cartoonish social poses.
 - Keep the DOM sprite only as a compatibility fallback; new character work should extend the warm layered atlas instead of creating a second visual system.
+
+## Returning contributor profiles
+
+Returning contributor identity should feel remembered, not auto-entered.
+
+- Store contributor name, hair, outfit and held item locally under the persistent actor identity.
+- Reopen the full contributor builder on every visit.
+- Prefill prior values and visibly select them before entry.
+- Mark the remembered state explicitly with “这台设备记得你”.
+- Do not broadcast presence until the contributor confirms the builder.
+- Keep viewer-local profile storage separate from contributor profile storage.
 
 ## Contributor identity ceremony
 
