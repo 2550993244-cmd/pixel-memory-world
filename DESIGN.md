@@ -1,5 +1,5 @@
 ---
-version: 15.13
+version: 15.14
 name: Pixel Memory World
 description: A warm multiplayer pixel-memory space. The interface should feel like a keepsake box that became a tiny playable world: soft paper surfaces, restrained pastel accents, readable modern Chinese typography, pixel-art scenes, and motion that responds to people rather than decorating every surface.
 ---
@@ -184,6 +184,17 @@ A memory's displayed author name is part of the moment in which the memory was c
 - Contributor renames on later visits must not retroactively rewrite old content.
 - Editing memory text, moving objects or host curation must never mutate the author-name snapshot.
 - Keep actor identity and display-name history conceptually separate: one secures continuity, the other preserves presentation at creation time.
+
+## Private alias linkage
+
+Stable actor identity is an authorization primitive, not public biography.
+
+- Never serialize authorId into public room, quest or WebSocket memory payloads.
+- A verified author may receive only an item-local `isAuthor: true` capability hint for their own content.
+- Hosts curate through host authority; host views do not receive contributor identity-link keys.
+- Strip actorId from transient player presence packets so renamed visits cannot be correlated through live traffic.
+- Public presentation preserves each memory's historical authorName without badges, alias history or same-person indicators.
+- Internal authorId remains server-side for continuity, edit authorization and recovery verification.
 
 ## Live contributor appearance editing
 
