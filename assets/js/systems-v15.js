@@ -5,14 +5,14 @@
 (() => {
   const $=(s,r=document)=>r.querySelector(s);
   const $$=(s,r=document)=>[...r.querySelectorAll(s)];
-  const V='15.2';
+  const V='15.3';
 
   window.PixelV15={
     version:V,
     p1:{layers:true,camera:true,tiled:true},
     p2:{actions:['idle','walk','sit','wave','hug','celebrate']},
-    p3:{roomEditor:true,persistentLayout:true,undoRedo:true,snap:true},
-    p4:{ownerToken:true,durableStorage:true,revisions:true}
+    p3:{roomEditor:true,persistentLayout:true,undoRedo:true,snap:true,curatedMementos:true},
+    p4:{ownerToken:true,durableStorage:true,revisions:true,actorCredentials:true}
   };
 
   const hasCore=()=>typeof state!=='undefined';
@@ -256,7 +256,7 @@
   // ---------------------------------------------------------------------------
   const roomMap=()=>window.PixelSceneMap?.room?.editableObjects||{};
   const cloneLayout=layout=>JSON.parse(JSON.stringify(layout||{}));
-  const editor={active:false,drag:null,lastLayout:'',claiming:false,history:[],future:[],keyboardSave:null,snap:1};
+  const editor={active:false,drag:null,lastLayout:'',claiming:false,history:[],future:[],keyboardSave:null,mementoSave:null,selectedMemento:'',snap:1};
 
   function pushHistory(){
     const snap=cloneLayout(state.world.layout);
@@ -349,6 +349,31 @@
 
   setInterval(()=>{ if(state.screen==='world') applyRoomLayout(); },300);
 
+  function markEditableMementos(){
+    if(!editor.active)return;
+    $('#mementoLayer .memento').forEach(el=>{
+      el.dataset.curatableMemento=el.dataset.id||'';
+      el.setAttribute('tabindex','0');
+      const m=state.mementos.find(x=>x.id===el.dataset.id);
+      if(m)el.setAttribute('aria-label',`纪念物：${m.title}，${m.by}留下`);
+    });
+  }
+  const mementoLayer=$('#mementoLayer');
+  if(mementoLayer&&!mementoLayer._pmCuratorObserver){
+    new MutationObserver(()=>markEditableMementos()).observe(mementoLayer,{childList:true});
+    mementoLayer._pmCuratorObserver=true;
+  }
+  function selectedMemento(){
+    return state.mementos.find(x=>x.id===editor.selectedMemento)||null;
+  }
+  function updateMementoEditorButton(){
+    const btn=$('[data-room-editor-manage]');
+    if(!btn)return;
+    const m=selectedMemento();
+    btn.disabled=!m;
+    btn.textContent=m?'管理「'+String(m.title||'纪念物').slice(0,7)+'」':'管理纪念物';
+  }
+
   async function ensureOwner(){
     if(!window.PixelNet?.enabled) return true;
     if(PixelNet.hasOwnerToken?.(state.roomCode)) return true;
@@ -377,16 +402,22 @@
       <div><span>ROOM EDITOR · SNAP 1%</span><b>拖动家具；Ctrl/⌘ + Z 撤销</b></div>
       <button type="button" data-room-editor-undo class="press">↶ 撤销</button>
       <button type="button" data-room-editor-redo class="press">↷ 重做</button>
+      <button type="button" data-room-editor-manage class="press" disabled>管理纪念物</button>
       <button type="button" data-room-editor-add class="press">＋ 纪念物</button>
-      <button type="button" data-room-editor-reset class="press">恢复默认</button>
+      <button type="button" data-room-editor-reset class="press">恢复家具</button>
       <button type="button" data-room-editor-done class="press primary">完成</button>`;
     $('#worldStage')?.appendChild(bar);
     $('[data-room-editor-done]',bar).onclick=stopRoomEditor;
     $('[data-room-editor-undo]',bar).onclick=undoLayout;
     $('[data-room-editor-redo]',bar).onclick=redoLayout;
     $('[data-room-editor-reset]',bar).onclick=resetRoomLayout;
+    $('[data-room-editor-manage]',bar).onclick=()=>{
+      const m=selectedMemento();
+      if(m){try{openMementoDetail(m)}catch(_){}}
+    };
     $('[data-room-editor-add]',bar).onclick=()=>{try{openMementoModal()}catch(_){}};
     updateEditorButtons();
+    updateMementoEditorButton();
     return bar;
   }
 
@@ -395,12 +426,14 @@
     editor.active=true;
     editor.history=[];
     editor.future=[];
+    editor.selectedMemento='';
     document.body.classList.add('pm-room-editing-v15');
     Object.entries(roomMap()).forEach(([id,def])=>{
       const el=$(def.selector);
       if(el){el.dataset.roomObjectV15=id;el.setAttribute('tabindex','0')}
     });
     editorToolbar();
+    markEditableMementos();
     $('#closeRoomDrawer')?.click();
     toast('拖动家具到喜欢的位置，完成后会自动保存');
   }
@@ -410,7 +443,8 @@
     editor.drag=null;
     document.body.classList.remove('pm-room-editing-v15');
     $('.pm-room-editor-toolbar-v15')?.remove();
-    $$('[data-room-object-v15]').forEach(el=>el.removeAttribute('tabindex'));
+    $('[data-room-object-v15]').forEach(el=>el.removeAttribute('tabindex'));
+    $('[data-curatable-memento]').forEach(el=>{el.removeAttribute('tabindex');delete el.dataset.curatableMemento});
     persistRoomLayout();
     $('#worldStage')?.focus();
   }
@@ -450,12 +484,25 @@
 
   worldStage?.addEventListener('pointerdown',e=>{
     if(!editor.active)return;
+    const memoryTarget=e.target.closest('[data-curatable-memento]');
+    if(memoryTarget){
+      e.preventDefault();e.stopPropagation();
+      const id=memoryTarget.dataset.id;
+      const m=state.mementos.find(x=>x.id===id);
+      if(!m)return;
+      editor.selectedMemento=id;
+      updateMementoEditorButton();
+      editor.drag={kind:'memento',id,el:memoryTarget,pointerId:e.pointerId,origin:{x:m.x,y:m.y}};
+      memoryTarget.classList.add('pm-dragging-v15','pm-curator-selected-v15');
+      try{worldStage.setPointerCapture(e.pointerId)}catch(_){}
+      return;
+    }
     const target=e.target.closest('[data-room-object-v15]');
     if(!target)return;
     e.preventDefault();e.stopPropagation();
     const id=target.dataset.roomObjectV15;
     pushHistory();
-    editor.drag={id,el:target,pointerId:e.pointerId};
+    editor.drag={kind:'furniture',id,el:target,pointerId:e.pointerId};
     target.classList.add('pm-dragging-v15');
     try{worldStage.setPointerCapture(e.pointerId)}catch(_){}
     const p=pointInStage(e);
@@ -469,16 +516,37 @@
     if(!editor.active||!editor.drag||editor.drag.pointerId!==e.pointerId)return;
     e.preventDefault();
     const p=pointInStage(e);
+    if(editor.drag.kind==='memento'){
+      const m=state.mementos.find(x=>x.id===editor.drag.id);
+      if(m){m.x=p.x;m.y=p.y;editor.drag.el.style.left=p.x+'%';editor.drag.el.style.top=p.y+'%'}
+      return;
+    }
     state.world.layout||={};
     state.world.layout[editor.drag.id]=p;
     editor.lastLayout='';
     applyRoomLayout(true);
   },true);
 
-  const finishDrag=e=>{
+  const finishDrag=async e=>{
     if(!editor.drag)return;
-    editor.drag.el?.classList.remove('pm-dragging-v15');
+    const drag=editor.drag;
+    drag.el?.classList.remove('pm-dragging-v15');
     editor.drag=null;
+    if(drag.kind==='memento'){
+      const m=state.mementos.find(x=>x.id===drag.id);
+      if(!m)return;
+      try{
+        await window.PixelMemoryOps?.commit?.({kind:'memento:move',id:m.id,x:m.x,y:m.y});
+        markEditableMementos();
+        toast('纪念物位置已经保存');
+      }catch(_){
+        if(drag.origin){m.x=drag.origin.x;m.y=drag.origin.y}
+        renderMementos();
+        markEditableMementos();
+        toast('这个纪念物的位置没有保存');
+      }
+      return;
+    }
     persistRoomLayout();
   };
   worldStage?.addEventListener('pointerup',finishDrag,true);
@@ -492,6 +560,22 @@
     }
     if(((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y')||((e.ctrlKey||e.metaKey)&&e.shiftKey&&e.key.toLowerCase()==='z')){
       e.preventDefault();e.stopPropagation();redoLayout();return;
+    }
+    const memoryTarget=document.activeElement?.closest?.('[data-curatable-memento]');
+    if(memoryTarget){
+      const key=e.key.toLowerCase();
+      if(!['arrowup','arrowdown','arrowleft','arrowright'].includes(key))return;
+      e.preventDefault();e.stopPropagation();
+      const m=state.mementos.find(x=>x.id===memoryTarget.dataset.id);if(!m)return;
+      editor.selectedMemento=m.id;updateMementoEditorButton();
+      if(key==='arrowleft')m.x=Math.max(4,Number(m.x)-1);
+      if(key==='arrowright')m.x=Math.min(96,Number(m.x)+1);
+      if(key==='arrowup')m.y=Math.max(10,Number(m.y)-1);
+      if(key==='arrowdown')m.y=Math.min(91,Number(m.y)+1);
+      memoryTarget.style.left=m.x+'%';memoryTarget.style.top=m.y+'%';
+      clearTimeout(editor.mementoSave);
+      editor.mementoSave=setTimeout(async()=>{try{await window.PixelMemoryOps?.commit?.({kind:'memento:move',id:m.id,x:m.x,y:m.y})}catch(_){}},350);
+      return;
     }
     const target=document.activeElement?.closest?.('[data-room-object-v15]');
     if(!target)return;
@@ -535,6 +619,20 @@
     }
   }
 
+  async function restoreLatestMementoRevision(){
+    if(!(await ensureOwner()))return;
+    if(!window.PixelNet?.enabled)return toast('本机模式没有云端纪念物历史');
+    try{
+      const data=await PixelNet.getRevisions(state.roomCode);
+      const rev=(data.revisions||[]).find(x=>x.kind==='mementos');
+      if(!rev)return toast('还没有可以恢复的纪念物整理记录');
+      const result=await PixelNet.restoreRevision(state.roomCode,rev.id);
+      state.mementos=JSON.parse(JSON.stringify(result.mementos||[]));
+      saveMemory();renderMementos();markEditableMementos();
+      toast('已经恢复上一次纪念物布置');
+    }catch(_){toast('纪念物历史恢复失败')}
+  }
+
   async function revisionStatusText(){
     if(!window.PixelNet?.enabled||!PixelNet.hasOwnerToken?.(state.roomCode))return '';
     try{
@@ -562,12 +660,14 @@
       <div class="pm-storage-state-v15"><i></i><span>${storageStatus()}</span></div>
       <div class="settings-grid">
         <button id="startRoomEditorV15" class="press">✥ 调整房间布置<br><small>拖动沙发、蛋糕桌、照片墙等</small></button>
-        <button id="restoreRoomRevisionV15" class="press">↶ 恢复上一版<br><small>跨刷新恢复云端家具布局</small></button>
+        <button id="restoreRoomRevisionV15" class="press">↶ 恢复家具上一版<br><small>跨刷新恢复家具布局</small></button>
+        <button id="restoreMementoRevisionV15" class="press">✦ 恢复纪念物上一版<br><small>找回房主整理前的纪念物</small></button>
         <button id="resetRoomEditorV15" class="press">↺ 恢复默认布置<br><small>只重置家具位置</small></button>
       </div>`;
     body.prepend(section);
     $('#startRoomEditorV15').onclick=startRoomEditor;
     $('#restoreRoomRevisionV15').onclick=restoreLatestCloudRevision;
+    $('#restoreMementoRevisionV15').onclick=restoreLatestMementoRevision;
     $('#resetRoomEditorV15').onclick=resetRoomLayout;
     revisionStatusText().then(extra=>{
       const span=$('.pm-storage-state-v15 span',section);
@@ -592,6 +692,7 @@
     undo:undoLayout,
     redo:redoLayout,
     restoreLatest:restoreLatestCloudRevision,
+    restoreMementos:restoreLatestMementoRevision,
     apply:()=>applyRoomLayout(true),
     get historyLength(){return editor.history.length},
     get futureLength(){return editor.future.length},
