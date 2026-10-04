@@ -286,19 +286,20 @@ const { chromium } = require('playwright');
       const room = await PixelNet.getRoom(state.roomCode);
       remote = room.world?.layout?.sofa || null;
     }
-    const unauthorized = window.PixelNet?.enabled
-      ? await fetch(`${PixelNet.baseUrl}/api/rooms/${state.roomCode}/layout`,{
-          method:'PUT',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({layout:{sofa:{x:1,y:1}}})
-        }).then(r=>r.status)
-      : 0;
-    return {local,remote,unauthorized};
+    return {local,remote};
   });
-  console.log('V15_LAYOUT_AUDIT', layoutAudit);
+  let unauthorizedStatus = 0;
+  if (ownerAudit.online) {
+    unauthorizedStatus = await fetch(`${base}/api/rooms/${ownerAudit.room}/layout`,{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({layout:{sofa:{x:1,y:1}}})
+    }).then(r=>r.status);
+  }
+  console.log('V15_LAYOUT_AUDIT', {...layoutAudit,unauthorizedStatus});
   if (!layoutAudit.local) throw new Error('V15 room editor did not update local layout');
   if (ownerAudit.online && !layoutAudit.remote) throw new Error('V15 owner layout did not persist to server');
-  if (ownerAudit.online && layoutAudit.unauthorized !== 403) throw new Error('V15 layout endpoint is not owner-protected');
+  if (ownerAudit.online && unauthorizedStatus !== 403) throw new Error('V15 layout endpoint is not owner-protected');
 
   await page.locator('[data-room-editor-done]').click();
   await page.waitForFunction(() => !document.body.classList.contains('pm-room-editing-v15'));
