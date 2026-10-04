@@ -63,7 +63,7 @@ const { chromium } = require('playwright');
     hasActionApi: !!window.PixelCharacterActions
   }));
   console.log('V15_1_DIAG', v15Diag);
-  if (v15Diag.runtime?.version !== '15.1') throw new Error('V15.1 runtime missing');
+  if (v15Diag.runtime?.version !== '15.2') throw new Error('V15.1 runtime missing');
   if (v15Diag.sceneVersion !== '15.0') throw new Error('V15 layered scene map missing');
   if (v15Diag.mapRuntime.source !== 'tiled-json' || v15Diag.mapRuntime.collisionCount < 3 || v15Diag.mapRuntime.pathCount < 6) {
     throw new Error('V15.1 Tiled map runtime did not load canonical JSON');
