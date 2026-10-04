@@ -273,7 +273,7 @@ The interface must state the recovery deadline clearly. “Archive” and “per
 
 ## D006 · Invitation access model
 
-**Status:** needs owner decision  
+**Status:** decided — A · Secret invite link + friendly room code  
 **Blocks:** whether invitation URLs need a secret token, whether room codes remain sufficient access credentials, waiting-room approval, invite rotation, anti-enumeration UX  
 **Does not block:** current room creation, recovery keys, archive lifecycle, author permissions, world editor, maps, character art
 
@@ -309,8 +309,66 @@ Keep the six-character room code as the human-readable room identity, but add a 
 
 **Tradeoff:** room privacy continues to depend heavily on a short code staying unknown.
 
+### Decision
+
+Selected **A · Secret invite link + friendly room code**.
+
+Implemented in V15.6:
+- each new room receives a high-entropy invite token separate from its six-character room code
+- invite secrets are stored hashed on the server and are omitted from public room payloads
+- the browser saves a received secret locally, then removes the `invite` query parameter from the visible URL
+- protected-room GET, WebSocket, writes and room-scoped uploads all require the current invite secret unless the request proves room ownership
+- invalid / missing invite tokens do not reveal protected-room existence through the ordinary GET endpoint
+- the host can rotate the invite secret without changing the room code, owner recovery key or room content
+- rotation immediately invalidates the old token and disconnects sessions authenticated with the previous link
+- owner recovery bundles created from V15.6 onward can carry the current invite token
+
+Legacy rooms stay code-accessible until the owner explicitly generates or rotates a secret invite, avoiding an invisible breaking migration.
+
+
+---
+
+## D007 · Invited guest capability
+
+**Status:** needs owner decision  
+**Blocks:** whether every valid invite is collaborative, whether view-only links exist, invite-role encoding, contribution controls in long-lived rooms  
+**Does not block:** current secret invite protection, room archive/recovery, owner curation, recovery keys, maps or character work
+
+V15.6 answers **who may enter**, but a valid invitation currently implies the normal collaborative experience: the guest can walk around and, after receiving an author credential, leave notes, photos, mementos and Outside memories.
+
+The next product question is whether every invite should grant contribution rights.
+
+### A · One collaborative invite — recommended for now
+
+- anyone with the current secret invite can enter and contribute
+- host curation and immutable authorship continue to protect the final keepsake
+- one link remains extremely easy to explain and share
+
+**Best fit:** birthdays, graduations and close-friend groups where participation is the point.
+
+**Tradeoff:** there is no safe “just let relatives view it” link.
+
+### B · Collaborative link + view-only link
+
+- host gets two independently rotatable secret links
+- collaborative invite can contribute
+- view-only invite can explore, read, listen and view photos but cannot create or modify memories
+- both remain account-free
+
+**Best fit:** a room that is edited by a small group but later shared with a wider audience.
+
+**Tradeoff:** introduces invite roles across REST, WebSocket UI and sharing surfaces.
+
+### C · Host toggles the whole room between collaborative and view-only
+
+- keep one invite secret
+- host changes whether invited guests may contribute
+- useful after an event ends
+
+**Best fit:** “collect memories during the event, freeze afterward.”
+
+**Tradeoff:** existing guests can suddenly lose contribution ability, and the single link cannot support contributors and viewers simultaneously.
+
 ### Default recommendation
 
-Choose **A · Secret invite link + friendly room code**.
-
-It does not introduce accounts or approval queues, but separates “easy name humans can type” from “secret credential that grants access,” which is the cleaner architecture for rooms intended to survive for years.
+Choose **B · Collaborative link + view-only link** only if wider sharing is already a concrete goal. Otherwise keep **A** for now: it preserves the current simple social loop and avoids adding a second permission axis prematurely.
