@@ -76,7 +76,7 @@ async function loadRoomRemote(code){loadRoom(code);if(!window.PixelNet?.enabled)
 function randomCode(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';return Array.from({length:6},()=>chars[Math.floor(Math.random()*chars.length)]).join('')}
 function escapeHTML(s=''){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function toast(t){const el=$('#toast');el.textContent=t;el.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('show'),1800)}
-function showScreen(id){$('.screen').forEach(s=>s.classList.toggle('active',s.id===id));state.screen=id;window.scrollTo({top:0,behavior:'smooth'});if(id==='world')setTimeout(()=>$('#worldStage').focus(),50)}
+function showScreen(id){$$('.screen').forEach(s=>s.classList.toggle('active',s.id===id));state.screen=id;window.scrollTo({top:0,behavior:'smooth'});if(id==='world')setTimeout(()=>$('#worldStage').focus(),50)}
 function openAvatarBuilderForCurrentRole(){
   const owner=!!window.PixelNet?.hasOwnerToken?.(state.roomCode);
   const contributor=!owner&&state.accessRole==='contributor';
