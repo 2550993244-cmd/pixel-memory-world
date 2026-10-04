@@ -1,5 +1,5 @@
 ---
-version: 15.6
+version: 15.7
 name: Pixel Memory World
 description: A warm multiplayer pixel-memory space. The interface should feel like a keepsake box that became a tiny playable world: soft paper surfaces, restrained pastel accents, readable modern Chinese typography, pixel-art scenes, and motion that responds to people rather than decorating every surface.
 ---
@@ -174,6 +174,17 @@ The technical sprite contract is fixed and the production direction is now **War
 - The runtime must keep the current DOM sprite as a fallback until a real atlas is present.
 - Production atlas language: warm brown outlines, muted clothing, small facial features, restrained handmade irregularity, readable four-direction silhouettes, and expressive-but-not-cartoonish social poses.
 - Keep the DOM sprite only as a compatibility fallback; new character work should extend the warm layered atlas instead of creating a second visual system.
+
+## View-only mode language
+
+Viewer mode must feel intentional, not broken.
+
+- Show a small persistent “只看模式” badge after entering with a viewer invite.
+- Remove creation / moderation controls instead of merely disabling them with unexplained gray states.
+- Existing memories, photos, audio and navigation remain fully readable and playable.
+- Music UI in viewer mode exposes local listening / volume only; it must not imply that the viewer controls the room soundtrack.
+- Server rejection is still authoritative even when a hidden control is triggered programmatically.
+- Contributor and viewer share cards must be visually distinct and describe their capability difference in one sentence.
 
 ## Secret invite language
 
