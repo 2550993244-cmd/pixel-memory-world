@@ -216,7 +216,7 @@ A recovery key is a bearer secret: possession of the key grants the represented 
 
 ## D005 · Room deletion and retention
 
-**Status:** needs owner decision  
+**Status:** decided — A · Archive first, permanent delete later  
 **Blocks:** owner-facing delete/archive controls, automatic cleanup policy, recovery after accidental deletion  
 **Does not block:** invitations, recovery keys, author identity, curation, multiplayer, maps, character art
 
@@ -252,6 +252,65 @@ Now that room ownership can survive device changes, the next irreversible produc
 
 **Tradeoff:** poor long-term user control and not appropriate for a mature privacy model.
 
+### Decision
+
+Selected **A · Archive first, permanent delete later**.
+
+Implemented in V15.5:
+- archive is the default destructive room action
+- archived rooms reject ordinary joins with HTTP 410
+- archived rooms reject mutations with HTTP 423 and close live sockets
+- the recovery window is **30 days**
+- owner tokens / recovery keys can reopen the room during that window
+- owners can still choose an explicit immediate permanent delete by retyping the room code
+- permanent purge removes room data and associated uploaded assets
+- an hourly server sweep permanently purges expired archives
+
+The interface must state the recovery deadline clearly. “Archive” and “permanent delete” are separate concepts and must never be presented as the same button.
+
+
+---
+
+## D006 · Invitation access model
+
+**Status:** needs owner decision  
+**Blocks:** whether invitation URLs need a secret token, whether room codes remain sufficient access credentials, waiting-room approval, invite rotation, anti-enumeration UX  
+**Does not block:** current room creation, recovery keys, archive lifecycle, author permissions, world editor, maps, character art
+
+V15.5 still uses a friendly six-character room code as both the room locator and the practical invitation credential. That is extremely low-friction, but it is not the strongest privacy boundary for a long-lived room containing photos, voices and personal messages.
+
+### A · Secret invite link + friendly room code — recommended
+
+Keep the six-character room code as the human-readable room identity, but add a high-entropy invitation token to the share link.
+
+- invited friends tap one link and enter directly
+- no account, password prompt or host approval
+- guessing a six-character code alone is not enough to enter
+- host can rotate the invite token if a link leaks without changing the room code or recovery key
+- manually entering a room code can ask for the invitation token only when needed
+
+**Best fit:** preserves the current “open the link and walk in” experience while making long-lived private memories materially harder to enumerate.
+
+**Tradeoff:** sharing becomes link-first rather than relying only on a memorable six-character code.
+
+### B · Host approval / waiting room
+
+- room code or link brings a guest to a waiting room
+- host approves each new participant before entry
+- strongest social control for live events
+
+**Tradeoff:** requires the host to be online and adds friction to birthday / graduation links that should work asynchronously.
+
+### C · Six-character code remains sufficient
+
+- keep the current model unchanged
+- simplest invitation flow and easiest verbal sharing
+- add only rate limiting and monitoring against brute-force attempts
+
+**Tradeoff:** room privacy continues to depend heavily on a short code staying unknown.
+
 ### Default recommendation
 
-Choose **A · Archive first, permanent delete later**, with a clearly disclosed recovery window and an explicit “delete permanently now” escape hatch.
+Choose **A · Secret invite link + friendly room code**.
+
+It does not introduce accounts or approval queues, but separates “easy name humans can type” from “secret credential that grants access,” which is the cleaner architecture for rooms intended to survive for years.
