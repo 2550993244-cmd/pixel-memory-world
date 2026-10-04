@@ -794,7 +794,7 @@
     if (questObstacle(x,y)) return toast('那里被水塘或小山挡住了，换个位置藏。');
     const title=$('#questMemoryTitle').value.trim()||questState.selectedAsset.label;
     const text=$('#questMemoryText').value.trim()||'看到它的时候，希望你会想起那一天。';
-    const item={id:uid(),order:questState.items.length+1,title,text,by:state.player.name,image:questState.selectedAsset.image,voiceKey:questState.pendingVoiceKey||'',voiceUrl:questState.pendingVoiceUrl||'',x,y,time:Date.now()};
+    const item={id:uid(),authorId:state.player.actorId,order:questState.items.length+1,title,text,by:state.player.name,image:questState.selectedAsset.image,voiceKey:questState.pendingVoiceKey||'',voiceUrl:questState.pendingVoiceUrl||'',x,y,time:Date.now()};
     questState.placing=false;$('#questStage').classList.remove('placing');
     questOp({kind:'add',item});renderQuestItems();pulseDiscovery(x,y);addActivity(`${state.player.name} 在门外藏下了「${title}」`);toast('藏好了。其他人现在也能在这条路上找到它。');
     resetEditorDraft();
