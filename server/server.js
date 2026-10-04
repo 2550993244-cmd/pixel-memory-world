@@ -166,6 +166,18 @@ function closeRoomConnections(room, reason='room-archived') {
     channels.delete(key);
   }
 }
+function closeRoomRoleConnections(room, role, reason) {
+  for (const [key,set] of channels) {
+    if (!key.startsWith(room+'::')) continue;
+    for (const socket of [...set]) {
+      if (socket._meta?.role !== role) continue;
+      try { wsSend(socket,{type:reason,sender:'server',room,role,meta:rooms[room]?.meta||null}); } catch(_){}
+      try { socket.end(); } catch(_){}
+      set.delete(socket);
+    }
+    if (!set.size) channels.delete(key);
+  }
+}
 function purgeRoom(code, reason='permanent-delete') {
   const r=rooms[code];
   if (!r) return {removed:false,blobs:0};
@@ -448,7 +460,7 @@ const server = http.createServer(async (req, res) => {
       }
       r.meta.inviteRequired=true;
       touchRoom(r);
-      closeRoomConnections(code,role==='viewer'?'view-invite-rotated':'invite-rotated');
+      closeRoomRoleConnections(code,role,role==='viewer'?'view-invite-rotated':'invite-rotated');
       return json(res,200,{
         ok:true,role,
         inviteToken:role==='contributor'?token:undefined,
