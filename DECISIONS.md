@@ -771,60 +771,70 @@ The result is deliberately asymmetric: the server can prove continuity; another 
 
 ## D015 · Private “my traces” view
 
-**Status:** needs owner decision
+**Status:** decided — A · Yes, private only
 
-Should a contributor get a private drawer that gathers everything they personally left across visits and historical names?
+Selected **A**.
 
-- **A · Yes, private only — recommended:** show “我留下的” using `isAuthor`, visible only to that contributor.
-- **B · No aggregation:** keep editing contextual; contributors find old items in the room/map themselves.
-- **C · Current-visit only:** show only things created in the current visit.
+Implemented in V15.15:
+- room settings exposes a private **「我留下的」** drawer
+- the drawer aggregates only records carrying the current actor's private `isAuthor: true` capability
+- it gathers notes, mementos, photo records and Outside memories across visits and historical names
+- every row keeps its own historical `authorName`; the drawer itself is never exposed as a public alias graph
 
 ---
 
 ## D016 · Author deletion rights
 
-**Status:** needs owner decision
+**Status:** decided — A · Edit + delete own content
 
-When contributors return later, how much control should they have over their old content?
+Selected **A**.
 
-- **A · Edit + delete own content — recommended:** the author can remove what they created; host recovery history remains available where supported.
-- **B · Edit but not delete:** authors can correct wording, but only the host can remove memories.
-- **C · Hide instead of delete:** authors can privately request/trigger hiding while the host keeps the underlying record.
+Implemented in V15.15:
+- authors can edit and delete their own notes
+- the photographer can delete their own photo record
+- authors keep existing edit / move / hide / delete controls for their own mementos and Outside memories
+- author-initiated memento and Outside deletion records a host-only recovery revision before removal
+- activity feed entries remain system history rather than individually editable memories
 
 ---
 
 ## D017 · Historical avatar snapshots
 
-**Status:** needs owner decision
+**Status:** decided — A · Name only
 
-Should a memory preserve only the author's historical name, or also the avatar they were using at that moment?
+Selected **A**.
 
-- **A · Name only — recommended:** avatar stays a live-visit expression and does not become another long-term identity trail.
-- **B · Snapshot avatar per memory:** store hair/outfit/item alongside authorName.
-- **C · Current avatar everywhere:** old memories visually follow the contributor's latest saved appearance.
+Implemented in V15.15:
+- historical authorship remains `authorName` only
+- avatar, hair, outfit, held item and sprite snapshot fields are stripped from authored records server-side
+- a contributor may change their live avatar without retroactively changing or permanently snapshotting old memory identity
 
 ---
 
 ## D018 · Edited-memory disclosure
 
-**Status:** needs owner decision
+**Status:** decided — A · Small “edited” marker
 
-If an author changes the text of an old memory later, should viewers be told?
+Selected **A**.
 
-- **A · Small “edited” marker — recommended:** preserve trust without showing a full edit history.
-- **B · No marker:** show only the current text.
-- **C · Public edit history:** expose prior versions and edit times.
+Implemented in V15.15:
+- author edits on notes, mementos and Outside memories set `editedAt`
+- viewers see only a small **“已编辑”** marker
+- no public edit history, prior text or edit timestamp timeline is exposed
+- immutable historical `authorName` is not changed by editing
 
 ---
 
 ## D019 · Lost-credential identity recovery
 
-**Status:** needs owner decision
+**Status:** decided — A · Never auto-merge by name
 
-If someone loses their actor credential and later returns with the same display name, should the system reconnect them to old content?
+Selected **A**.
 
-- **A · Never auto-merge by name — recommended:** same name is not proof of identity; only recovery credentials can restore authorship.
-- **B · Host-assisted relink:** the host can manually bind a new actor credential to old content.
-- **C · Name-based relink:** automatically assume matching names are the same person.
+Implemented / enforced in V15.15:
+- display names are never used in authorization or actor recovery
+- a second actor using the exact same visible name cannot edit, move or delete the first actor's content
+- only the original actor credential / recovery path can restore authorship continuity
+- the host is not given a manual relink control in this version
 
-These five decisions are intentionally separable so they can be answered in one batch without coupling public privacy back to account identity.
+The product now has a consistent identity boundary: **history remembers what a person called themselves at that moment; only private credentials remember who that person is across time.**
