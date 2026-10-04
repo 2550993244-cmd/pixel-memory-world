@@ -5,8 +5,8 @@ const crypto = require('crypto');
 
 const PORT = Number(process.env.PORT || 8787);
 const ROOT = path.join(__dirname, '..');
-const DATA_DIR = path.join(__dirname, 'data');
-const UPLOAD_DIR = path.join(__dirname, 'uploads');
+const DATA_DIR = process.env.PIXEL_DATA_DIR || path.join(__dirname, 'data');
+const UPLOAD_DIR = process.env.PIXEL_UPLOAD_DIR || path.join(__dirname, 'uploads');
 const DB_FILE = path.join(DATA_DIR, 'rooms.json');
 fs.mkdirSync(DATA_DIR, { recursive: true });
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
@@ -16,7 +16,11 @@ try { rooms = JSON.parse(fs.readFileSync(DB_FILE, 'utf8')); } catch (_) {}
 let saveTimer = null;
 function saveDB() {
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => fs.writeFileSync(DB_FILE, JSON.stringify(rooms, null, 2)), 80);
+  saveTimer = setTimeout(() => {
+    const next = DB_FILE + '.tmp';
+    fs.writeFileSync(next, JSON.stringify(rooms, null, 2));
+    fs.renameSync(next, DB_FILE);
+  }, 80);
 }
 function validCode(c) { return /^[A-Z0-9]{6}$/.test(String(c || '')); }
 function randomCode() {
@@ -27,6 +31,7 @@ function randomCode() {
 }
 function normalizeRoom(r) {
   r.world ||= {};
+  r.world.layout ||= {};
   r.memory ||= {};
   r.memory.mementos ||= [];
   r.memory.notes ||= [];
@@ -35,7 +40,34 @@ function normalizeRoom(r) {
   r.quest ||= { items: [] };
   r.quest.items ||= [];
   r.music ||= null;
+  r.meta ||= {};
+  r.meta.revision ||= 1;
+  r.meta.createdAt ||= r.createdAt || Date.now();
+  r.meta.updatedAt ||= r.updatedAt || r.meta.createdAt;
+  r.meta.lastVisitedAt ||= r.meta.updatedAt;
   return r;
+}
+function roomToken() { return crypto.randomBytes(24).toString('base64url'); }
+function tokenHash(token) { return crypto.createHash('sha256').update(String(token || '')).digest('hex'); }
+function isOwner(req, r) {
+  if (!r.ownerHash) return false;
+  const token = req.headers['x-room-owner'] || '';
+  if (!token) return false;
+  const a = Buffer.from(tokenHash(token));
+  const b = Buffer.from(r.ownerHash);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+function publicRoom(r) {
+  normalizeRoom(r);
+  const { ownerHash, ...safe } = r;
+  return safe;
+}
+function touchRoom(r) {
+  normalizeRoom(r);
+  r.updatedAt = Date.now();
+  r.meta.updatedAt = r.updatedAt;
+  r.meta.revision = (r.meta.revision || 0) + 1;
+  saveDB();
 }
 Object.values(rooms).forEach(normalizeRoom);
 
@@ -45,7 +77,7 @@ function json(res, status, obj) {
     'Content-Type': 'application/json; charset=utf-8',
     'Content-Length': b.length,
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Room-Owner',
     'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS'
   });
   res.end(b);
@@ -109,8 +141,7 @@ function applyMemoryOp(r, op) {
     r.memory.activity = r.memory.activity.slice(-60);
   }
   if (op.kind === 'world:patch' && op.patch) r.world = { ...r.world, ...op.patch };
-  r.updatedAt = Date.now();
-  saveDB();
+  touchRoom(r);
 }
 function applyQuestOp(r, op) {
   normalizeRoom(r);
@@ -122,8 +153,7 @@ function applyQuestOp(r, op) {
   }
   if (op.kind === 'clear') r.quest.items = [];
   if (op.kind === 'set' && Array.isArray(op.items)) r.quest.items = op.items;
-  r.updatedAt = Date.now();
-  saveDB();
+  touchRoom(r);
 }
 
 const channels = new Map();
@@ -133,21 +163,43 @@ function connectionCount() { let n = 0; for (const s of channels.values()) n += 
 
 const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') {
-    res.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS' });
+    res.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type, X-Room-Owner', 'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS' });
     return res.end();
   }
   const u = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = u.pathname;
   try {
-    if (pathname === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, version: 'v14.3', rooms: Object.keys(rooms).length, connections: connectionCount(), time: Date.now() });
+    if (pathname === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, version: 'v15.0', rooms: Object.keys(rooms).length, connections: connectionCount(), durableDataDir: !!process.env.PIXEL_DATA_DIR, durableUploadDir: !!process.env.PIXEL_UPLOAD_DIR, time: Date.now() });
     if (pathname === '/api/rooms' && req.method === 'POST') {
       const body = JSON.parse((await readBody(req)).toString('utf8') || '{}');
       const code = String(body.code || randomCode()).toUpperCase();
       if (!validCode(code)) return json(res, 400, { error: 'invalid_room_code' });
       if (rooms[code]) return json(res, 409, { error: 'room_exists' });
-      rooms[code] = normalizeRoom({ code, world: body.world || {}, memory: body.memory || {}, quest: { items: [] }, music: null, createdAt: Date.now(), updatedAt: Date.now() });
+      const ownerToken = roomToken();
+      rooms[code] = normalizeRoom({ code, world: body.world || {}, memory: body.memory || {}, quest: { items: [] }, music: null, ownerHash: tokenHash(ownerToken), createdAt: Date.now(), updatedAt: Date.now() });
       saveDB();
-      return json(res, 200, rooms[code]);
+      return json(res, 200, { ...publicRoom(rooms[code]), ownerToken });
+    }
+    const claimm = /^\/api\/rooms\/([A-Z0-9]{6})\/claim$/.exec(pathname);
+    if (claimm && req.method === 'POST') {
+      const r = rooms[claimm[1]];
+      if (!r) return json(res, 404, { error: 'room_not_found' });
+      if (r.ownerHash) return json(res, 409, { error: 'owner_already_claimed' });
+      const ownerToken = roomToken();
+      r.ownerHash = tokenHash(ownerToken);
+      touchRoom(r);
+      return json(res, 200, { ok: true, ownerToken, meta: r.meta });
+    }
+    const layoutm = /^\/api\/rooms\/([A-Z0-9]{6})\/layout$/.exec(pathname);
+    if (layoutm && req.method === 'PUT') {
+      const r = rooms[layoutm[1]];
+      if (!r) return json(res, 404, { error: 'room_not_found' });
+      if (!isOwner(req, r)) return json(res, 403, { error: 'owner_required' });
+      const b = JSON.parse((await readBody(req)).toString('utf8') || '{}');
+      const layout = b.layout && typeof b.layout === 'object' ? b.layout : {};
+      r.world = { ...r.world, layout };
+      touchRoom(r);
+      return json(res, 200, { ok: true, layout: r.world.layout, meta: r.meta });
     }
     const opm = /^\/api\/rooms\/([A-Z0-9]{6})\/ops$/.exec(pathname);
     if (opm && req.method === 'POST') {
@@ -163,7 +215,11 @@ const server = http.createServer(async (req, res) => {
     const rm = /^\/api\/rooms\/([A-Z0-9]{6})$/.exec(pathname);
     if (rm && req.method === 'GET') {
       const r = rooms[rm[1]];
-      return r ? json(res, 200, normalizeRoom(r)) : json(res, 404, { error: 'room_not_found' });
+      if (!r) return json(res, 404, { error: 'room_not_found' });
+      normalizeRoom(r);
+      r.meta.lastVisitedAt = Date.now();
+      saveDB();
+      return json(res, 200, publicRoom(r));
     }
     if (rm && req.method === 'PUT') {
       const r = rooms[rm[1]];
@@ -174,9 +230,8 @@ const server = http.createServer(async (req, res) => {
       if (b.quest) r.quest = b.quest;
       if ('music' in b) r.music = b.music;
       normalizeRoom(r);
-      r.updatedAt = Date.now();
-      saveDB();
-      return json(res, 200, r);
+      touchRoom(r);
+      return json(res, 200, publicRoom(r));
     }
     if (pathname === '/api/uploads' && req.method === 'POST') {
       const body = await readBody(req, 18 * 1024 * 1024);
@@ -295,4 +350,4 @@ server.on('upgrade', (req, socket) => {
   socket.on('close', close); socket.on('end', close); socket.on('error', close);
 });
 
-server.listen(PORT, () => console.log(`Pixel Memory V14.3 server: http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`Pixel Memory V15.0 server: http://localhost:${PORT}`));
