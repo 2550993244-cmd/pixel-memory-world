@@ -622,7 +622,7 @@ This preserves the entry ritual while making repeat visits continuous.
 
 ## D012 · In-room contributor avatar editing
 
-**Status:** needs owner decision  
+**Status:** decided — A · Allow in-room appearance editing, keep name stable  
 **Blocks:** whether a visible contributor can change their name / look without leaving and re-entering  
 **Does not block:** returning-profile prefill, authorship credentials, viewer customization or room permissions
 
@@ -646,6 +646,61 @@ No in-room editor. To change anything, leave and re-enter through the builder.
 
 **Tradeoff:** strongest ceremony, but unnecessarily rigid for cosmetic changes.
 
+### Decision
+
+Selected **A · Allow in-room appearance editing, keep name stable**.
+
+Implemented in V15.12:
+- contributors see an in-room “我的小人” control after entering
+- the live editor exposes hair, outfit and held item only
+- the current visit name is displayed but cannot be edited there
+- saving updates the local player immediately and broadcasts a normal realtime `state` message
+- other participants see the new appearance without a rejoin
+- the updated appearance is written back to the remembered contributor profile for the next visit
+- viewer customization remains local-only and separate
+- room owners are not silently routed through the contributor editor
+
+This keeps appearance playful while preserving authored-name continuity during a visit.
+
+
+---
+
+## D013 · Historical author display names
+
+**Status:** needs owner decision  
+**Blocks:** what happens when a contributor changes their name on a later visit, whether old memories should visually follow the latest name  
+**Does not block:** stable current-visit names, appearance editing, actor credentials, viewer privacy or room permissions
+
+V15.12 keeps a contributor's name stable while they are inside a room. But D011 still lets a returning contributor change their name on the next visit before entering.
+
+That creates a historical question: if “小林” later returns as “Lynn”, what should old notes and mementos created as “小林” show?
+
+### A · Keep the name snapshot stored with each memory — recommended
+
+- old memories keep the display name used when they were created
+- new memories use the newly confirmed name
+- actor identity still links both to the same underlying contributor credential
+- the room preserves how each memory originally appeared at that moment
+
+**Best fit:** sentimental keepsakes where historical context matters.
+
+**Tradeoff:** one person can appear under different names across years.
+
+### B · Retroactively show the contributor's latest name everywhere
+
+- all old memories render using the contributor's newest display name
+- the room looks more consistent today
+
+**Tradeoff:** historical content silently changes, and old screenshots / exports may no longer match the live room.
+
+### C · Show both current identity and original snapshot
+
+For example: “Lynn（当时：小林）”.
+
+**Best fit:** maximum traceability.
+
+**Tradeoff:** visually heavy for a warm, lightweight memorial interface.
+
 ### Default recommendation
 
-Choose **A**. Let appearance be playful and live, while keeping the current visit's name stable so authored memories remain easy to follow.
+Choose **A**. Treat the author name on a memory as part of that memory's historical snapshot, while the hidden actor identity continues to provide continuity underneath.
