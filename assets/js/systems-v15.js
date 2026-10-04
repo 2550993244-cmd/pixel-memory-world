@@ -5,14 +5,14 @@
 (() => {
   const $=(s,r=document)=>r.querySelector(s);
   const $$=(s,r=document)=>[...r.querySelectorAll(s)];
-  const V='15.0';
+  const V='15.1';
 
   window.PixelV15={
     version:V,
-    p1:{layers:true,camera:true},
+    p1:{layers:true,camera:true,tiled:true},
     p2:{actions:['idle','walk','sit','wave','hug','celebrate']},
-    p3:{roomEditor:true,persistentLayout:true},
-    p4:{ownerToken:true,durableStorage:true}
+    p3:{roomEditor:true,persistentLayout:true,undoRedo:true,snap:true},
+    p4:{ownerToken:true,durableStorage:true,revisions:true}
   };
 
   const hasCore=()=>typeof state!=='undefined';
@@ -86,7 +86,7 @@
         const rect=camera.stage.getBoundingClientRect();
         const px=parseFloat(me.style.left)||50;
         const py=parseFloat(me.style.top)||50;
-        const mapZoom=Number(window.PixelSceneMap?.outdoor?.world?.viewportScale)||1.22;
+        const mapZoom=Number(window.PixelMapRuntime?.dimensions?.().viewportScale || window.PixelSceneMap?.outdoor?.world?.viewportScale)||1.22;
         const targetZoom=window.innerWidth<700?Math.max(1.10,mapZoom-.10):mapZoom;
         const rawX=rect.width/2-(px/100)*rect.width*targetZoom;
         const rawY=rect.height/2-(py/100)*rect.height*targetZoom;
@@ -179,7 +179,43 @@
   // P3 · owner room editor
   // ---------------------------------------------------------------------------
   const roomMap=()=>window.PixelSceneMap?.room?.editableObjects||{};
-  const editor={active:false,drag:null,lastLayout:'',claiming:false};
+  const cloneLayout=layout=>JSON.parse(JSON.stringify(layout||{}));
+  const editor={active:false,drag:null,lastLayout:'',claiming:false,history:[],future:[],keyboardSave:null,snap:1};
+
+  function pushHistory(){
+    const snap=cloneLayout(state.world.layout);
+    const last=editor.history[editor.history.length-1];
+    if(last && JSON.stringify(last)===JSON.stringify(snap)) return;
+    editor.history.push(snap);
+    if(editor.history.length>40) editor.history.shift();
+    editor.future=[];
+    updateEditorButtons();
+  }
+  function restoreLocalLayout(layout){
+    state.world.layout=cloneLayout(layout);
+    editor.lastLayout='';
+    applyRoomLayout(true);
+    updateEditorButtons();
+  }
+  async function undoLayout(){
+    if(!editor.history.length)return toast('已经是最早一步了');
+    editor.future.push(cloneLayout(state.world.layout));
+    restoreLocalLayout(editor.history.pop());
+    await persistRoomLayout({quiet:true});
+    toast('已撤销上一步');
+  }
+  async function redoLayout(){
+    if(!editor.future.length)return toast('没有可以重做的步骤');
+    editor.history.push(cloneLayout(state.world.layout));
+    restoreLocalLayout(editor.future.pop());
+    await persistRoomLayout({quiet:true});
+    toast('已重做');
+  }
+  function updateEditorButtons(){
+    const u=$('[data-room-editor-undo]'),r=$('[data-room-editor-redo]');
+    if(u)u.disabled=!editor.history.length;
+    if(r)r.disabled=!editor.future.length;
+  }
 
   function layoutObject(id){
     return roomMap()[id]||null;
@@ -262,20 +298,27 @@
     bar=document.createElement('div');
     bar.className='pm-room-editor-toolbar-v15';
     bar.innerHTML=`
-      <div><span>ROOM EDITOR</span><b>拖动家具，布置你们自己的房间</b></div>
+      <div><span>ROOM EDITOR · SNAP 1%</span><b>拖动家具；Ctrl/⌘ + Z 撤销</b></div>
+      <button type="button" data-room-editor-undo class="press">↶ 撤销</button>
+      <button type="button" data-room-editor-redo class="press">↷ 重做</button>
       <button type="button" data-room-editor-add class="press">＋ 纪念物</button>
       <button type="button" data-room-editor-reset class="press">恢复默认</button>
       <button type="button" data-room-editor-done class="press primary">完成</button>`;
     $('#worldStage')?.appendChild(bar);
     $('[data-room-editor-done]',bar).onclick=stopRoomEditor;
+    $('[data-room-editor-undo]',bar).onclick=undoLayout;
+    $('[data-room-editor-redo]',bar).onclick=redoLayout;
     $('[data-room-editor-reset]',bar).onclick=resetRoomLayout;
     $('[data-room-editor-add]',bar).onclick=()=>{try{openMementoModal()}catch(_){}};
+    updateEditorButtons();
     return bar;
   }
 
   async function startRoomEditor(){
     if(!(await ensureOwner()))return;
     editor.active=true;
+    editor.history=[];
+    editor.future=[];
     document.body.classList.add('pm-room-editing-v15');
     Object.entries(roomMap()).forEach(([id,def])=>{
       const el=$(def.selector);
@@ -296,14 +339,14 @@
     $('#worldStage')?.focus();
   }
 
-  async function persistRoomLayout(){
+  async function persistRoomLayout(opts={}){
     state.world.layout={...(state.world.layout||{})};
     try{ saveRoom(false); }catch(_){}
     try{ broadcast('world-patch',{patch:{layout:state.world.layout}}); }catch(_){}
     if(window.PixelNet?.enabled){
       try{
         await PixelNet.updateOwnerLayout(state.roomCode,state.world.layout);
-        toast('房间布置已经长期保存');
+        if(!opts.quiet) toast('房间布置已经长期保存');
       }catch(e){
         if(String(e?.message||'').includes('403')) toast('房主权限已失效，布局只保存在本机');
       }
@@ -312,6 +355,7 @@
 
   async function resetRoomLayout(){
     if(!(await ensureOwner()))return;
+    pushHistory();
     state.world.layout={};
     editor.lastLayout='';
     applyRoomLayout(true);
@@ -321,9 +365,10 @@
 
   function pointInStage(e){
     const r=worldStage.getBoundingClientRect();
+    const snap=v=>Math.round(v/editor.snap)*editor.snap;
     return {
-      x:Math.max(4,Math.min(96,(e.clientX-r.left)/r.width*100)),
-      y:Math.max(10,Math.min(91,(e.clientY-r.top)/r.height*100))
+      x:snap(Math.max(4,Math.min(96,(e.clientX-r.left)/r.width*100))),
+      y:snap(Math.max(10,Math.min(91,(e.clientY-r.top)/r.height*100)))
     };
   }
 
@@ -333,6 +378,7 @@
     if(!target)return;
     e.preventDefault();e.stopPropagation();
     const id=target.dataset.roomObjectV15;
+    pushHistory();
     editor.drag={id,el:target,pointerId:e.pointerId};
     target.classList.add('pm-dragging-v15');
     try{worldStage.setPointerCapture(e.pointerId)}catch(_){}
@@ -365,12 +411,19 @@
   // Keyboard nudge in edit mode.
   worldStage?.addEventListener('keydown',e=>{
     if(!editor.active)return;
+    if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&e.key.toLowerCase()==='z'){
+      e.preventDefault();e.stopPropagation();undoLayout();return;
+    }
+    if(((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y')||((e.ctrlKey||e.metaKey)&&e.shiftKey&&e.key.toLowerCase()==='z')){
+      e.preventDefault();e.stopPropagation();redoLayout();return;
+    }
     const target=document.activeElement?.closest?.('[data-room-object-v15]');
     if(!target)return;
     const key=e.key.toLowerCase();
     if(!['arrowup','arrowdown','arrowleft','arrowright'].includes(key))return;
     e.preventDefault();e.stopPropagation();
     const id=target.dataset.roomObjectV15;
+    pushHistory();
     const def=layoutObject(id)||{};
     const cur=state.world.layout?.[id]||{x:def.x||50,y:def.y||50};
     const next={x:Number(cur.x),y:Number(cur.y)};
@@ -425,7 +478,11 @@
     start:startRoomEditor,
     stop:stopRoomEditor,
     reset:resetRoomLayout,
+    undo:undoLayout,
+    redo:redoLayout,
     apply:()=>applyRoomLayout(true),
+    get historyLength(){return editor.history.length},
+    get futureLength(){return editor.future.length},
     get active(){return editor.active}
   };
 
