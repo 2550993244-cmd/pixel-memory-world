@@ -83,7 +83,14 @@
     if(typeof state!=='undefined'&&state.player) state.player.actorId=data.actor.id;
     if(data.kind==='owner'){
       PixelNet.saveOwnerToken(data.roomCode,data.ownerToken);
-      if(typeof state!=='undefined'&&state.roomCode===data.roomCode) state.player.host=true;
+      if(typeof state!=='undefined'&&state.roomCode===data.roomCode){
+        state.player.host=true;
+        try{
+          state.players.set(state.player.id,{...state.player,lastSeen:Date.now()});
+          renderPlayers();
+          broadcast('state');
+        }catch(_){}
+      }
     }
     window.dispatchEvent(new CustomEvent('pixel-recovery-imported',{detail:{kind:data.kind,roomCode:data.roomCode||'',verified}}));
     return {data,verified};
