@@ -46,8 +46,10 @@ function normalizeRoom(r) {
   if (!('purgeAfter' in r.meta)) r.meta.purgeAfter = null;
   r.meta.uploads ||= [];
   if (!('inviteHash' in r)) r.inviteHash = null;
+  if (!('viewInviteHash' in r)) r.viewInviteHash = null;
   r.meta.inviteVersion ||= r.inviteHash ? 1 : 0;
-  r.meta.inviteRequired = !!r.inviteHash;
+  r.meta.viewInviteVersion ||= r.viewInviteHash ? 1 : 0;
+  r.meta.inviteRequired = !!(r.inviteHash || r.viewInviteHash);
   return r;
 }
 function roomToken() { return crypto.randomBytes(24).toString('base64url'); }
@@ -69,12 +71,19 @@ function validSecretHash(secret, hash) {
   const a=Buffer.from(tokenHash(secret)), b=Buffer.from(String(hash));
   return a.length===b.length && crypto.timingSafeEqual(a,b);
 }
-function hasInviteAccess(req,r,{token=''}={}) {
+function inviteRole(req,r,{token=''}={}) {
   normalizeRoom(r);
-  if (isOwner(req,r)) return true;
-  if (!r.inviteHash) return true;
+  if (isOwner(req,r)) return 'owner';
+  if (!r.inviteHash && !r.viewInviteHash) return 'contributor';
   const supplied=token || inviteCredential(req);
-  return validSecretHash(supplied,r.inviteHash);
+  if (validSecretHash(supplied,r.inviteHash)) return 'contributor';
+  if (validSecretHash(supplied,r.viewInviteHash)) return 'viewer';
+  return '';
+}
+function hasInviteAccess(req,r,opts={}) { return !!inviteRole(req,r,opts); }
+function hasWriteInviteAccess(req,r,opts={}) {
+  const role=inviteRole(req,r,opts);
+  return role==='owner' || role==='contributor';
 }
 function actorCredential(req) {
   return {
@@ -106,7 +115,7 @@ function canCurate(req, r, item, { allowRegister=false } = {}) {
 }
 function publicRoom(r) {
   normalizeRoom(r);
-  const { ownerHash, inviteHash, actors, revisions, ...safe } = r;
+  const { ownerHash, inviteHash, viewInviteHash, actors, revisions, ...safe } = r;
   return safe;
 }
 function recordRevision(r, kind, data, label='') {
@@ -364,7 +373,7 @@ const server = http.createServer(async (req, res) => {
   const pathname = u.pathname;
   try {
     sweepExpiredArchives();
-    if (pathname === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, version: 'v15.6', rooms: Object.keys(rooms).length, archivedRooms: Object.values(rooms).filter(r=>isArchived(r)).length, retentionDays:30, connections: connectionCount(), roomStore: roomStore.info().kind, blobStore: blobStore.info().kind, durableDataDir: !!process.env.PIXEL_DATA_DIR, durableUploadDir: !!process.env.PIXEL_UPLOAD_DIR, time: Date.now() });
+    if (pathname === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, version: 'v15.7', rooms: Object.keys(rooms).length, archivedRooms: Object.values(rooms).filter(r=>isArchived(r)).length, retentionDays:30, connections: connectionCount(), roomStore: roomStore.info().kind, blobStore: blobStore.info().kind, durableDataDir: !!process.env.PIXEL_DATA_DIR, durableUploadDir: !!process.env.PIXEL_UPLOAD_DIR, time: Date.now() });
     if (pathname === '/api/rooms' && req.method === 'POST') {
       const body = JSON.parse((await readBody(req)).toString('utf8') || '{}');
       const code = String(body.code || randomCode()).toUpperCase();
@@ -372,9 +381,10 @@ const server = http.createServer(async (req, res) => {
       if (rooms[code]) return json(res, 409, { error: 'room_exists' });
       const ownerToken = roomToken();
       const invite = inviteToken();
-      rooms[code] = normalizeRoom({ code, world: body.world || {}, memory: body.memory || {}, quest: { items: [] }, music: null, ownerHash: tokenHash(ownerToken), inviteHash: tokenHash(invite), meta:{inviteVersion:1}, createdAt: Date.now(), updatedAt: Date.now() });
+      const viewInvite = inviteToken();
+      rooms[code] = normalizeRoom({ code, world: body.world || {}, memory: body.memory || {}, quest: { items: [] }, music: null, ownerHash: tokenHash(ownerToken), inviteHash: tokenHash(invite), viewInviteHash: tokenHash(viewInvite), meta:{inviteVersion:1,viewInviteVersion:1}, createdAt: Date.now(), updatedAt: Date.now() });
       saveDB();
-      return json(res, 200, { ...publicRoom(rooms[code]), ownerToken, inviteToken:invite });
+      return json(res, 200, { ...publicRoom(rooms[code]), ownerToken, inviteToken:invite, viewInviteToken:viewInvite });
     }
     const claimm = /^\/api\/rooms\/([A-Z0-9]{6})\/claim$/.exec(pathname);
     if (claimm && req.method === 'POST') {
@@ -418,20 +428,34 @@ const server = http.createServer(async (req, res) => {
         canImportActor: actorStatus === 'valid' || actorStatus === 'unknown' || actorStatus === 'missing'
       });
     }
-    const inviterotatem = /^\/api\/rooms\/([A-Z0-9]{6})\/invite\/rotate$/.exec(pathname);
-    if (inviterotatem && req.method === 'POST') {
-      const r=rooms[inviterotatem[1]];
+    const inviterotatem = /^\/api\/rooms\/([A-Z0-9]{6})\/invite\/(contributor|viewer)\/rotate$/.exec(pathname);
+    const legacyInviterotatem = /^\/api\/rooms\/([A-Z0-9]{6})\/invite\/rotate$/.exec(pathname);
+    if ((inviterotatem || legacyInviterotatem) && req.method === 'POST') {
+      const code=inviterotatem?.[1] || legacyInviterotatem?.[1];
+      const role=inviterotatem?.[2] || 'contributor';
+      const r=rooms[code];
       if(!r) return json(res,404,{error:'room_not_found'});
       if(!isOwner(req,r)) return json(res,403,{error:'owner_required'});
       normalizeRoom(r);
       if(isArchived(r)) return json(res,423,{error:'room_archived',purgeAfter:r.meta.purgeAfter});
       const token=inviteToken();
-      r.inviteHash=tokenHash(token);
-      r.meta.inviteVersion=(Number(r.meta.inviteVersion)||0)+1;
+      if(role==='viewer'){
+        r.viewInviteHash=tokenHash(token);
+        r.meta.viewInviteVersion=(Number(r.meta.viewInviteVersion)||0)+1;
+      }else{
+        r.inviteHash=tokenHash(token);
+        r.meta.inviteVersion=(Number(r.meta.inviteVersion)||0)+1;
+      }
       r.meta.inviteRequired=true;
       touchRoom(r);
-      closeRoomConnections(inviterotatem[1],'invite-rotated');
-      return json(res,200,{ok:true,inviteToken:token,inviteVersion:r.meta.inviteVersion});
+      closeRoomConnections(code,role==='viewer'?'view-invite-rotated':'invite-rotated');
+      return json(res,200,{
+        ok:true,role,
+        inviteToken:role==='contributor'?token:undefined,
+        viewInviteToken:role==='viewer'?token:undefined,
+        inviteVersion:r.meta.inviteVersion,
+        viewInviteVersion:r.meta.viewInviteVersion
+      });
     }
 
     const archivem = /^\/api\/rooms\/([A-Z0-9]{6})\/archive$/.exec(pathname);
@@ -530,7 +554,7 @@ const server = http.createServer(async (req, res) => {
       const r = rooms[opm[1]];
       if (!r) return json(res, 404, { error: 'room_not_found' });
       if (isArchived(r)) return json(res, 423, { error:'room_archived', purgeAfter:r.meta.purgeAfter });
-      if (!hasInviteAccess(req,r)) return json(res,403,{error:'invite_required'});
+      if (!hasWriteInviteAccess(req,r)) return json(res,403,{error:inviteRole(req,r)?'view_only':'invite_required'});
       const b = JSON.parse((await readBody(req)).toString('utf8') || '{}');
       const scope=b.scope;
       const op=b.op;
@@ -562,17 +586,18 @@ const server = http.createServer(async (req, res) => {
       const r = rooms[rm[1]];
       if (!r) return json(res, 404, { error: 'room_not_found' });
       normalizeRoom(r);
-      if (!hasInviteAccess(req,r)) return json(res,404,{error:'room_not_found'});
+      const accessRole=inviteRole(req,r);
+      if (!accessRole) return json(res,404,{error:'room_not_found'});
       if (isArchived(r) && !isOwner(req,r)) return json(res, 410, { error:'room_archived', purgeAfter:r.meta.purgeAfter, recoveryDays:30 });
       r.meta.lastVisitedAt = Date.now();
       saveDB();
-      return json(res, 200, publicRoom(r));
+      return json(res, 200, {...publicRoom(r),accessRole});
     }
     if (rm && req.method === 'PUT') {
       const r = rooms[rm[1]];
       if (!r) return json(res, 404, { error: 'room_not_found' });
       if (isArchived(r)) return json(res, 423, { error:'room_archived', purgeAfter:r.meta.purgeAfter });
-      if (!hasInviteAccess(req,r)) return json(res,403,{error:'invite_required'});
+      if (!hasWriteInviteAccess(req,r)) return json(res,403,{error:inviteRole(req,r)?'view_only':'invite_required'});
       const b = JSON.parse((await readBody(req)).toString('utf8') || '{}');
       if (b.memory || b.quest) return json(res, 400, { error:'snapshot_write_disabled', hint:'use_authorized_ops' });
       if (b.world) {
@@ -595,7 +620,7 @@ const server = http.createServer(async (req, res) => {
         if (!uploadRoom) return json(res,404,{error:'room_not_found'});
         normalizeRoom(uploadRoom);
         if (isArchived(uploadRoom)) return json(res,423,{error:'room_archived'});
-        if(!hasInviteAccess(req,uploadRoom)) return json(res,403,{error:'invite_required'});
+        if(!hasWriteInviteAccess(req,uploadRoom)) return json(res,403,{error:inviteRole(req,uploadRoom)?'view_only':'invite_required'});
         const auth=isOwner(req,uploadRoom)?{ok:true}:verifyActor(req,uploadRoom,{allowRegister:true});
         if(!auth.ok) return json(res,403,{error:auth.error||'forbidden'});
       }
@@ -680,7 +705,8 @@ server.on('upgrade', (req, socket) => {
   }
   normalizeRoom(roomState);
   const wsInvite=String(u.searchParams.get('invite')||'');
-  if (roomState.inviteHash && !validSecretHash(wsInvite,roomState.inviteHash)) {
+  const wsRole=inviteRole({headers:{'x-room-invite':wsInvite}},roomState,{token:wsInvite});
+  if (!wsRole) {
     socket.write('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n');
     return socket.end();
   }
@@ -694,14 +720,14 @@ server.on('upgrade', (req, socket) => {
   socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ' + accept + '\r\n\r\n');
   const ck = `${room}::${channel}`;
   chset(ck).add(socket);
-  socket._meta = { room, channel, player, ck };
+  socket._meta = { room, channel, player, ck, role:wsRole };
 
   const r = rooms[room];
   if (r) {
     normalizeRoom(r);
-    if (channel.includes('quest')) wsSend(socket, { type: 'quest-update', sender: 'server', items: r.quest.items });
+    if (channel.includes('quest')) wsSend(socket, { type: 'quest-update', sender: 'server', items: r.quest.items, accessRole:wsRole });
     else {
-      wsSend(socket, { type: 'room-snapshot', sender: 'server', memory: r.memory, world: r.world, music: r.music });
+      wsSend(socket, { type: 'room-snapshot', sender: 'server', memory: r.memory, world: r.world, music: r.music, accessRole:wsRole });
       if (r.music) wsSend(socket, { type: 'music-sync', sender: 'server', music: r.music });
     }
   }
@@ -711,6 +737,7 @@ server.on('upgrade', (req, socket) => {
     try { m = JSON.parse(text); } catch (_) { return; }
     const rr = rooms[room];
     if (m.type === 'ping') return wsSend(socket, { type: 'pong', sender: 'server', t: m.t, serverTime: Date.now() });
+    if (socket._meta?.role === 'viewer' && !new Set(['hello','state','move','leave']).has(m.type)) return;
     if (rr) {
       normalizeRoom(rr);
       // V15.3: memory persistence is REST-authorized; websocket messages are transient only.
@@ -734,4 +761,4 @@ server.on('upgrade', (req, socket) => {
 const retentionSweep=setInterval(()=>{try{sweepExpiredArchives()}catch(e){console.error('retention sweep',e)}},60*60*1000);
 retentionSweep.unref?.();
 
-server.listen(PORT, () => console.log(`Pixel Memory V15.6 server: http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`Pixel Memory V15.7 server: http://localhost:${PORT}`));
