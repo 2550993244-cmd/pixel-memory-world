@@ -113,10 +113,46 @@ function canCurate(req, r, item, { allowRegister=false } = {}) {
   if (!item || item.authorId === actor.id) return { ok:true, role:'author', actorId:actor.id };
   return { ok:false, error:'not_author' };
 }
-function publicRoom(r) {
-  normalizeRoom(r);
-  const { ownerHash, inviteHash, viewInviteHash, actors, revisions, ...safe } = r;
+function verifiedActorId(req, r) {
+  if (!req) return '';
+  const actor = verifyActor(req, r);
+  return actor.ok ? actor.id : '';
+}
+function publicAuthoredItem(item, actorId='') {
+  if (!item || typeof item !== 'object') return item;
+  const { authorId, isAuthor, ...safe } = item;
+  if (actorId && authorId === actorId) safe.isAuthor = true;
   return safe;
+}
+function publicMemory(memory, actorId='') {
+  const m = memory && typeof memory === 'object' ? memory : {};
+  return {
+    ...m,
+    mementos: (m.mementos || []).map(item => publicAuthoredItem(item, actorId)),
+    notes: (m.notes || []).map(item => publicAuthoredItem(item, actorId)),
+    photos: (m.photos || []).map(item => publicAuthoredItem(item, actorId)),
+    activity: (m.activity || []).map(item => publicAuthoredItem(item, actorId))
+  };
+}
+function publicQuest(quest, actorId='') {
+  const q = quest && typeof quest === 'object' ? quest : {};
+  return { ...q, items: (q.items || []).map(item => publicAuthoredItem(item, actorId)) };
+}
+function publicRoom(r, req=null) {
+  normalizeRoom(r);
+  const actorId = verifiedActorId(req, r);
+  const { ownerHash, inviteHash, viewInviteHash, actors, revisions, ...safe } = r;
+  return { ...safe, memory: publicMemory(safe.memory, actorId), quest: publicQuest(safe.quest, actorId) };
+}
+function publicPayloadForSocket(payload, socket) {
+  if (!payload || typeof payload !== 'object') return payload;
+  const actorId = socket?._meta?.actorId || '';
+  if (payload.type === 'room-snapshot') return { ...payload, memory: publicMemory(payload.memory, actorId) };
+  if (payload.type === 'quest-update') return { ...payload, items: (payload.items || []).map(item => publicAuthoredItem(item, actorId)) };
+  if ((payload.type === 'memory-op' || payload.type === 'quest-op') && payload.op?.item) {
+    return { ...payload, op: { ...payload.op, item: publicAuthoredItem(payload.op.item, actorId) } };
+  }
+  return payload;
 }
 function recordRevision(r, kind, data, label='') {
   normalizeRoom(r);
@@ -393,7 +429,7 @@ function broadcastRoomScope(room, scope, payload) {
     if (!key.startsWith(room+'::')) continue;
     const isQuest = key.toLowerCase().includes('quest');
     if (isQuest !== wantQuest) continue;
-    for (const socket of set) if (!socket.destroyed) wsSend(socket,payload);
+    for (const socket of set) if (!socket.destroyed) wsSend(socket, publicPayloadForSocket(payload, socket));
   }
 }
 const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
@@ -429,7 +465,7 @@ const server = http.createServer(async (req, res) => {
   const pathname = u.pathname;
   try {
     sweepExpiredArchives();
-    if (pathname === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, version: 'v15.13', rooms: Object.keys(rooms).length, archivedRooms: Object.values(rooms).filter(r=>isArchived(r)).length, retentionDays:30, connections: connectionCount(), roomStore: roomStore.info().kind, blobStore: blobStore.info().kind, durableDataDir: !!process.env.PIXEL_DATA_DIR, durableUploadDir: !!process.env.PIXEL_UPLOAD_DIR, time: Date.now() });
+    if (pathname === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, version: 'v15.14', rooms: Object.keys(rooms).length, archivedRooms: Object.values(rooms).filter(r=>isArchived(r)).length, retentionDays:30, connections: connectionCount(), roomStore: roomStore.info().kind, blobStore: blobStore.info().kind, durableDataDir: !!process.env.PIXEL_DATA_DIR, durableUploadDir: !!process.env.PIXEL_UPLOAD_DIR, time: Date.now() });
     if (pathname === '/api/rooms' && req.method === 'POST') {
       const body = JSON.parse((await readBody(req)).toString('utf8') || '{}');
       const code = String(body.code || randomCode()).toUpperCase();
@@ -440,7 +476,7 @@ const server = http.createServer(async (req, res) => {
       const viewInvite = inviteToken();
       rooms[code] = normalizeRoom({ code, world: body.world || {}, memory: body.memory || {}, quest: { items: [] }, music: null, ownerHash: tokenHash(ownerToken), inviteHash: tokenHash(invite), viewInviteHash: tokenHash(viewInvite), meta:{inviteVersion:1,viewInviteVersion:1}, createdAt: Date.now(), updatedAt: Date.now() });
       saveDB();
-      return json(res, 200, { ...publicRoom(rooms[code]), ownerToken, inviteToken:invite, viewInviteToken:viewInvite });
+      return json(res, 200, { ...publicRoom(rooms[code], req), ownerToken, inviteToken:invite, viewInviteToken:viewInvite });
     }
     const claimm = /^\/api\/rooms\/([A-Z0-9]{6})\/claim$/.exec(pathname);
     if (claimm && req.method === 'POST') {
@@ -538,7 +574,7 @@ const server = http.createServer(async (req, res) => {
       r.meta.archivedAt = null;
       r.meta.purgeAfter = null;
       touchRoom(r);
-      return json(res, 200, { ok:true, archived:false, room:publicRoom(r) });
+      return json(res, 200, { ok:true, archived:false, room:publicRoom(r, req) });
     }
 
     const deletem = /^\/api\/rooms\/([A-Z0-9]{6})\/delete-permanently$/.exec(pathname);
@@ -589,7 +625,8 @@ const server = http.createServer(async (req, res) => {
       if (rev.kind === 'layout') broadcastRoomScope(restorem[1],'memory',{type:'world-patch',sender:'server',patch:{layout:r.world.layout}});
       if (rev.kind === 'mementos') broadcastRoomScope(restorem[1],'memory',{type:'room-snapshot',sender:'server',memory:r.memory,world:r.world,music:r.music});
       if (rev.kind === 'quest') broadcastRoomScope(restorem[1],'quest',{type:'quest-update',sender:'server',items:r.quest.items});
-      return json(res, 200, { ok: true, kind:rev.kind, layout:r.world.layout, mementos:r.memory.mementos, quest:r.quest.items, restoredRevision: rev.id, meta: r.meta });
+      const actorId = verifiedActorId(req, r);
+      return json(res, 200, { ok: true, kind:rev.kind, layout:r.world.layout, mementos:publicMemory(r.memory, actorId).mementos, quest:publicQuest(r.quest, actorId).items, restoredRevision: rev.id, meta: r.meta });
     }
     const layoutm = /^\/api\/rooms\/([A-Z0-9]{6})\/layout$/.exec(pathname);
     if (layoutm && req.method === 'PUT') {
@@ -647,7 +684,7 @@ const server = http.createServer(async (req, res) => {
       if (isArchived(r) && !isOwner(req,r)) return json(res, 410, { error:'room_archived', purgeAfter:r.meta.purgeAfter, recoveryDays:30 });
       r.meta.lastVisitedAt = Date.now();
       saveDB();
-      return json(res, 200, {...publicRoom(r),accessRole});
+      return json(res, 200, {...publicRoom(r, req),accessRole});
     }
     if (rm && req.method === 'PUT') {
       const r = rooms[rm[1]];
@@ -663,7 +700,7 @@ const server = http.createServer(async (req, res) => {
       if ('music' in b) r.music = b.music;
       normalizeRoom(r);
       touchRoom(r);
-      return json(res, 200, publicRoom(r));
+      return json(res, 200, publicRoom(r, req));
     }
     if (pathname === '/api/uploads' && req.method === 'POST') {
       const body = await readBody(req, 18 * 1024 * 1024);
@@ -714,7 +751,12 @@ function wsFrame(text, opcode = 0x1) {
   return Buffer.concat([h, p]);
 }
 function wsSend(socket, obj) { if (!socket.destroyed) socket.write(wsFrame(JSON.stringify(obj))); }
-function wsBroadcast(key, obj, except) { for (const s of (channels.get(key) || [])) if (s !== except && !s.destroyed) wsSend(s, obj); }
+function publicTransientMessage(obj) {
+  if (!obj || typeof obj !== 'object' || !obj.player || typeof obj.player !== 'object') return obj;
+  const { actorId, ...player } = obj.player;
+  return { ...obj, player };
+}
+function wsBroadcast(key, obj, except) { for (const s of (channels.get(key) || [])) if (s !== except && !s.destroyed) wsSend(s, publicTransientMessage(obj)); }
 function parseFrames(socket, chunk, onText) {
   socket._wsbuf = Buffer.concat([socket._wsbuf || Buffer.alloc(0), chunk]);
   while (socket._wsbuf.length >= 2) {
@@ -762,6 +804,10 @@ server.on('upgrade', (req, socket) => {
   normalizeRoom(roomState);
   const wsInvite=String(u.searchParams.get('invite')||'');
   const wsRole=inviteRole({headers:{'x-room-invite':wsInvite}},roomState,{token:wsInvite});
+  const wsActorId=String(u.searchParams.get('actorId')||'');
+  const wsActorToken=String(u.searchParams.get('actorToken')||'');
+  const wsActor=wsActorId&&wsActorToken ? verifyActor({headers:{'x-actor-id':wsActorId,'x-actor-token':wsActorToken}},roomState) : {ok:false};
+  const wsVerifiedActorId=wsActor.ok ? wsActor.id : '';
   if (!wsRole) {
     socket.write('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n');
     return socket.end();
@@ -776,16 +822,16 @@ server.on('upgrade', (req, socket) => {
   socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ' + accept + '\r\n\r\n');
   const ck = `${room}::${channel}`;
   chset(ck).add(socket);
-  socket._meta = { room, channel, player, ck, role:wsRole };
+  socket._meta = { room, channel, player, ck, role:wsRole, actorId:wsVerifiedActorId };
   if (wsRole==='viewer') sendViewerCount(room);
   else wsSend(socket,{type:'viewer-count',sender:'server',count:viewerCount(room)});
 
   const r = rooms[room];
   if (r) {
     normalizeRoom(r);
-    if (channel.includes('quest')) wsSend(socket, { type: 'quest-update', sender: 'server', items: r.quest.items, accessRole:wsRole });
+    if (channel.includes('quest')) wsSend(socket, { type: 'quest-update', sender: 'server', items: publicQuest(r.quest, wsVerifiedActorId).items, accessRole:wsRole });
     else {
-      wsSend(socket, { type: 'room-snapshot', sender: 'server', memory: r.memory, world: r.world, music: r.music, accessRole:wsRole });
+      wsSend(socket, { type: 'room-snapshot', sender: 'server', memory: publicMemory(r.memory, wsVerifiedActorId), world: r.world, music: r.music, accessRole:wsRole });
       if (r.music) wsSend(socket, { type: 'music-sync', sender: 'server', music: r.music });
     }
   }
@@ -825,4 +871,4 @@ server.on('upgrade', (req, socket) => {
 const retentionSweep=setInterval(()=>{try{sweepExpiredArchives()}catch(e){console.error('retention sweep',e)}},60*60*1000);
 retentionSweep.unref?.();
 
-server.listen(PORT, () => console.log(`Pixel Memory V15.13 server: http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`Pixel Memory V15.14 server: http://localhost:${PORT}`));
