@@ -34,6 +34,7 @@ function applyMemoryOp(op){
   const add=(arr,item)=>{if(!item?.id)return;const i=arr.findIndex(x=>x.id===item.id);if(i>=0)arr[i]={...arr[i],...item};else arr.push(item)};
   if(op.kind==='memento:add')add(state.mementos,op.item);
   if(op.kind==='memento:move'){const m=state.mementos.find(x=>x.id===op.id);if(m){m.x=Number(op.x);m.y=Number(op.y)}}
+  if(op.kind==='memento:update'){const m=state.mementos.find(x=>x.id===op.id);if(m){if(typeof op.title==='string')m.title=op.title;if(typeof op.meaning==='string')m.meaning=op.meaning;if(typeof op.type==='string')m.type=op.type}}
   if(op.kind==='memento:hide'){const m=state.mementos.find(x=>x.id===op.id);if(m)m.hidden=!!op.hidden}
   if(op.kind==='memento:remove')state.mementos=state.mementos.filter(x=>x.id!==op.id);
   if(op.kind==='note:add')add(state.notes,op.item);
@@ -127,7 +128,52 @@ function openModal(ey,title,html){$('#modalEyebrow').textContent=ey;$('#modalTit
 function openNoteModal(){openModal('LEAVE A LITTLE TRACE','在这里留下一句话',`<div class="modal-form"><label class="field"><span>别人以后走到这里，也能看到它</span><textarea id="noteText" rows="4" maxlength="120" placeholder="今年也要很开心。"></textarea></label><button id="saveNoteBtn" class="button primary full press">把这句话贴到墙上 <span>→</span></button></div>`);setTimeout(()=>$('#saveNoteBtn').onclick=()=>{const t=$('#noteText').value.trim();if(!t)return toast('先写一句话');const item={id:uid(),authorId:state.player.actorId,by:state.player.name,text:t,time:Date.now()};memoryOp({kind:'note:add',item});addActivity(`${state.player.name} 在留言墙贴了一张纸条`);reaction(state.player.id,'✎');closeModal();toast('它已经贴在墙上了')},0)}
 function openMementoModal(){let type='🎁',photo='',photoFile=null;openModal('DROP A MEMORY','在脚边放下一件纪念物',`<div class="modal-form"><div class="type-grid"><button class="type-choice selected press" data-mtype="🎁">🎁</button><button class="type-choice press" data-mtype="✉️">✉️</button><button class="type-choice press" data-mtype="🌷">🌷</button><button class="type-choice press" data-mtype="🎫">🎫</button><button class="type-choice press" data-mtype="📷">📷</button></div><label class="field"><span>给它一个名字</span><input id="mTitle" maxlength="28" placeholder="例如：2019 年的第一张合照"></label><label class="field"><span>它为什么重要？</span><textarea id="mMeaning" rows="4" maxlength="180" placeholder="那天我们第一次一起旅行，回程坐错了车。"></textarea></label><div class="photo-upload-box"><span id="mPhotoState">可以加一张照片，把它做成地上的小相框</span><button id="pickMPhoto" class="button secondary small press">选择照片</button></div><button id="dropMBtn" class="button primary full press">就放在我现在站的位置 <span>↓</span></button></div>`);setTimeout(()=>{$$('[data-mtype]').forEach(b=>b.onclick=()=>{$$('[data-mtype]').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');type=b.dataset.mtype});$('#pickMPhoto').onclick=()=>$('#mementoPhotoInput').click();$('#mementoPhotoInput').onchange=e=>{const f=e.target.files[0];if(!f)return;photoFile=f;const rd=new FileReader();rd.onload=()=>{photo=rd.result;$('#mPhotoState').textContent=`${f.name} · 保存时会上传给房间`};rd.readAsDataURL(f)};$('#dropMBtn').onclick=async()=>{const btn=$('#dropMBtn');btn.disabled=true;const title=$('#mTitle').value.trim()||'一件小东西',meaning=$('#mMeaning').value.trim()||'有人觉得它值得被留下。';if(photoFile&&window.PixelNet?.enabled){try{$('#mPhotoState').textContent='正在上传照片…';const up=await PixelNet.uploadBlob(photoFile,photoFile.name);photo=up.url;$('#mPhotoState').textContent='照片已上传 · 其他人可以看到'}catch(_){btn.disabled=false;$('#mPhotoState').textContent='上传失败，请再试一次';return toast('照片没有上传成功，暂时没有放下纪念物')}}const item={id:uid(),authorId:state.player.actorId,type,photo,title,meaning,by:state.player.name,x:state.player.x+2,y:state.player.y+2,time:Date.now()};memoryOp({kind:'memento:add',item});addActivity(`${state.player.name} 放下了「${title}」`);renderMementos();closeModal();reaction(state.player.id,'✦');toast('它已经同步到这间房了')}} ,0)}
 function renderMementos(){const layer=$('#mementoLayer');layer.innerHTML='';state.mementos.filter(m=>!m.hidden).forEach(m=>{const e=document.createElement('div');e.className=`memento${m.photo?' photo':''}`;e.dataset.id=m.id;e.style.left=`${m.x}%`;e.style.top=`${m.y}%`;const bg=m.photo?`style="background-image:url('${m.photo.replace(/'/g,"%27")}')"`:'';e.innerHTML=`<div class="object" ${bg}>${m.photo?'':m.type}</div>`;layer.appendChild(e)});updateNear();renderCelebrateStatus()}
-function openMementoDetail(m){openModal('YOU FOUND SOMETHING',escapeHTML(m.title),`${m.photo?`<img class="memory-detail-photo" src="${m.photo}" alt="${escapeHTML(m.title)}">`:''}<p style="line-height:1.8;font-size:11px;color:#6f5f56">${escapeHTML(m.meaning)}</p><div class="memory-detail-meta">${escapeHTML(m.by)} 把它留在这里 · ${new Date(m.time).toLocaleDateString('zh-CN')}</div>`);reaction(state.player.id,'✦')}
+function canCurateMemento(m){
+  const owner=!!window.PixelNet?.hasOwnerToken?.(state.roomCode)||!!state.player.host;
+  return owner||m?.authorId===state.player.actorId
+}
+function isMementoAuthor(m){return !!m?.authorId&&m.authorId===state.player.actorId}
+async function runMementoAction(m,action){
+  try{
+    if(action==='move'){
+      await commitMemoryOp({kind:'memento:move',id:m.id,x:Math.min(96,state.player.x+2),y:Math.min(92,state.player.y+2)});
+      toast('已经把它挪到你脚边了')
+    }
+    if(action==='hide'){
+      await commitMemoryOp({kind:'memento:hide',id:m.id,hidden:!m.hidden});
+      toast(m.hidden?'已经重新摆出来':'已经先收起来了')
+    }
+    if(action==='remove'){
+      if(!confirm(`确定要移除「${m.title}」吗？房主操作会保留可恢复历史。`))return;
+      await commitMemoryOp({kind:'memento:remove',id:m.id});
+      toast('已经从房间里移除了')
+    }
+    closeModal();
+  }catch(e){
+    toast(String(e?.message||'').includes('403')?'你没有权限修改这个纪念物':'修改没有保存成功')
+  }
+}
+function openMementoEdit(m){
+  if(!isMementoAuthor(m))return toast('只有原作者可以修改这段回忆的内容');
+  openModal('EDIT YOUR MEMORY','修改你留下的纪念物',`<div class="modal-form"><label class="field"><span>名字</span><input id="editMTitle" maxlength="28" value="${escapeHTML(m.title)}"></label><label class="field"><span>它为什么重要？</span><textarea id="editMMeaning" rows="4" maxlength="180">${escapeHTML(m.meaning)}</textarea></label><button id="saveMEdit" class="button primary full press">保存修改 <span>→</span></button></div>`);
+  setTimeout(()=>$('#saveMEdit').onclick=async()=>{
+    const title=$('#editMTitle').value.trim()||m.title;
+    const meaning=$('#editMMeaning').value.trim()||m.meaning;
+    try{await commitMemoryOp({kind:'memento:update',id:m.id,title,meaning});closeModal();toast('这段回忆已经更新')}catch(_){toast('只有原作者可以修改内容')}
+  },0)
+}
+function openMementoDetail(m){
+  const can=canCurateMemento(m),author=isMementoAuthor(m);
+  const actions=can?`<div class="memory-detail-actions">${author?'<button id="mEditOwn" class="button secondary small press">✎ 修改文字</button>':''}<button id="mMoveHere" class="button secondary small press">⌖ 挪到脚边</button><button id="mHideToggle" class="button secondary small press">${m.hidden?'◉ 重新显示':'◌ 暂时收起'}</button><button id="mRemove" class="button danger small press">⌫ 移除</button></div>`:'';
+  openModal('YOU FOUND SOMETHING',escapeHTML(m.title),`${m.photo?`<img class="memory-detail-photo" src="${m.photo}" alt="${escapeHTML(m.title)}">`:''}<p style="line-height:1.8;font-size:11px;color:#6f5f56">${escapeHTML(m.meaning)}</p><div class="memory-detail-meta">${escapeHTML(m.by)} 把它留在这里 · ${new Date(m.time).toLocaleDateString('zh-CN')}</div>${actions}`);
+  setTimeout(()=>{
+    $('#mEditOwn')&&($('#mEditOwn').onclick=()=>openMementoEdit(m));
+    $('#mMoveHere')&&($('#mMoveHere').onclick=()=>runMementoAction(m,'move'));
+    $('#mHideToggle')&&($('#mHideToggle').onclick=()=>runMementoAction(m,'hide'));
+    $('#mRemove')&&($('#mRemove').onclick=()=>runMementoAction(m,'remove'));
+  },0);
+  reaction(state.player.id,'✦')
+}
 function takePhoto(){const names=[...state.players.values()].map(p=>p.name);const item={id:uid(),authorId:state.player.actorId,by:state.player.name,names,time:Date.now()};memoryOp({kind:'photo:add',item});addActivity(`${state.player.name} 按下快门，${names.length} 个人被拍进了合影`);reaction(state.player.id,'📷');toast(`咔嚓！${names.length} 个人被拍进去了`)}
 
 // drawer
@@ -135,7 +181,13 @@ function showDrawer(title,html){$('#drawerTitle').textContent=title;$('#drawerBo
 $('#onlinePill').onclick=openPeopleDrawer;function openPeopleDrawer(){showDrawer('今晚在这里',`<div class="drawer-section"><h4>ONLINE NOW</h4><div class="people-list">${[...state.players.values()].map(p=>`<div class="person-row"><span>${p.host?'✦ ':''}${escapeHTML(p.name)}</span><span>${p.item}</span></div>`).join('')}</div></div><div class="drawer-section"><h4>刚刚发生</h4><div class="activity-list">${state.activity.slice().reverse().slice(0,12).map(a=>`<div class="activity-row"><span>${escapeHTML(a.text)}</span><small>${a.time}</small></div>`).join('')||'<div class="activity-row">还没有什么发生。</div>'}</div></div>`)}
 function openNotesDrawer(){showDrawer('留言墙',`<div class="drawer-section"><h4>${state.notes.length} 张纸条</h4><div class="activity-list">${state.notes.slice().reverse().map(n=>`<div class="activity-row" style="display:block"><b>${escapeHTML(n.by)}</b><p style="margin:6px 0 0;line-height:1.55">${escapeHTML(n.text)}</p></div>`).join('')||'<div class="activity-row">墙还是空的。</div>'}</div></div><button class="button primary full press" id="drawerAddNote">再留一句</button>`);setTimeout(()=>$('#drawerAddNote').onclick=openNoteModal,0)}
 function openPhotosDrawer(){showDrawer('今晚的合影',`<div class="drawer-section"><h4>${state.photos.length} 次快门</h4><div class="activity-list">${state.photos.slice().reverse().map(p=>`<div class="activity-row" style="display:block"><b>📷 ${p.names.map(escapeHTML).join('、')}</b><p style="margin:5px 0 0">${new Date(p.time).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})}</p></div>`).join('')||'<div class="activity-row">还没人按下快门。</div>'}</div></div>`)}
-function openMementosDrawer(){showDrawer('散落的纪念物',`<div class="drawer-section"><h4>${state.mementos.length} 件东西</h4><div class="activity-list">${state.mementos.slice().reverse().map(m=>`<div class="activity-row"><span>${m.type} ${escapeHTML(m.title)}</span><small>${escapeHTML(m.by)}</small></div>`).join('')||'<div class="activity-row">地上还空空的。</div>'}</div></div>`)}
+function openMementosDrawer(){
+  showDrawer('散落的纪念物',`<div class="drawer-section"><h4>${state.mementos.length} 件东西</h4><div class="activity-list">${state.mementos.slice().reverse().map(m=>`<div class="activity-row memento-drawer-row ${m.hidden?'is-hidden':''}" data-drawer-mid="${m.id}"><span>${m.type} ${escapeHTML(m.title)}<small>${m.hidden?' · 已收起':''}</small></span><span><small>${escapeHTML(m.by)}</small>${canCurateMemento(m)?`<button class="mini-manage press" data-manage-memento="${m.id}">${m.hidden?'显示':'管理'}</button>`:''}</span></div>`).join('')||'<div class="activity-row">地上还空空的。</div>'}</div></div>`);
+  setTimeout(()=>$('[data-manage-memento]').forEach(btn=>btn.onclick=()=>{
+    const m=state.mementos.find(x=>x.id===btn.dataset.manageMemento);
+    if(m)openMementoDetail(m)
+  }),0)
+}
 $('#worldSettingsBtn').onclick=()=>{showDrawer('房间设置',`<div class="drawer-section"><h4>ROOM LOOK</h4><div class="settings-grid"><button id="changeBackdrop">▣ 上传背景照片<br><small>把熟悉的地方放进大厅</small></button><button id="clearBackdrop">⌫ 恢复像素场景<br><small>回到默认布置</small></button></div></div><div class="drawer-section"><h4>SOUND</h4><button id="settingsMusic" class="button secondary full press">♫ 打开音乐控制</button></div><div class="drawer-section"><h4>THIS ROOM</h4><div class="person-row"><span>门牌号</span><b>${state.roomCode}</b></div><div class="person-row"><span>纪念物</span><b>${state.mementos.length}</b></div><div class="person-row"><span>留言</span><b>${state.notes.length}</b></div><div class="person-row"><span>合影</span><b>${state.photos.length}</b></div><button id="openKeepsakeSettings" class="button warm full press" style="margin-top:8px">✦ 打开纪念卡</button></div>`);setTimeout(()=>{const change=$('#changeBackdrop'),clear=$('#clearBackdrop'),music=$('#settingsMusic'),keep=$('#openKeepsakeSettings');if(change)change.onclick=()=>$('#backdropUploadInput').click();if(clear)clear.onclick=()=>{state.world.backdrop='';saveRoom();applyBackdrop();toast('已经恢复成像素场景')};if(music)music.onclick=openMusicDrawer;if(keep)keep.onclick=openKeepsake},0)};
 $('#backdropUploadInput').onchange=async e=>{const f=e.target.files[0];if(!f)return;if(f.size>4*1024*1024)return toast('背景图建议控制在 4MB 以内');if(window.PixelNet?.enabled){toast('正在同步背景照片…');try{const up=await PixelNet.uploadBlob(f,f.name);state.world.backdrop=up.url;saveRoom();applyBackdrop();toast('背景已经同步给房间里的所有人');return}catch(_){toast('云端上传失败，先保存在这台设备')}}const rd=new FileReader();rd.onload=()=>{state.world.backdrop=rd.result;saveRoom();applyBackdrop();toast('这张照片已经成为本机房间背景')};rd.readAsDataURL(f)};function applyBackdrop(){const b=$('#customBackdrop'),stage=$('#worldStage');if(state.world.backdrop){b.style.backgroundImage=`url('${state.world.backdrop}')`;b.classList.add('on');stage.classList.add('has-backdrop')}else{b.style.backgroundImage='';b.classList.remove('on');stage.classList.remove('has-backdrop')}}
 
