@@ -26,11 +26,11 @@
       id:localStorage.getItem(ACTOR_KEY)||'',
       token:localStorage.getItem(ACTOR_TOKEN_KEY)||''
     };
-    return {actor,ownerToken:window.PixelNet?.getOwnerToken?.(state.roomCode)||''};
+    return {actor,ownerToken:window.PixelNet?.getOwnerToken?.(state.roomCode)||'',inviteToken:window.PixelNet?.getInviteToken?.(state.roomCode)||''};
   }
 
   async function createBundle(kind='identity'){
-    const {actor,ownerToken}=credentials();
+    const {actor,ownerToken,inviteToken}=credentials();
     if(!actor.id||!actor.token) throw new Error('当前设备还没有可导出的作者身份');
     if(kind==='owner'&&(!state.roomCode||!ownerToken)) throw new Error('当前设备没有这个房间的房主权限');
     const bundle={
@@ -40,7 +40,7 @@
       createdAt:new Date().toISOString(),
       roomCode:state.roomCode||'',
       actor:{id:actor.id,token:actor.token},
-      ...(kind==='owner'?{ownerToken}:{})
+      ...(kind==='owner'?{ownerToken,...(inviteToken?{inviteToken}:{})}:{})
     };
     const payload=encodeUtf8(JSON.stringify(bundle));
     return `${PREFIX}.${payload}.${await checksum(payload)}`;
@@ -83,6 +83,7 @@
     if(typeof state!=='undefined'&&state.player) state.player.actorId=data.actor.id;
     if(data.kind==='owner'){
       PixelNet.saveOwnerToken(data.roomCode,data.ownerToken);
+      if(data.inviteToken)PixelNet.saveInviteToken?.(data.roomCode,data.inviteToken);
       if(typeof state!=='undefined'&&state.roomCode===data.roomCode){
         state.player.host=true;
         try{
