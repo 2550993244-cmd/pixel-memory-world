@@ -76,10 +76,52 @@ async function loadRoomRemote(code){loadRoom(code);if(!window.PixelNet?.enabled)
 function randomCode(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';return Array.from({length:6},()=>chars[Math.floor(Math.random()*chars.length)]).join('')}
 function escapeHTML(s=''){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function toast(t){const el=$('#toast');el.textContent=t;el.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('show'),1800)}
+const CONTRIBUTOR_PROFILE_PREFIX='pixel-memory-contributor-profile-v1:';
+function contributorProfileKey(){
+  return CONTRIBUTOR_PROFILE_PREFIX+String(state.player.actorId||persistentActorId());
+}
+function readContributorProfile(){
+  try{
+    const v=JSON.parse(localStorage.getItem(contributorProfileKey())||'null');
+    if(!v||typeof v!=='object')return null;
+    return {
+      name:String(v.name||'').slice(0,10),
+      hair:['1','2','3'].includes(String(v.hair))?String(v.hair):'1',
+      outfit:['coral','blue','sage','butter'].includes(String(v.outfit))?String(v.outfit):'coral',
+      item:['🎁','🌷','📷','🎈'].includes(String(v.item))?String(v.item):'🎁'
+    };
+  }catch(_){return null}
+}
+function saveContributorProfile(){
+  if(isViewOnly()||window.PixelNet?.hasOwnerToken?.(state.roomCode))return null;
+  const v={
+    name:String(state.player.name||'朋友').slice(0,10),
+    hair:String(state.player.hair||'1'),
+    outfit:String(state.player.outfit||'coral'),
+    item:String(state.player.item||'🎁')
+  };
+  localStorage.setItem(contributorProfileKey(),JSON.stringify(v));
+  return v;
+}
+function applyContributorProfileToBuilder(){
+  const v=readContributorProfile();
+  if(!v)return false;
+  state.player.name=v.name||'朋友';
+  state.player.hair=v.hair;
+  state.player.outfit=v.outfit;
+  state.player.item=v.item;
+  const name=$('#playerNameInput');if(name)name.value=v.name||'';
+  $$('[data-hair]').forEach(b=>b.classList.toggle('selected',b.dataset.hair===v.hair));
+  $$('[data-outfit]').forEach(b=>b.classList.toggle('selected',b.dataset.outfit===v.outfit));
+  $$('[data-item]').forEach(b=>b.classList.toggle('selected',b.dataset.item===v.item));
+  renderAvatar();
+  return true;
+}
 function showScreen(id){$$('.screen').forEach(s=>s.classList.toggle('active',s.id===id));state.screen=id;window.scrollTo({top:0,behavior:'smooth'});if(id==='world')setTimeout(()=>$('#worldStage').focus(),50)}
 function openAvatarBuilderForCurrentRole(){
   const owner=!!window.PixelNet?.hasOwnerToken?.(state.roomCode);
   const contributor=!owner&&state.accessRole==='contributor';
+  if(contributor)applyContributorProfileToBuilder();
   const note=$('#contributorIdentityNoteV15');
   if(note)note.classList.toggle('hidden',!contributor);
   const heading=$('#avatarNameHeadingV15');
@@ -191,7 +233,7 @@ $$('[data-hair]').forEach(b=>b.onclick=()=>{$$('[data-hair]').forEach(x=>x.class
 $$('[data-outfit]').forEach(b=>b.onclick=()=>{$$('[data-outfit]').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');state.player.outfit=b.dataset.outfit;renderAvatar()});
 $$('[data-item]').forEach(b=>b.onclick=()=>{$$('[data-item]').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');state.player.item=b.dataset.item;renderAvatar()});
 function renderAvatar(){const p=$('#avatarPreview');p.className=`avatar-preview hair-${state.player.hair} outfit-${state.player.outfit}`;$('.held',p).textContent=state.player.item}renderAvatar();
-$('#enterWorldBtn').onclick=()=>{ensureAudio();state.audio.ctx?.resume?.().catch(()=>{});state.player.name=$('#playerNameInput').value.trim()||'朋友';state.player.host=$('#hostToggle').checked;state.player.x=50+Math.random()*8-4;state.player.y=79+Math.random()*4-2;state.player.celebrated=false;enterWorld()};
+$('#enterWorldBtn').onclick=()=>{ensureAudio();state.audio.ctx?.resume?.().catch(()=>{});state.player.name=$('#playerNameInput').value.trim()||'朋友';state.player.host=$('#hostToggle').checked;state.player.x=50+Math.random()*8-4;state.player.y=79+Math.random()*4-2;state.player.celebrated=false;saveContributorProfile();enterWorld()};
 $('#viewerAvatarBtnV15')?.addEventListener('click',openViewerAvatarCustomizer);
 
 // room network
