@@ -83,8 +83,9 @@
     transition('想去看看外面？', () => {
       loadQuest();
       setupQuestChannel();
-      questState.x = 9;
-      questState.y = 82;
+      const spawn=window.PixelMapRuntime?.spawn?.()||{x:9,y:82};
+      questState.x = Number(spawn.x)||9;
+      questState.y = Number(spawn.y)||82;
       renderQuest();
       showScreen('quest');
       setTimeout(() => $('#questStage')?.focus(), 80);
