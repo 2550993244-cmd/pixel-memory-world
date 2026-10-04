@@ -185,7 +185,8 @@
     $('#questOnlineCount') && ($('#questOnlineCount').textContent=questState.players.size);
     for (const [id,p] of questState.players) {
       const el = document.createElement('div');
-      el.className = `quest-player hair-${p.hair}${id===state.player.id&&questState.walking ? ' walking' : ''}${id===state.player.id?' me':''}`;
+      el.className = `quest-player hair-${p.hair} outfit-${p.outfit||'coral'}${id===state.player.id&&questState.walking ? ' walking' : ''}${id===state.player.id?' me':''}`;
+      el.dataset.id = id;
       el.style.left = `${id===state.player.id?questState.x:p.qx}%`;
       el.style.top = `${id===state.player.id?questState.y:p.qy}%`;
       el.style.setProperty('--shirt', colors[p.outfit] || colors.coral);
