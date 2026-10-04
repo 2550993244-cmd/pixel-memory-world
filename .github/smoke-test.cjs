@@ -97,6 +97,7 @@ const { chromium } = require('playwright');
     markerBox: document.querySelector('#creator .section-head>div>span').getBoundingClientRect().width,
     choiceHelp: parseFloat(getComputedStyle(document.querySelector('#creator .choice-card>small')).fontSize)
   }));
+  console.log('V14_1_CREATOR_TYPE', creatorType);
   if (creatorType.meta < 9.5 || creatorType.field < 11.5 || creatorType.marker < 11 || creatorType.markerBox < 31 || creatorType.choiceHelp < 10.5) {
     throw new Error('creator typography/order markers are still too small');
   }

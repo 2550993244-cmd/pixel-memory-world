@@ -565,3 +565,20 @@ body.v14-ready .quest-bar .button{font-size:11px}
   }
   body.v14-ready .join-card{padding:30px 22px}
 }
+
+
+/* V14.1 specificity patch: V13 creator rules include #creator and would
+   otherwise win over the generic V14.1 section marker rule. */
+body.v14-ready #creator .section-head>div>span,
+body.v14-ready #avatarBuilder .section-head>div>span{
+  width:34px;
+  height:34px;
+  flex:0 0 34px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  font:700 12px/1 var(--v14-mono);
+  background:#f3e8dd;
+  border:1px solid rgba(126,97,79,.16);
+  color:#765d50;
+}
