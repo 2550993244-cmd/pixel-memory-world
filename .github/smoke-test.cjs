@@ -427,16 +427,40 @@ const { chromium } = require('playwright');
   console.log('V15_2_QUEST_ATLAS',questAtlasAudit);
   if(!questAtlasAudit.ready||questAtlasAudit.layers!==3||!/outfit-blue/.test(questAtlasAudit.outfitClass)) throw new Error('V15.2 Outside avatar atlas missing');
   await page.waitForTimeout(260);
-  const cameraAudit = await page.evaluate(() => ({
-    wrapper: !!document.querySelector('.pm-camera-world-v15'),
-    active: document.querySelector('#questStage')?.classList.contains('pm-camera-active'),
-    transform: getComputedStyle(document.querySelector('.pm-camera-world-v15')).transform,
-    collisionCount: window.PixelMapRuntime?.collisionEllipses?.().length || 0,
-    source: window.PixelMapRuntime?.source || ''
-  }));
-  console.log('V15_1_CAMERA_AUDIT', cameraAudit);
-  if (!cameraAudit.wrapper || !cameraAudit.active || cameraAudit.collisionCount < 3 || cameraAudit.source !== 'tiled-json') throw new Error('V15.1 camera/Tiled collision runtime missing');
+  const cameraAudit = await page.evaluate(() => {
+    const stage=document.querySelector('#questStage');
+    const world=document.querySelector('.pm-camera-world-v15');
+    const sr=stage.getBoundingClientRect();
+    const state=window.PixelCameraRuntime?.state||{};
+    const center=window.PixelCameraRuntime?.screenToWorldPercent?.(sr.left+sr.width/2,sr.top+sr.height/2)||null;
+    return {
+      wrapper: !!world,
+      active: stage?.classList.contains('pm-camera-active'),
+      transform: getComputedStyle(world).transform,
+      collisionCount: window.PixelMapRuntime?.collisionEllipses?.().length || 0,
+      source: window.PixelMapRuntime?.source || '',
+      stageW:sr.width,stageH:sr.height,
+      worldW:state.worldW||0,worldH:state.worldH||0,
+      center
+    };
+  });
+  console.log('V15_2_CAMERA_AUDIT', cameraAudit);
+  if (!cameraAudit.wrapper || !cameraAudit.active || cameraAudit.collisionCount < 3 || cameraAudit.source !== 'tiled-json') throw new Error('V15.2 camera/Tiled collision runtime missing');
   if (cameraAudit.transform === 'none') throw new Error('V15 camera did not transform the quest world');
+  if (!(cameraAudit.worldW > cameraAudit.stageW*1.08 || cameraAudit.worldH > cameraAudit.stageH*1.08)) throw new Error('V15.2 Outside world is not actually larger than the viewport');
+  if (!cameraAudit.center || cameraAudit.center.x<0 || cameraAudit.center.x>100 || cameraAudit.center.y<0 || cameraAudit.center.y>100) throw new Error('V15.2 camera screen-to-world mapping invalid');
+
+  await page.evaluate(()=>document.querySelector('#questStage').classList.add('placing'));
+  await page.waitForTimeout(120);
+  const fitAudit=await page.evaluate(()=>({
+    fit:document.querySelector('#questStage')?.classList.contains('pm-camera-fit'),
+    active:document.querySelector('#questStage')?.classList.contains('pm-camera-active'),
+    state:window.PixelCameraRuntime?.state||null
+  }));
+  console.log('V15_2_CAMERA_FIT',fitAudit);
+  if(!fitAudit.fit||fitAudit.active||!fitAudit.state?.fit) throw new Error('V15.2 editor fit-camera mode missing');
+  await page.evaluate(()=>document.querySelector('#questStage').classList.remove('placing'));
+  await page.waitForTimeout(80);
   if (await page.locator('.quest-signpost,.pm-sign').count()) throw new Error('duplicate memory-road signs still visible');
   if (!(await page.locator('#questFishingSpot').count())) throw new Error('fishing spot missing');
   await page.locator('#returnRoomBtn').click();
