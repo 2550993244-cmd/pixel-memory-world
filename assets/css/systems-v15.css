@@ -271,6 +271,8 @@ body.pm-world .quest-stage.edit-mode .quest-memory.is-hidden-memory:after{
 
 /* V15.16 · returning contributor continuity */
 #toast.has-action-v16{
+  z-index:1000;
+  pointer-events:auto;
   display:flex;
   align-items:center;
   justify-content:space-between;
