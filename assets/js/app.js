@@ -141,7 +141,7 @@ async function runMementoAction(m,action){
     }
     if(action==='hide'){
       await commitMemoryOp({kind:'memento:hide',id:m.id,hidden:!m.hidden});
-      toast(m.hidden?'已经重新摆出来':'已经先收起来了')
+      toast(m.hidden?'已经先收起来了':'已经重新摆出来')
     }
     if(action==='remove'){
       if(!confirm(`确定要移除「${m.title}」吗？房主操作会保留可恢复历史。`))return;
