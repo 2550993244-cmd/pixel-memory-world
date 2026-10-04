@@ -545,7 +545,7 @@
     const owner=window.PixelNet?.enabled?!!window.PixelNet?.hasOwnerToken?.(state.roomCode):!!state.player.host;
     const author=item.authorId===state.player.actorId;
     const manage=(owner||author)?`<div class="memory-detail-actions">${author?'<button id="questEditOwn" class="button secondary small press">✎ 修改文字</button>':''}<button id="questHideMemory" class="button secondary small press">${item.hidden?'◉ 重新显示':'◌ 暂时收起'}</button><button id="questRemoveMemory" class="button danger small press">⌫ 移除</button></div>`:'';
-    openModal('MEMORY FOUND', escapeHTML(item.title), `<div class="memory-found-card"><div class="memory-found-visual">${item.image ? `<img src="${item.image}" alt="">` : `<span>${item.icon || '✦'}</span>`}</div><div class="memory-found-copy">${escapeHTML(item.text || '有人觉得这一刻值得被留下。')}</div>${voiceHtml}<div class="memory-detail-meta">${escapeHTML(item.by || '朋友')} 把它藏在这条路上 · 第 ${item.order || 1} 站</div>${manage}</div>`);
+    openModal('MEMORY FOUND', escapeHTML(item.title), `<div class="memory-found-card"><div class="memory-found-visual">${item.image ? `<img src="${item.image}" alt="">` : `<span>${item.icon || '✦'}</span>`}</div><div class="memory-found-copy">${escapeHTML(item.text || '有人觉得这一刻值得被留下。')}</div>${voiceHtml}<div class="memory-detail-meta">${escapeHTML(item.authorName || item.by || '朋友')} 把它藏在这条路上 · 第 ${item.order || 1} 站</div>${manage}</div>`);
     if (owner||author) {
       setTimeout(()=>{
         $('#questHideMemory')&&($('#questHideMemory').onclick=async()=>{
@@ -841,7 +841,7 @@
     if (questObstacle(x,y)) return toast('那里被水塘或小山挡住了，换个位置藏。');
     const title=$('#questMemoryTitle').value.trim()||questState.selectedAsset.label;
     const text=$('#questMemoryText').value.trim()||'看到它的时候，希望你会想起那一天。';
-    const item={id:uid(),authorId:state.player.actorId,order:questState.items.length+1,title,text,by:state.player.name,image:questState.selectedAsset.image,voiceKey:questState.pendingVoiceKey||'',voiceUrl:questState.pendingVoiceUrl||'',x,y,time:Date.now()};
+    const item={id:uid(),authorId:state.player.actorId,authorName:state.player.name,order:questState.items.length+1,title,text,by:state.player.name,image:questState.selectedAsset.image,voiceKey:questState.pendingVoiceKey||'',voiceUrl:questState.pendingVoiceUrl||'',x,y,time:Date.now()};
     questState.placing=false;$('#questStage').classList.remove('placing');
     questOp({kind:'add',item});renderQuestItems();pulseDiscovery(x,y);addActivity(`${state.player.name} 在门外藏下了「${title}」`);toast('藏好了。其他人现在也能在这条路上找到它。');
     resetEditorDraft();
@@ -856,7 +856,7 @@
       {x:55,y:56,title:'一张没有拍好的照片',text:'有人闭眼，有人笑场，但后来它反而成了最舍不得删的一张。',icon:'📷'},
       {x:77,y:38,title:'最后一个小秘密',text:'如果你真的走到了这里——谢谢你出现在这段故事里。',icon:'✦'}
     ];
-    const items=questState.items.slice();demo.forEach((d,i)=>items.push({id:uid(),order:items.length+1,by:state.player.name,time:Date.now(),voiceKey:'',image:'',...d}));
+    const items=questState.items.slice();demo.forEach((d,i)=>items.push({id:uid(),order:items.length+1,authorId:state.player.actorId,authorName:state.player.name,by:state.player.name,time:Date.now(),voiceKey:'',image:'',...d}));
     questOp({kind:'set',items});renderQuestItems();toast('三段示例回忆已经散落在路上。');
   });
 
