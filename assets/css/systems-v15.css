@@ -267,3 +267,152 @@ body.pm-world .quest-stage.edit-mode .quest-memory.is-hidden-memory:after{
   font-size:7px;
   white-space:nowrap;
 }
+
+
+/* V15.16 · returning contributor continuity */
+#toast.has-action-v16{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  max-width:min(520px,calc(100vw - 28px));
+  padding-right:8px;
+}
+#toast.has-action-v16>span{min-width:0}
+#toast .toast-undo-v16{
+  flex:0 0 auto;
+  border:1px solid rgba(255,255,255,.34);
+  border-radius:999px;
+  padding:6px 11px;
+  background:rgba(255,255,255,.15);
+  color:inherit;
+  font:700 10px/1 var(--v14-mono,ui-monospace,monospace);
+  letter-spacing:.06em;
+}
+#toast .toast-undo-v16:disabled{opacity:.45}
+body.pm-world .contributor-continuity-actions-v16{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-top:9px;
+}
+body.pm-world .my-traces-summary-v16>small{
+  display:block;
+  margin-top:7px;
+  color:#8c7d73;
+  font-size:10px;
+  line-height:1.55;
+}
+body.pm-world .trace-recovery-row-v16{margin-top:10px}
+body.pm-world .trace-filter-row-v16{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+}
+body.pm-world .trace-filter-v16{
+  min-height:30px;
+  padding:6px 10px;
+  border:1px solid rgba(105,88,75,.14);
+  border-radius:999px;
+  background:#f7f2eb;
+  color:#77685e;
+  font-size:9px;
+  font-weight:700;
+}
+body.pm-world .trace-filter-v16.selected{
+  background:#6f856d;
+  border-color:#6f856d;
+  color:#fff;
+}
+body.pm-world .trace-name-filter-v16{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-top:9px;
+  color:#85776e;
+  font-size:10px;
+}
+body.pm-world .trace-name-filter-v16 select{
+  max-width:65%;
+  border:1px solid rgba(105,88,75,.16);
+  border-radius:10px;
+  padding:7px 9px;
+  background:#fffdfa;
+  color:#645952;
+  font:600 10px/1.2 inherit;
+}
+body.pm-world .my-trace-timeline-v16{position:relative}
+body.pm-world .trace-year-v16{
+  display:grid;
+  grid-template-columns:62px minmax(0,1fr);
+  gap:10px;
+  margin-top:12px;
+}
+body.pm-world .trace-year-label-v16{
+  position:relative;
+  padding-top:3px;
+  text-align:right;
+}
+body.pm-world .trace-year-label-v16 b{
+  display:block;
+  color:#596a59;
+  font-size:14px;
+}
+body.pm-world .trace-year-label-v16 span{
+  display:block;
+  margin-top:3px;
+  color:#a09389;
+  font-size:8px;
+}
+body.pm-world .trace-year-list-v16{
+  position:relative;
+  display:grid;
+  gap:8px;
+  padding-left:13px;
+  border-left:1px solid rgba(112,139,112,.26);
+}
+body.pm-world .trace-year-list-v16:before{
+  content:"";
+  position:absolute;
+  left:-4px;
+  top:8px;
+  width:7px;height:7px;
+  border-radius:50%;
+  background:#819780;
+  box-shadow:0 0 0 4px rgba(129,151,128,.12);
+}
+body.pm-world .trace-card-v16{
+  padding:10px 11px;
+  border:1px solid rgba(105,88,75,.12);
+  border-radius:13px;
+  background:rgba(255,253,249,.82);
+}
+body.pm-world .trace-card-head-v16{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+}
+body.pm-world .trace-card-head-v16>span{
+  color:#5f554e;
+  font-size:10px;
+  font-weight:800;
+}
+body.pm-world .trace-card-head-v16>small{
+  color:#998b82;
+  font-size:8px;
+  text-align:right;
+}
+body.pm-world .trace-card-v16 p{
+  margin:7px 0 0;
+  color:#6c6059;
+  font-size:10px;
+  line-height:1.6;
+}
+@media(max-width:700px){
+  body.pm-world .contributor-continuity-actions-v16{grid-template-columns:1fr}
+  body.pm-world .trace-year-v16{grid-template-columns:46px minmax(0,1fr);gap:7px}
+  body.pm-world .trace-card-head-v16{display:block}
+  body.pm-world .trace-card-head-v16>small{display:block;margin-top:3px;text-align:left}
+}
