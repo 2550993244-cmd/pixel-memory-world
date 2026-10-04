@@ -4,7 +4,7 @@ This file records only decisions that would create meaningful rework if guessed 
 
 ## D001 · Final character pixel-art direction
 
-**Status:** needs owner decision  
+**Status:** decided — A · Warm keepsake pixel  
 **Blocks:** production spritesheet / atlas generation only  
 **Does not block:** current DOM fallback, multiplayer movement, actions, room editor, Tiled map, persistence
 
@@ -54,11 +54,17 @@ More expressive and avatar-focused.
 
 **Tradeoff:** requires more careful variant art and can become visually cute enough to compete with the restrained editorial UI.
 
-### Default recommendation
+### Decision
 
-Use **A · Warm keepsake pixel**, but borrow B's readable four-direction silhouette and C's clearer celebration poses.
+Selected **A · Warm keepsake pixel**, while deliberately borrowing B's readable four-direction silhouette and C's clearer social poses.
 
-That preserves the current product identity while making movement and social actions more legible.
+Implemented in V15.2 as the `warm-v1` layered atlas:
+- warm brown outline
+- muted coral / lake blue / sage / butter clothing
+- small restrained facial features
+- four-direction silhouettes
+- clearer wave / hug / celebrate poses
+- DOM sprite retained only as fallback
 
 ---
 
