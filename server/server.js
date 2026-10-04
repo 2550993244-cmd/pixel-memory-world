@@ -684,4 +684,7 @@ server.on('upgrade', (req, socket) => {
   socket.on('close', close); socket.on('end', close); socket.on('error', close);
 });
 
+const retentionSweep=setInterval(()=>{try{sweepExpiredArchives()}catch(e){console.error('retention sweep',e)}},60*60*1000);
+retentionSweep.unref?.();
+
 server.listen(PORT, () => console.log(`Pixel Memory V15.5 server: http://localhost:${PORT}`));
