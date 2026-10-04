@@ -667,7 +667,7 @@ This keeps appearance playful while preserving authored-name continuity during a
 
 ## D013 · Historical author display names
 
-**Status:** needs owner decision  
+**Status:** decided — A · Keep the name snapshot stored with each memory  
 **Blocks:** what happens when a contributor changes their name on a later visit, whether old memories should visually follow the latest name  
 **Does not block:** stable current-visit names, appearance editing, actor credentials, viewer privacy or room permissions
 
@@ -701,6 +701,54 @@ For example: “Lynn（当时：小林）”.
 
 **Tradeoff:** visually heavy for a warm, lightweight memorial interface.
 
+### Decision
+
+Selected **A · Keep the name snapshot stored with each memory**.
+
+Implemented in V15.13:
+- new authored objects store an immutable authorName snapshot alongside authorId
+- the server canonicalizes the initial display-name snapshot and preserves it on duplicate / replayed add operations
+- later text edits, movement, curation and contributor renames do not mutate the stored author name
+- old records without authorName render through their existing by field
+- notes, mementos, photos, activity items and Outside memories all use the snapshot contract
+- the same authorId may legitimately appear as “小林” on an older memory and “Lynn” on a newer one
+
+The hidden actor identity provides continuity and permissions; the displayed author name remains part of the historical moment.
+
+
+---
+
+## D014 · Public alias linkage
+
+**Status:** needs owner decision  
+**Blocks:** whether viewers can visibly tell that two historical names belong to the same contributor  
+**Does not block:** permissions, immutable author snapshots, contributor renaming, recovery keys or room access
+
+After D013, the system can know that “小林” and “Lynn” are the same underlying actor while preserving both historical names. The next question is whether that hidden continuity should ever be exposed in the warm public interface.
+
+### A · Keep alias linkage private — recommended
+
+- memories show only the name captured at creation time
+- no “same person as…” badge or public alias history
+- actorId remains an internal permission / continuity concept
+- contributors can change how they present themselves over time without the room publishing an identity trail
+
+**Best fit:** keeps the memorial interface simple and privacy-preserving.
+
+### B · Subtle same-person indicator
+
+When two names share an actorId, a detail view may show a small “同一位朋友” indicator without listing every historical name.
+
+**Tradeoff:** adds identity inference that the contributor did not explicitly choose to publish.
+
+### C · Public alias history
+
+A contributor profile could show “曾用名：小林 / Lynn”.
+
+**Tradeoff:** strongest continuity, but creates a persistent public identity history that is much heavier than the current product.
+
 ### Default recommendation
 
-Choose **A**. Treat the author name on a memory as part of that memory's historical snapshot, while the hidden actor identity continues to provide continuity underneath.
+Choose **A · Keep alias linkage private**.
+
+The system needs identity continuity for authorship and permissions; the room does not need to turn that internal identity graph into public biography.
