@@ -150,12 +150,14 @@
     $('#openInviteCenterV15').onclick=openCenter;
   }
 
-  const settings=$('#worldSettingsBtn');
-  if(settings&&!settings.dataset.inviteWrapped){
-    const old=settings.onclick;
-    settings.onclick=function(e){old?.call(this,e);setTimeout(injectSettings,0)};
-    settings.dataset.inviteWrapped='true';
-  }
+  setTimeout(()=>{
+    const settings=$('#worldSettingsBtn');
+    if(settings&&!settings.dataset.inviteWrapped){
+      const old=settings.onclick;
+      settings.onclick=function(e){old?.call(this,e);setTimeout(injectSettings,0)};
+      settings.dataset.inviteWrapped='true';
+    }
+  },0);
 
   const apiState={
     version:'15.6',
