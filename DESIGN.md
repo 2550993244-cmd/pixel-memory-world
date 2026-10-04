@@ -1,5 +1,5 @@
 ---
-version: 15.5
+version: 15.6
 name: Pixel Memory World
 description: A warm multiplayer pixel-memory space. The interface should feel like a keepsake box that became a tiny playable world: soft paper surfaces, restrained pastel accents, readable modern Chinese typography, pixel-art scenes, and motion that responds to people rather than decorating every surface.
 ---
@@ -174,6 +174,17 @@ The technical sprite contract is fixed and the production direction is now **War
 - The runtime must keep the current DOM sprite as a fallback until a real atlas is present.
 - Production atlas language: warm brown outlines, muted clothing, small facial features, restrained handmade irregularity, readable four-direction silhouettes, and expressive-but-not-cartoonish social poses.
 - Keep the DOM sprite only as a compatibility fallback; new character work should extend the warm layered atlas instead of creating a second visual system.
+
+## Secret invite language
+
+A room code is an identity label; a secret invite link is an access credential.
+
+- Never print the invite token on keepsake cards, exported images, screenshots or decorative room-code surfaces.
+- Share actions should copy the complete secret URL, while visible UI may continue showing the six-character room code.
+- After accepting an invite URL, remove the secret query parameter from the visible address bar once it is stored locally.
+- Invite rotation must clearly warn that old links stop working immediately while room content stays untouched.
+- A missing / invalid invite should use neutral language that does not confirm whether a guessed room code exists.
+- Do not add an account, password prompt or waiting room to the default secret-link flow.
 
 ## Archive / delete language
 
