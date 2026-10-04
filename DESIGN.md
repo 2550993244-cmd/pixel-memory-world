@@ -138,15 +138,18 @@ Visual content should replace empty whitespace. If a region feels empty, add mea
 
 ## Keepsake / gift-card language
 
-The saved keepsake is a ceremonial object, not an analytics dashboard.
+The saved keepsake is a ceremonial paper object, not an analytics dashboard or a jewelry box.
 
-- Think jewelry presentation case / gift packaging: champagne gold, translucent glass, fine dark-gold textile pattern, thin metallic frame.
-- Main title and invitation quote are centered.
-- A small medallion or seal may anchor the composition.
-- Stats must not be four hard rectangular cells. Use open spacing, fine separators, small jewels or medallions.
-- Participant tokens may resemble tiny mounted gems.
-- One frosted capsule or plaque is acceptable for the final quote; do not put every field in a box.
-- The exported PNG must match the on-screen keepsake language.
+- Use warm white premium paper as the dominant surface.
+- Texture should read as subtle paper fibre, never as a noisy digital pattern.
+- Ornament is blind-embossed / debossed: very light gray, low contrast, formed by paired highlight and shadow rather than a printed decorative border.
+- Main title and invitation quote stay centered with generous negative space.
+- A small tonal pressed medallion may anchor the composition; avoid metallic gold as the primary visual language.
+- Stats must not be four hard rectangular cells. Use open spacing and hairline separators.
+- Participant tokens should resemble small paper seals / embossed badges, not jewels.
+- One softly recessed paper panel is acceptable for the final quote; do not put every field in a box.
+- The exported PNG must match the on-screen keepsake language, including paper texture and embossed ornament.
+- On mobile, the card may scroll inside its shell and actions must remain reachable without covering content.
 
 ## Room & Outside
 
