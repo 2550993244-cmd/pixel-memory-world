@@ -1,4 +1,4 @@
-/* Pixel Memory World · V15.9 instant spectator entry + local avatar customization */
+/* Pixel Memory World · V15.10 ceremonial contributor entry + instant spectators */
 (() => {
   const $=(s,r=document)=>r.querySelector(s);
 
@@ -82,8 +82,8 @@
         enterViewerWorld();
         toast('已经打开这份纪念 · 你的小人只有自己看得到');
       }else{
-        showScreen('avatarBuilder');
-        toast('参与邀请验证成功');
+        openAvatarBuilderForCurrentRole();
+        toast('参与邀请验证成功 · 先以自己的样子正式入场');
       }
       return true;
     }
@@ -177,7 +177,7 @@
   },0);
 
   const apiState={
-    version:'15.9',
+    version:'15.10',
     rotatingRole:'',
     tokenFromText,
     ensureToken,
