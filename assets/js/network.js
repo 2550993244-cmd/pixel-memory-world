@@ -104,6 +104,12 @@
     const token=getOwnerToken(code);
     return token ? {'X-Room-Owner':token} : {};
   };
+  const actorHeaders = () => {
+    const id=localStorage.getItem('pixel-memory-actor-v1')||'';
+    const token=localStorage.getItem('pixel-memory-actor-token-v1')||'';
+    return id&&token ? {'X-Actor-Id':id,'X-Actor-Token':token} : {};
+  };
+  const mutationHeaders = code => ({...actorHeaders(),...ownerHeaders(code)});
 
   window.PixelNet = {
     get baseUrl(){ return baseUrl; },
@@ -114,6 +120,7 @@
     createChannel(name, roomCode, playerId){ return new RealtimeChannel(name, roomCode, playerId); },
     getOwnerToken,
     hasOwnerToken(code){ return !!getOwnerToken(code); },
+    getActorHeaders(){ return actorHeaders(); },
     async createRoom(code, world, memory={}) {
       const room=await api('/api/rooms',{method:'POST',body:JSON.stringify({code,world,memory})});
       if(room?.ownerToken) saveOwnerToken(code,room.ownerToken);
@@ -145,7 +152,7 @@
       });
     },
     async updateRoom(code, patch){ return api(`/api/rooms/${encodeURIComponent(code)}`,{method:'PUT',body:JSON.stringify(patch)}); },
-    async applyOp(code, scope, op){ return api(`/api/rooms/${encodeURIComponent(code)}/ops`,{method:'POST',body:JSON.stringify({scope,op})}); },
+    async applyOp(code, scope, op){ return api(`/api/rooms/${encodeURIComponent(code)}/ops`,{method:'POST',headers:mutationHeaders(code),body:JSON.stringify({scope,op})}); },
     async uploadBlob(blob, filename='voice.webm') {
       if (!baseUrl) throw new Error('NO_SERVER');
       const fd = new FormData(); fd.append('file', blob, filename);
