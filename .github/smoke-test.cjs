@@ -480,7 +480,7 @@ const { chromium } = require('playwright');
   if(!curatorCreate.ok) throw new Error('V15.3 curator test room create failed '+curatorCreate.status);
   const curatorRoom=await curatorCreate.json();
   const snapshotBypass=await fetch(`${base}/api/rooms/${curatorCode}`,{
-    method:'PUT',headers:{'Content-Type':'application/json'},
+    method:'PUT',headers:{'Content-Type':'application/json','X-Room-Invite':curatorRoom.inviteToken},
     body:JSON.stringify({memory:{mementos:[{id:'bypass'}]}})
   });
   if(snapshotBypass.status!==400) throw new Error('V15.3 legacy snapshot write can bypass memory permissions');
