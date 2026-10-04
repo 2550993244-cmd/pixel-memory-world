@@ -289,11 +289,75 @@ const { chromium } = require('playwright');
     actor:window.PixelIdentity?.actorId||'',
     session:window.PixelIdentity?.sessionId||'',
     stored:localStorage.getItem('pixel-memory-actor-v1')||'',
+    hasToken:!!localStorage.getItem('pixel-memory-actor-token-v1'),
     activityAuthor:state.activity.find(x=>x.text==='CI identity check')?.authorId||''
   }));
   console.log('V15_2_IDENTITY_AUDIT',identityAudit);
-  if(!identityAudit.actor||identityAudit.actor===identityAudit.session||identityAudit.actor!==identityAudit.stored) throw new Error('V15.2 persistent actor identity missing');
+  if(!identityAudit.actor||identityAudit.actor===identityAudit.session||identityAudit.actor!==identityAudit.stored||!identityAudit.hasToken) throw new Error('V15.3 persistent actor credential missing');
   if(identityAudit.activityAuthor!==identityAudit.actor) throw new Error('V15.2 authored memory is not tagged with actor identity');
+
+  // V15.3 D003=A: real server-side author/host curation permissions.
+  const curatorCode=('T'+Math.random().toString(36).slice(2,7)).toUpperCase();
+  const curatorCreate=await fetch(`${base}/api/rooms`,{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({code:curatorCode,world:{occasion:'测试'},memory:{mementos:[],notes:[],photos:[],activity:[]}})
+  });
+  if(!curatorCreate.ok) throw new Error('V15.3 curator test room create failed '+curatorCreate.status);
+  const curatorRoom=await curatorCreate.json();
+  const guestA={'Content-Type':'application/json','X-Actor-Id':'guest-author-a','X-Actor-Token':'guest-secret-a'};
+  const guestB={'Content-Type':'application/json','X-Actor-Id':'guest-intruder-b','X-Actor-Token':'guest-secret-b'};
+  const hostH={'Content-Type':'application/json','X-Room-Owner':curatorRoom.ownerToken};
+  const opRequest=(scope,op,headers)=>fetch(`${base}/api/rooms/${curatorCode}/ops`,{
+    method:'POST',headers,body:JSON.stringify({scope,op})
+  });
+
+  let authRes=await opRequest('memory',{kind:'memento:add',item:{id:'guest-memory',authorId:'spoofed',type:'📷',title:'原始标题',meaning:'原始内容',by:'访客A',x:22,y:66,time:Date.now()}},guestA);
+  if(authRes.status!==200) throw new Error('V15.3 author could not add memento');
+  let authRoom=await fetch(`${base}/api/rooms/${curatorCode}`).then(r=>r.json());
+  if(authRoom.memory.mementos[0]?.authorId!=='guest-author-a') throw new Error('V15.3 server did not stamp canonical authorId');
+
+  authRes=await opRequest('memory',{kind:'memento:move',id:'guest-memory',x:44,y:55},guestB);
+  if(authRes.status!==403) throw new Error('V15.3 stranger can move another author memento');
+  authRes=await opRequest('memory',{kind:'memento:move',id:'guest-memory',x:44,y:55},hostH);
+  if(authRes.status!==200) throw new Error('V15.3 host curator cannot move participant memento');
+  authRes=await opRequest('memory',{kind:'memento:update',id:'guest-memory',title:'房主不该能改'},hostH);
+  if(authRes.status!==403) throw new Error('V15.3 host can rewrite participant memory content');
+  authRes=await opRequest('memory',{kind:'memento:update',id:'guest-memory',title:'作者修改后',meaning:'作者自己的修改'},guestA);
+  if(authRes.status!==200) throw new Error('V15.3 author cannot edit own memento');
+  authRes=await opRequest('memory',{kind:'memento:hide',id:'guest-memory',hidden:true},hostH);
+  if(authRes.status!==200) throw new Error('V15.3 host curator cannot hide memento');
+  authRes=await opRequest('memory',{kind:'memento:remove',id:'guest-memory'},hostH);
+  if(authRes.status!==200) throw new Error('V15.3 host curator cannot remove memento');
+
+  const revData=await fetch(`${base}/api/rooms/${curatorCode}/revisions`,{headers:{'X-Room-Owner':curatorRoom.ownerToken}}).then(r=>r.json());
+  const memoryRev=(revData.revisions||[]).find(r=>r.kind==='mementos');
+  if(!memoryRev) throw new Error('V15.3 host curation revision missing');
+  const restored=await fetch(`${base}/api/rooms/${curatorCode}/revisions/${memoryRev.id}/restore`,{
+    method:'POST',headers:{'Content-Type':'application/json','X-Room-Owner':curatorRoom.ownerToken},body:'{}'
+  }).then(r=>r.json());
+  if(!restored.mementos?.some(m=>m.id==='guest-memory'&&m.authorId==='guest-author-a')) throw new Error('V15.3 curation restore lost author attribution');
+
+  authRes=await opRequest('quest',{kind:'add',item:{id:'guest-quest',authorId:'spoofed',order:1,title:'门外标题',text:'门外内容',by:'访客A',x:30,y:70,time:Date.now()}},guestA);
+  if(authRes.status!==200) throw new Error('V15.3 author could not add Outside memory');
+  authRes=await opRequest('quest',{kind:'move',id:'guest-quest',x:51,y:61},guestB);
+  if(authRes.status!==403) throw new Error('V15.3 stranger can move Outside memory');
+  authRes=await opRequest('quest',{kind:'move',id:'guest-quest',x:51,y:61},hostH);
+  if(authRes.status!==200) throw new Error('V15.3 host cannot curate Outside memory');
+  authRes=await opRequest('quest',{kind:'update',id:'guest-quest',title:'房主改写'},hostH);
+  if(authRes.status!==403) throw new Error('V15.3 host can rewrite Outside memory content');
+  authRes=await opRequest('quest',{kind:'update',id:'guest-quest',title:'作者改写',text:'作者改写内容'},guestA);
+  if(authRes.status!==200) throw new Error('V15.3 author cannot edit own Outside memory');
+  console.log('V15_3_CURATOR_AUTH', {room:curatorCode, memoryRevision:memoryRev.id, ok:true});
+
+  // Inject a real guest-authored memento into the active room so the host editor
+  // must curate someone else's object, not merely its own.
+  const liveGuestHeaders={'Content-Type':'application/json','X-Actor-Id':'live-guest-author','X-Actor-Token':'live-guest-secret'};
+  const liveGuestAdd=await fetch(`${base}/api/rooms/${ownerAudit.room}/ops`,{
+    method:'POST',headers:liveGuestHeaders,
+    body:JSON.stringify({scope:'memory',op:{kind:'memento:add',item:{id:'ci-guest-memento',type:'🌷',title:'访客留下的花',meaning:'给房主整理测试',by:'访客',x:67,y:67,time:Date.now()}}})
+  });
+  if(liveGuestAdd.status!==200) throw new Error('V15.3 live participant memento injection failed');
+  await page.waitForSelector('.memento[data-id="ci-guest-memento"]',{timeout:3000});
 
   // V13.1 music drawer should be compact, readable and clickable.
   await page.locator('#globalSoundBtn').click();
@@ -354,6 +418,32 @@ const { chromium } = require('playwright');
   await page.mouse.move(sofaBox.x + sofaBox.width/2 + 42, sofaBox.y + sofaBox.height/2 - 18, {steps:5});
   await page.mouse.up();
   await page.waitForTimeout(280);
+
+  const guestMemento=page.locator('.memento[data-id="ci-guest-memento"]');
+  await page.waitForFunction(()=>document.querySelector('.memento[data-id="ci-guest-memento"]')?.hasAttribute('data-curatable-memento'));
+  const guestBox=await guestMemento.boundingBox();
+  if(!guestBox) throw new Error('V15.3 host editor did not expose participant memento');
+  const guestBefore=await page.evaluate(()=>state.mementos.find(m=>m.id==='ci-guest-memento')?.x);
+  await page.mouse.move(guestBox.x+guestBox.width/2,guestBox.y+guestBox.height/2);
+  await page.mouse.down();
+  await page.mouse.move(guestBox.x+guestBox.width/2-55,guestBox.y+guestBox.height/2-24,{steps:6});
+  await page.mouse.up();
+  await page.waitForTimeout(320);
+  const curatorUiAudit=await page.evaluate(async()=>{
+    const local=state.mementos.find(m=>m.id==='ci-guest-memento')||null;
+    const room=await PixelNet.getRoom(state.roomCode);
+    const remote=room.memory?.mementos?.find(m=>m.id==='ci-guest-memento')||null;
+    return {
+      local,remote,
+      manageDisabled:document.querySelector('[data-room-editor-manage]')?.disabled,
+      selectedText:document.querySelector('[data-room-editor-manage]')?.textContent||''
+    };
+  });
+  console.log('V15_3_CURATOR_UI',curatorUiAudit);
+  if(!curatorUiAudit.local||!curatorUiAudit.remote||Math.abs(curatorUiAudit.local.x-guestBefore)<.5) throw new Error('V15.3 host did not move participant memento');
+  if(Math.abs(curatorUiAudit.local.x-curatorUiAudit.remote.x)>.01) throw new Error('V15.3 participant memento move did not persist');
+  if(curatorUiAudit.remote.authorId!=='live-guest-author') throw new Error('V15.3 host curation changed participant attribution');
+  if(curatorUiAudit.manageDisabled) throw new Error('V15.3 selected participant memento cannot be managed');
 
   const layoutAudit = await page.evaluate(async () => {
     const local = state.world.layout?.sofa || null;
@@ -488,7 +578,7 @@ const { chromium } = require('playwright');
     throw new Error('Browser errors:\n' + errors.join('\n'));
   }
 
-  console.log('SMOKE_OK V15.2 A-style atlas -> tiled map -> editor history -> owner revisions -> keepsake -> outside camera -> join');
+  console.log('SMOKE_OK V15.3 A-curator -> author credentials -> participant memory editor -> warm atlas -> tiled camera -> revisions -> join');
   await browser.close();
 })().catch(async err => {
   console.error(err);
