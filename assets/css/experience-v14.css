@@ -582,3 +582,210 @@ body.v14-ready #avatarBuilder .section-head>div>span{
   border:1px solid rgba(126,97,79,.16);
   color:#765d50;
 }
+
+
+/* ==========================================================
+   V14.2 · COLLAGE VISIBILITY / ORDER GEOMETRY / JEWEL KEEPSAKE
+   ========================================================== */
+
+/* Keep every memory object's copy readable. */
+body.v14-ready .memory-strip{
+  position:relative;
+  display:grid;
+  grid-template-columns:minmax(0,1.42fr) minmax(230px,.78fr);
+  grid-template-rows:minmax(205px,1.08fr) minmax(152px,.78fr);
+  gap:18px 20px;
+  align-items:stretch;
+  overflow:visible;
+  padding:24px 18px 28px 8px;
+}
+body.v14-ready .memory-strip:before{left:5%;right:2%;top:44%;height:28%}
+body.v14-ready .group-photo-tile{
+  grid-column:1;grid-row:1 / span 2;min-height:390px;overflow:hidden;
+  transform:rotate(-1.5deg) translateY(4px);
+}
+body.v14-ready .group-photo-tile .memory-photo-scene{min-height:300px}
+body.v14-ready .letter-tile{
+  grid-column:2;grid-row:1;width:100%;min-height:205px;padding:11px;
+  overflow:visible;transform:rotate(1.1deg);z-index:3;
+}
+body.v14-ready .memory-paper{
+  box-sizing:border-box;min-height:183px;height:100%;padding:31px 20px 20px;overflow:visible;
+}
+body.v14-ready .memory-paper p{
+  position:relative;z-index:3;margin:8px 0 18px;color:#5c5048;
+  font-size:13px!important;line-height:1.78;
+}
+body.v14-ready .memory-paper small{position:relative;z-index:3;color:#806f62;font-size:10px!important}
+body.v14-ready .ticket-tile{
+  grid-column:2;grid-row:2;width:100%;min-height:150px;padding:8px 3px 4px;
+  overflow:visible;transform:rotate(.6deg);z-index:2;
+}
+body.v14-ready .memory-ticket{
+  box-sizing:border-box;min-height:138px;height:100%;padding:20px 112px 19px 22px;overflow:visible;
+}
+body.v14-ready .memory-ticket:before{right:34%}
+body.v14-ready .memory-ticket span,
+body.v14-ready .memory-ticket b,
+body.v14-ready .memory-ticket small{
+  position:relative;z-index:3;max-width:100%;overflow:visible;white-space:nowrap;
+}
+body.v14-ready .memory-ticket span{font-size:10px}
+body.v14-ready .memory-ticket b{margin:20px 0 6px!important;font-size:14px!important;letter-spacing:.06em}
+body.v14-ready .memory-ticket small{font-size:9px}
+body.v14-ready .flower-tile{
+  position:absolute;right:1px;bottom:4px;width:108px;min-width:108px;height:96px;
+  padding:8px;overflow:visible;transform:rotate(4deg)!important;z-index:6;border-radius:7px;
+}
+body.v14-ready .flower-tile:hover{transform:rotate(1deg) translateY(-4px) scale(1.02)!important}
+body.v14-ready .pressed-flower{left:8px;top:11px;width:38px;height:65px}
+body.v14-ready .flower-note{left:48px;right:5px;top:20px;z-index:3}
+body.v14-ready .flower-note span{font-size:10px}
+body.v14-ready .flower-note b{font-size:10px!important;line-height:1.3;white-space:normal}
+body.v14-ready .flower-note small{display:none}
+body.v14-ready .memory-tile:after{z-index:1}
+body.v14-ready .memory-tile>*{position:relative;z-index:2}
+
+/* Number badges and copy are separate grid columns: no overlap. */
+body.v14-ready #creator .creator-preview-meta>span{
+  display:grid;
+  grid-template-columns:34px minmax(0,1fr);
+  grid-template-rows:auto auto;
+  column-gap:10px;row-gap:3px;align-content:center;
+  min-height:68px;padding:10px 12px;
+}
+body.v14-ready #creator .creator-preview-meta i{
+  position:static;grid-column:1;grid-row:1 / span 2;align-self:center;
+  width:34px;height:34px;display:grid;place-items:center;margin:0;
+  border-radius:50%;font:700 11px/1 var(--v14-mono);
+}
+body.v14-ready #creator .creator-preview-meta b{
+  grid-column:2;grid-row:1;align-self:end;margin:0;font-size:12px;line-height:1.25;white-space:nowrap;
+}
+body.v14-ready #creator .creator-preview-meta small{
+  grid-column:2;grid-row:2;align-self:start;margin:0;font-size:10px;line-height:1.35;white-space:normal;
+}
+
+/* Jewelry-gift keepsake: champagne glass, dark-gold pattern, centered ceremony. */
+body.v14-ready .keepsake-shell{width:min(830px,94vw);perspective:1200px}
+body.v14-ready .keepsake-shell>.modal-close{
+  top:-18px;right:-18px;background:rgba(255,248,224,.92);
+  border:1px solid rgba(114,82,37,.22);box-shadow:0 10px 30px rgba(65,46,25,.16);
+}
+body.v14-ready .keepsake-card{
+  isolation:isolate;min-height:560px;padding:58px 64px 46px;overflow:hidden;text-align:center;
+  border:1px solid rgba(109,78,35,.42);border-radius:34px;
+  background:
+    radial-gradient(circle at 50% 16%,rgba(255,255,255,.58),transparent 26%),
+    repeating-linear-gradient(135deg,rgba(91,65,28,.045) 0 1px,transparent 1px 17px),
+    repeating-linear-gradient(45deg,rgba(255,255,255,.10) 0 1px,transparent 1px 23px),
+    linear-gradient(145deg,rgba(246,226,177,.94),rgba(207,170,101,.91) 46%,rgba(168,128,65,.90));
+  color:#493a27;
+  box-shadow:
+    0 34px 90px rgba(62,43,21,.28),
+    inset 0 0 0 10px rgba(255,248,226,.24),
+    inset 0 0 0 11px rgba(99,69,29,.13),
+    inset 0 18px 45px rgba(255,255,255,.18);
+  backdrop-filter:blur(18px) saturate(1.05);
+}
+body.v14-ready .keepsake-card:before{
+  content:"";position:absolute;inset:20px;width:auto;height:auto;border-radius:24px;
+  border:1px solid rgba(255,248,220,.62);
+  background:
+    linear-gradient(90deg,transparent 48.4%,rgba(255,244,203,.16) 48.4% 51.6%,transparent 51.6%),
+    linear-gradient(0deg,transparent 49%,rgba(113,78,34,.07) 49% 51%,transparent 51%);
+  opacity:1;
+  box-shadow:inset 0 0 0 1px rgba(102,72,31,.10),inset 0 0 45px rgba(255,250,231,.14);
+  pointer-events:none;z-index:0;
+}
+body.v14-ready .keepsake-card:after{
+  content:"✦";position:absolute;left:50%;top:24px;transform:translateX(-50%);
+  width:48px;height:48px;display:grid;place-items:center;border-radius:50%;
+  background:radial-gradient(circle at 40% 32%,#fff2bc 0 14%,#d8ad56 15% 48%,#8d672d 50% 54%,#e3bc68 56%);
+  color:#6c4b1e;font-family:Georgia,serif;font-size:18px;
+  box-shadow:0 8px 18px rgba(82,57,25,.22),inset 0 0 0 2px rgba(255,246,206,.44);z-index:3;
+}
+body.v14-ready .keepsake-card>*{position:relative;z-index:2}
+body.v14-ready .keepsake-card>.eyebrow{
+  display:block;margin-top:24px;color:#6f552e;font-size:11px;letter-spacing:.22em;
+}
+body.v14-ready .keepsake-date{
+  margin-top:10px;font:500 11px/1.4 var(--v14-mono);letter-spacing:.12em;color:#735d3e;
+}
+body.v14-ready .keepsake-card h2{
+  max-width:640px;margin:20px auto 10px;color:#3f3020;
+  font-family:"Songti SC","STSong","Times New Roman",serif;
+  font-size:clamp(38px,4.2vw,52px);font-weight:700;line-height:1.12;letter-spacing:-.035em;text-wrap:balance;
+}
+body.v14-ready .keepsake-card h2:after{
+  content:"◆";display:block;margin:14px auto 0;color:#8b642a;font:9px/1 Georgia,serif;opacity:.8;
+}
+body.v14-ready .keepsake-card>p{
+  max-width:590px;margin:0 auto;color:#5f4c33;
+  font-family:"Songti SC","STSong",serif;font-size:14px;line-height:1.8;
+}
+body.v14-ready .keepsake-people{justify-content:center;flex-wrap:wrap;gap:9px;margin:22px auto 24px}
+body.v14-ready .keepsake-people span{
+  width:38px;height:38px;border:1px solid rgba(104,72,29,.42);border-radius:50%;
+  background:
+    radial-gradient(circle at 35% 28%,rgba(255,255,255,.78),transparent 22%),
+    linear-gradient(145deg,#f4dba2,#b9833d);
+  color:#4d3820;font-size:10px;font-weight:700;
+  box-shadow:0 7px 14px rgba(83,57,24,.15),inset 0 0 0 3px rgba(255,244,210,.35);
+}
+body.v14-ready .keepsake-stats{
+  position:relative;display:grid;grid-template-columns:repeat(4,1fr);gap:0;
+  max-width:630px;margin:22px auto 24px;padding:15px 14px;
+  border:0;border-top:1px solid rgba(99,69,30,.22);border-bottom:1px solid rgba(255,246,214,.45);
+  background:transparent;
+}
+body.v14-ready .keepsake-stats:before,
+body.v14-ready .keepsake-stats:after{
+  content:"◆";position:absolute;top:50%;transform:translateY(-50%);
+  color:#785522;font:8px/1 Georgia,serif;opacity:.72;
+}
+body.v14-ready .keepsake-stats:before{left:-3px}
+body.v14-ready .keepsake-stats:after{right:-3px}
+body.v14-ready .keepsake-stats div{position:relative;padding:6px 10px;border:0;text-align:center}
+body.v14-ready .keepsake-stats div:not(:last-child):after{
+  content:"";position:absolute;right:0;top:26%;bottom:26%;width:1px;
+  background:linear-gradient(transparent,rgba(101,70,31,.24),transparent);
+}
+body.v14-ready .keepsake-stats b{color:#45321d;font:700 26px/1.1 Georgia,"Times New Roman",serif}
+body.v14-ready .keepsake-stats small{margin-top:5px;color:#725b3c;font-size:10px;letter-spacing:.06em}
+body.v14-ready .keepsake-line{
+  max-width:620px;margin:0 auto;padding:14px 24px;border:1px solid rgba(255,246,217,.52);
+  border-left:0;border-radius:999px;background:rgba(255,247,221,.20);color:#513e27;
+  font-family:"Songti SC","STSong",serif;font-size:12px;line-height:1.55;
+  box-shadow:inset 0 0 0 1px rgba(102,72,32,.08);
+}
+body.v14-ready .keepsake-footer{
+  justify-content:center;gap:24px;margin-top:24px;color:#6f593b;font-size:9px;letter-spacing:.08em;
+}
+body.v14-ready .keepsake-footer span+span:before{content:"◇";margin-right:24px;color:#86632f}
+body.v14-ready .keepsake-actions{margin-top:18px;gap:10px}
+body.v14-ready .keepsake-actions .button{min-height:48px;border-radius:999px;padding-inline:22px}
+body.v14-ready #saveKeepsakeBtn{
+  background:linear-gradient(145deg,#6a4b27,#3f2f22);color:#fff8e7;
+  box-shadow:0 9px 22px rgba(58,40,20,.22);
+}
+body.v14-ready #copyKeepsakeInvite{
+  background:rgba(255,249,232,.86);border-color:rgba(104,75,36,.22);color:#584126;
+}
+
+@media(max-width:760px){
+  body.v14-ready .memory-strip{grid-template-columns:1fr;grid-template-rows:auto;gap:16px;padding:18px 0 26px}
+  body.v14-ready .group-photo-tile,
+  body.v14-ready .letter-tile,
+  body.v14-ready .ticket-tile{grid-column:1;grid-row:auto;width:100%}
+  body.v14-ready .group-photo-tile{min-height:330px}
+  body.v14-ready .flower-tile{
+    position:relative;right:auto;bottom:auto;justify-self:end;width:120px;margin:-68px 12px 0 0;
+  }
+  body.v14-ready .keepsake-card{min-height:0;padding:52px 24px 34px;border-radius:26px}
+  body.v14-ready .keepsake-card h2{font-size:36px}
+  body.v14-ready .keepsake-stats{padding-inline:4px}
+  body.v14-ready .keepsake-stats div{padding-inline:4px}
+  body.v14-ready .keepsake-footer{flex-direction:column;gap:6px}
+  body.v14-ready .keepsake-footer span+span:before{display:none}
+}
