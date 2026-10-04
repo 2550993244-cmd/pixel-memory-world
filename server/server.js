@@ -132,7 +132,7 @@ function closeRoomConnections(room, reason='room-archived') {
   for (const [key,set] of channels) {
     if (!key.startsWith(room+'::')) continue;
     for (const socket of [...set]) {
-      try { wsSend(socket,{type:reason,sender:'server',room}); } catch(_){}
+      try { wsSend(socket,{type:reason,sender:'server',room,meta:rooms[room]?.meta||null}); } catch(_){}
       try { socket.end(); } catch(_){}
     }
     channels.delete(key);
