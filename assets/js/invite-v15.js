@@ -1,4 +1,4 @@
-/* Pixel Memory World · V15.6 secret invitation links */
+/* Pixel Memory World · V15.8 invite roles + invisible spectator mode */
 (() => {
   const $=(s,r=document)=>r.querySelector(s);
 
@@ -172,7 +172,7 @@
   },0);
 
   const apiState={
-    version:'15.7',
+    version:'15.8',
     rotatingRole:'',
     tokenFromText,
     ensureToken,
