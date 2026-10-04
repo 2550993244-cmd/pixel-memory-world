@@ -126,6 +126,7 @@
   }
 
   async function questOp(op) {
+    if(typeof isViewOnly==='function'&&isViewOnly()){toast('只看模式不能修改门外回忆');return false}
     if(window.PixelNet?.enabled){
       try{await PixelNet.applyOp(state.roomCode,'quest',op);applyQuestOp(op);return true}catch(e){toast('这个回忆现在不能被修改');return false}
     }
@@ -154,7 +155,7 @@
     questState.channel.onmessage = e => {
       const m = e.data;
       if (!m || m.sender === state.player.id) return;
-      if (m.type === 'quest-update' && Array.isArray(m.items)) { questState.items = m.items; saveQuest(); renderQuestItems(); }
+      if (m.type === 'quest-update' && Array.isArray(m.items)) { if(m.accessRole&&typeof applyAccessMode==='function')applyAccessMode(m.accessRole);questState.items = m.items; saveQuest(); renderQuestItems(); }
       if (m.type === 'quest-op' && m.op) { applyQuestOp(m.op); renderQuestItems(); }
       if (m.type === 'quest-hello') { questBroadcast('quest-player', { player: questPlayerSnapshot() }); }
       if (m.type === 'quest-player' && m.player) { questState.players.set(m.player.id, { ...m.player, lastSeen: Date.now() }); renderQuestPlayer(); }
@@ -171,6 +172,7 @@
   function questPlayerSnapshot() { return { id: state.player.id, name: state.player.name, hair: state.player.hair, outfit: state.player.outfit, item: state.player.item, action: state.player.action || 'idle', qx: questState.x, qy: questState.y }; }
 
   function questBroadcast(type, extra = {}) {
+    if(typeof isViewOnly==='function'&&isViewOnly()&&!['quest-hello','quest-player','quest-leave'].includes(type))return;
     questState.channel?.postMessage({ type, sender: state.player.id, ...extra });
   }
 
@@ -214,7 +216,7 @@
       if (!revealed) return;
       const near = questState.nearby?.id === item.id;
       const el = document.createElement('div');
-      const canCurate=(window.PixelNet?.enabled?!!window.PixelNet?.hasOwnerToken?.(state.roomCode):!!state.player.host)||item.authorId===state.player.actorId;
+      const canCurate=!(typeof isViewOnly==='function'&&isViewOnly())&&((window.PixelNet?.enabled?!!window.PixelNet?.hasOwnerToken?.(state.roomCode):!!state.player.host)||item.authorId===state.player.actorId);
       el.className = `quest-memory${found ? ' found' : ' mystery'}${near ? ' near' : ''}${canCurate ? ' curatable' : ' locked'}${item.hidden ? ' is-hidden-memory' : ''}`;
       el.dataset.id = item.id;
       el.style.left = `${item.x}%`;
@@ -600,6 +602,7 @@
 
   // ---------- editor ----------
   function openQuestEditor() {
+    if(typeof isViewOnly==='function'&&isViewOnly())return toast('只看模式可以探索，但不能布置地图');
     questState.editorOpen = true;
     questState.keys.clear();
     $('#questEditor').classList.remove('hidden');
@@ -621,7 +624,10 @@
 
   $('#questModeBtn')?.addEventListener('click', () => questState.editorOpen ? closeQuestEditor() : openQuestEditor());
   $('#closeQuestEditor')?.addEventListener('click', closeQuestEditor);
-  $('#questUploadBtn')?.addEventListener('click', () => $('#questPhotoInput').click());
+  $('#questUploadBtn')?.addEventListener('click', () => {
+    if(typeof isViewOnly==='function'&&isViewOnly())return toast('只看模式不能上传素材');
+    $('#questPhotoInput').click();
+  });
 
   $('#questPhotoInput')?.addEventListener('change', async e => {
     const file = e.target.files?.[0];
@@ -771,6 +777,7 @@
   async function uploadPendingVoice(){if(!questState.pendingVoiceBlob||!window.PixelNet?.enabled)return !!questState.pendingVoiceUrl;try{$('#questRecordState').textContent='正在把录音上传到房间…';const ext=voiceExt(questState.pendingVoiceBlob.type);const up=await PixelNet.uploadBlob(questState.pendingVoiceBlob,`memory-${Date.now()}.${ext}`,state.roomCode);questState.pendingVoiceUrl=up.url;$('#questRecordState').textContent='云端已保存 · 其他人也可以听到';return true}catch(_){$('#questRecordState').textContent='云端上传失败 · 再点“放进地图”会重试';toast('录音已保存在本机，但还没传到房间');return false}}
 
   $('#questRecordBtn')?.addEventListener('click', () => {
+    if(typeof isViewOnly==='function'&&isViewOnly())return toast('只看模式不能录制新的回忆');
     if (questState.recorder?.state === 'recording') stopRecording(false); else startRecording();
   });
 
@@ -809,6 +816,7 @@
 
   // ---------- placement ----------
   $('#questPlaceHintBtn')?.addEventListener('click', async () => {
+    if(typeof isViewOnly==='function'&&isViewOnly())return toast('只看模式不能新增门外回忆');
     if (!questState.selectedAsset) return toast('先从照片里选一个像素线索。');
     if (questState.recorder?.state === 'recording') return toast('先点一下停止录音，再把它放进地图。');
     if (questState.pendingVoiceBlob && window.PixelNet?.enabled && !questState.pendingVoiceUrl) {
@@ -822,6 +830,7 @@
   });
 
   questStage?.addEventListener('click', e => {
+    if(typeof isViewOnly==='function'&&isViewOnly())return;
     if (!questState.placing) return;
     if (e.target.closest('#questReturnDoor')) return;
     const p=questPointerPercent(e);
