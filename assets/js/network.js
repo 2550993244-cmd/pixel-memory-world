@@ -23,8 +23,14 @@
       ...rest,
       headers: {'Content-Type':'application/json', ...optionHeaders}
     });
-    if (!res.ok) throw new Error(`HTTP_${res.status}`);
-    return res.json();
+    let data=null;
+    try{data=await res.json()}catch(_){}
+    if (!res.ok) {
+      const err=new Error(`HTTP_${res.status}${data?.error?':'+data.error:''}`);
+      err.status=res.status;err.data=data||{};
+      throw err;
+    }
+    return data;
   };
 
   class RealtimeChannel {
@@ -146,7 +152,20 @@
       if(room?.ownerToken) saveOwnerToken(code,room.ownerToken);
       return room;
     },
-    async getRoom(code){ return api(`/api/rooms/${encodeURIComponent(code)}`); },
+    async getRoom(code){ return api(`/api/rooms/${encodeURIComponent(code)}`,{headers:ownerHeaders(code)}); },
+    async archiveRoom(code){
+      return api(`/api/rooms/${encodeURIComponent(code)}/archive`,{method:'POST',headers:ownerHeaders(code),body:'{}'});
+    },
+    async unarchiveRoom(code){
+      return api(`/api/rooms/${encodeURIComponent(code)}/unarchive`,{method:'POST',headers:ownerHeaders(code),body:'{}'});
+    },
+    async deleteRoomPermanently(code,confirmCode){
+      return api(`/api/rooms/${encodeURIComponent(code)}/delete-permanently`,{
+        method:'POST',
+        headers:ownerHeaders(code),
+        body:JSON.stringify({confirmCode,acknowledge:'DELETE_FOREVER'})
+      });
+    },
     async claimRoom(code){
       const room=await api(`/api/rooms/${encodeURIComponent(code)}/claim`,{method:'POST',body:'{}'});
       if(room?.ownerToken) saveOwnerToken(code,room.ownerToken);
@@ -186,10 +205,11 @@
     },
     async updateRoom(code, patch){ return api(`/api/rooms/${encodeURIComponent(code)}`,{method:'PUT',body:JSON.stringify(patch)}); },
     async applyOp(code, scope, op){ return api(`/api/rooms/${encodeURIComponent(code)}/ops`,{method:'POST',headers:mutationHeaders(code),body:JSON.stringify({scope,op})}); },
-    async uploadBlob(blob, filename='voice.webm') {
+    async uploadBlob(blob, filename='voice.webm', roomCode='') {
       if (!baseUrl) throw new Error('NO_SERVER');
       const fd = new FormData(); fd.append('file', blob, filename);
-      const res = await fetch(`${baseUrl}/api/uploads`,{method:'POST',body:fd});
+      const headers=roomCode?{...mutationHeaders(roomCode),'X-Room-Code':String(roomCode).toUpperCase()}:{};
+      const res = await fetch(`${baseUrl}/api/uploads`,{method:'POST',headers,body:fd});
       if(!res.ok) throw new Error(`HTTP_${res.status}`);
       return res.json();
     }
