@@ -261,10 +261,30 @@ function addUnique(arr, item) {
   if (i >= 0) arr[i] = { ...arr[i], ...item };
   else arr.push(item);
 }
+function cleanAuthorName(value) {
+  return String(value || '').trim().slice(0,40) || '朋友';
+}
+function stampAuthorSnapshot(item) {
+  if (!item || typeof item !== 'object') return item;
+  const name=cleanAuthorName(item.authorName || item.by);
+  item.authorName=name;
+  if (!item.by) item.by=name;
+  return item;
+}
+function addAuthoredUnique(arr,item) {
+  if (!item?.id) return;
+  const i=arr.findIndex(x=>x.id===item.id);
+  if(i>=0){
+    const prev=arr[i];
+    arr[i]={...prev,...item,authorId:prev.authorId,authorName:prev.authorName||prev.by||item.authorName||item.by,by:prev.by||prev.authorName||item.by||item.authorName};
+  }else{
+    arr.push(stampAuthorSnapshot({...item}));
+  }
+}
 function applyMemoryOp(r, op) {
   normalizeRoom(r);
   if (!op?.kind) return;
-  if (op.kind === 'memento:add') addUnique(r.memory.mementos, op.item);
+  if (op.kind === 'memento:add') addAuthoredUnique(r.memory.mementos, op.item);
   if (op.kind === 'memento:move') {
     const item = r.memory.mementos.find(x => x.id === op.id);
     if (item) { item.x = Number(op.x); item.y = Number(op.y); }
@@ -282,12 +302,12 @@ function applyMemoryOp(r, op) {
     if (item) item.hidden = !!op.hidden;
   }
   if (op.kind === 'memento:remove') r.memory.mementos = r.memory.mementos.filter(x => x.id !== op.id);
-  if (op.kind === 'note:add') addUnique(r.memory.notes, op.item);
+  if (op.kind === 'note:add') addAuthoredUnique(r.memory.notes, op.item);
   if (op.kind === 'note:remove') r.memory.notes = r.memory.notes.filter(x => x.id !== op.id);
-  if (op.kind === 'photo:add') addUnique(r.memory.photos, op.item);
+  if (op.kind === 'photo:add') addAuthoredUnique(r.memory.photos, op.item);
   if (op.kind === 'photo:remove') r.memory.photos = r.memory.photos.filter(x => x.id !== op.id);
   if (op.kind === 'activity:add') {
-    addUnique(r.memory.activity, op.item);
+    addAuthoredUnique(r.memory.activity, op.item);
     r.memory.activity = r.memory.activity.slice(-60);
   }
   if (op.kind === 'world:patch' && op.patch) r.world = { ...r.world, ...op.patch };
@@ -296,7 +316,7 @@ function applyMemoryOp(r, op) {
 function applyQuestOp(r, op) {
   normalizeRoom(r);
   if (!op?.kind) return;
-  if (op.kind === 'add' && op.item) addUnique(r.quest.items, op.item);
+  if (op.kind === 'add' && op.item) addAuthoredUnique(r.quest.items, op.item);
   if (op.kind === 'move') {
     const item = r.quest.items.find(x => x.id === op.id);
     if (item) { item.x = Number(op.x); item.y = Number(op.y); }
@@ -334,7 +354,10 @@ function authorizeOp(req, r, scope, op) {
   if (addKinds.has(op?.kind)) {
     const actor = verifyActor(req,r,{allowRegister:true});
     if (!actor.ok) return actor;
-    if (op.item && typeof op.item === 'object') op.item.authorId = actor.id;
+    if (op.item && typeof op.item === 'object') {
+      op.item.authorId = actor.id;
+      stampAuthorSnapshot(op.item);
+    }
     return { ok:true, role:'author', actorId:actor.id };
   }
   if (scope === 'memory' && op?.kind === 'memento:update') {
@@ -406,7 +429,7 @@ const server = http.createServer(async (req, res) => {
   const pathname = u.pathname;
   try {
     sweepExpiredArchives();
-    if (pathname === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, version: 'v15.12', rooms: Object.keys(rooms).length, archivedRooms: Object.values(rooms).filter(r=>isArchived(r)).length, retentionDays:30, connections: connectionCount(), roomStore: roomStore.info().kind, blobStore: blobStore.info().kind, durableDataDir: !!process.env.PIXEL_DATA_DIR, durableUploadDir: !!process.env.PIXEL_UPLOAD_DIR, time: Date.now() });
+    if (pathname === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, version: 'v15.13', rooms: Object.keys(rooms).length, archivedRooms: Object.values(rooms).filter(r=>isArchived(r)).length, retentionDays:30, connections: connectionCount(), roomStore: roomStore.info().kind, blobStore: blobStore.info().kind, durableDataDir: !!process.env.PIXEL_DATA_DIR, durableUploadDir: !!process.env.PIXEL_UPLOAD_DIR, time: Date.now() });
     if (pathname === '/api/rooms' && req.method === 'POST') {
       const body = JSON.parse((await readBody(req)).toString('utf8') || '{}');
       const code = String(body.code || randomCode()).toUpperCase();
@@ -802,4 +825,4 @@ server.on('upgrade', (req, socket) => {
 const retentionSweep=setInterval(()=>{try{sweepExpiredArchives()}catch(e){console.error('retention sweep',e)}},60*60*1000);
 retentionSweep.unref?.();
 
-server.listen(PORT, () => console.log(`Pixel Memory V15.12 server: http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`Pixel Memory V15.13 server: http://localhost:${PORT}`));
