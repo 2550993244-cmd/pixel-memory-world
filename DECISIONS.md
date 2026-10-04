@@ -330,7 +330,7 @@ Legacy rooms stay code-accessible until the owner explicitly generates or rotate
 
 ## D007 · Invited guest capability
 
-**Status:** needs owner decision  
+**Status:** decided — B · Collaborative link + view-only link  
 **Blocks:** whether every valid invite is collaborative, whether view-only links exist, invite-role encoding, contribution controls in long-lived rooms  
 **Does not block:** current secret invite protection, room archive/recovery, owner curation, recovery keys, maps or character work
 
@@ -369,6 +369,69 @@ The next product question is whether every invite should grant contribution righ
 
 **Tradeoff:** existing guests can suddenly lose contribution ability, and the single link cannot support contributors and viewers simultaneously.
 
+### Decision
+
+Selected **B · Collaborative link + view-only link**.
+
+Implemented in V15.7:
+- every new room receives two independent high-entropy invitation secrets
+- the **contributor** invite grants normal collaborative access
+- the **viewer** invite grants read/explore access only
+- server GET responses identify the active access role without exposing either secret or hash
+- viewer REST writes and room-scoped uploads return `403 view_only`
+- viewer WebSocket sessions may publish only presence / movement events; chat, reactions, celebration, music control and content-changing realtime messages are blocked
+- the browser removes creation controls and also blocks local mutation functions, preventing false local-only edits
+- contributor and viewer secrets rotate independently and only disconnect sessions using the rotated role
+- owner recovery bundles retain both invitation secrets
+
+Both links remain account-free. A viewer can still walk through the room, read and listen, but cannot leave a new trace.
+
+
+---
+
+## D008 · View-only presence model
+
+**Status:** needs owner decision  
+**Blocks:** whether viewer avatars appear to collaborators, viewer online-count semantics, spectator privacy, large-audience realtime scaling  
+**Does not block:** the dual invite permission model itself, persistent content permissions, archive/recovery, character art or map editing
+
+V15.7 makes view-only guests read-only, but they still enter through the normal avatar flow and currently publish presence / movement. That means contributors can see viewer avatars walking around.
+
+If a finished room is shared with a much wider audience, this becomes a distinct product choice.
+
+### A · Invisible spectators — recommended
+
+- viewers can move locally and explore every scene
+- their avatar is not broadcast to contributors or other viewers
+- they do not appear in the normal “people online” count
+- the UI may show a coarse anonymous viewing count separately
+- contributors continue to feel like the people actually “in the room”
+
+**Best fit:** finished keepsakes shared with relatives, classmates or a larger audience.
+
+**Tradeoff:** viewer mode feels less socially alive.
+
+### B · Visible read-only avatars
+
+- viewer avatars appear and move like normal participants
+- they cannot create content or send social interactions
+- everyone sees a shared crowd
+
+**Best fit:** small trusted audiences where seeing who is present is part of the experience.
+
+**Tradeoff:** wide sharing can clutter the world, expose presence and increase realtime load.
+
+### C · Host chooses spectator visibility
+
+- add a host setting: “只看访客可见 / 隐身”
+- same viewer link, room-wide behavior can be switched later
+
+**Best fit:** maximum flexibility.
+
+**Tradeoff:** adds another live room setting and makes audience expectations less predictable.
+
 ### Default recommendation
 
-Choose **B · Collaborative link + view-only link** only if wider sharing is already a concrete goal. Otherwise keep **A** for now: it preserves the current simple social loop and avoids adding a second permission axis prematurely.
+Choose **A · Invisible spectators**.
+
+The reason to create a view-only link is usually to widen distribution after the collaborative phase. Treating those people as spectators keeps the authored social space intimate while still letting the finished world be explored.
