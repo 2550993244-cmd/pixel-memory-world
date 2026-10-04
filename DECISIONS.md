@@ -391,7 +391,7 @@ Both links remain account-free. A viewer can still walk through the room, read a
 
 ## D008 · View-only presence model
 
-**Status:** needs owner decision  
+**Status:** decided — A · Invisible spectators  
 **Blocks:** whether viewer avatars appear to collaborators, viewer online-count semantics, spectator privacy, large-audience realtime scaling  
 **Does not block:** the dual invite permission model itself, persistent content permissions, archive/recovery, character art or map editing
 
@@ -430,8 +430,66 @@ If a finished room is shared with a much wider audience, this becomes a distinct
 
 **Tradeoff:** adds another live room setting and makes audience expectations less predictable.
 
+### Decision
+
+Selected **A · Invisible spectators**.
+
+Implemented in V15.8:
+- viewer avatars remain visible only to the viewer on their own device
+- viewer presence, movement and Outside player-state messages are never rebroadcast by the server
+- contributors keep their normal participant count; viewers do not inflate it
+- contributors / owners receive only an anonymous viewer count
+- viewer count is deduplicated by room + player id across multiple scene WebSockets
+- viewer clients do not receive the anonymous audience count themselves
+- viewers continue receiving collaborative room updates and contributor presence, so the finished world can still feel live
+- forged viewer presence events are discarded server-side, not merely hidden by UI
+
+This makes the viewer link a true spectator credential rather than a muted participant credential.
+
+
+---
+
+## D009 · Spectator entry flow
+
+**Status:** needs owner decision  
+**Blocks:** whether view-only links retain full avatar customization, spectator onboarding friction, whether viewer names are collected at all  
+**Does not block:** viewer privacy, anonymous counts, content permissions, contributor onboarding, archive/recovery
+
+V15.8 makes viewer avatars local-only. That raises a UX question: if nobody else can see a viewer's name or avatar, should a viewer still complete the same full avatar-builder flow before entering?
+
+### A · Instant spectator entry + optional local customization — recommended
+
+- clicking a view-only link opens the world almost immediately
+- assign a warm default / randomized local avatar
+- viewer can optionally open “我的小人” later and customize it for their own screen
+- do not ask for a name by default because it is not shared
+
+**Best fit:** wider sharing to classmates, family and casual viewers.
+
+**Tradeoff:** viewer onboarding feels less ceremonial than contributor onboarding.
+
+### B · Keep the full avatar builder
+
+- viewer still chooses name, hair, outfit and held item before entering
+- their customization remains entirely local
+- preserves the feeling of “walking into the world as yourself”
+
+**Best fit:** small audiences where playful onboarding matters more than speed.
+
+**Tradeoff:** adds friction for people who only want to look around, and collecting a name can falsely imply that others will see it.
+
+### C · Lightweight spectator card
+
+- ask only for a local nickname and one avatar preset
+- fewer steps than the contributor builder
+- clearly state “只有你自己看得到”
+
+**Best fit:** a middle ground.
+
+**Tradeoff:** creates a second onboarding UI to maintain.
+
 ### Default recommendation
 
-Choose **A · Invisible spectators**.
+Choose **A · Instant spectator entry + optional local customization**.
 
-The reason to create a view-only link is usually to widen distribution after the collaborative phase. Treating those people as spectators keeps the authored social space intimate while still letting the finished world be explored.
+Once spectator presence is intentionally private, the cleanest experience is to make the view-only link feel like opening a finished keepsake rather than joining a live collaboration session.
