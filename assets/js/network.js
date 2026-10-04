@@ -18,9 +18,10 @@
 
   const api = async (path, options={}) => {
     if (!baseUrl) throw new Error('NO_SERVER');
+    const { headers: optionHeaders={}, ...rest } = options;
     const res = await fetch(`${baseUrl}${path}`, {
-      headers: {'Content-Type':'application/json', ...(options.headers||{})},
-      ...options
+      ...rest,
+      headers: {'Content-Type':'application/json', ...optionHeaders}
     });
     if (!res.ok) throw new Error(`HTTP_${res.status}`);
     return res.json();
