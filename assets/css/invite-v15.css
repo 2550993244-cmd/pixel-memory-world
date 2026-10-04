@@ -1,4 +1,4 @@
-/* Pixel Memory World · V15.7 collaborative + view-only invites */
+/* Pixel Memory World · V15.8 invisible spectators */
 body.v14-ready .pm-invite-entry-v15>p{margin:0 0 10px;color:#7b716a;font-size:11px;line-height:1.55}
 body.v14-ready .invite-panel-v15{display:grid;gap:14px}
 body.v14-ready .invite-panel-v15 section{
@@ -48,3 +48,14 @@ body.pm-view-only [data-dock="photo"],
 body.pm-view-only [data-dock="celebrate"],
 body.pm-view-only #worldSettingsBtn,
 body.pm-view-only #questModeBtn{display:none!important}
+
+body.v14-ready .spectator-chip-v15{
+  cursor:default;
+  border-color:rgba(92,116,132,.14);
+  background:rgba(240,245,247,.86);
+  color:#60737f;
+  pointer-events:none
+}
+body.v14-ready .spectator-chip-v15>span:first-child{font-size:10px;opacity:.72}
+body.v14-ready .spectator-chip-v15 b{font-variant-numeric:tabular-nums}
+body.pm-view-only #viewerPillV15{display:none!important}
