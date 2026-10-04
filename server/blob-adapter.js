@@ -19,6 +19,19 @@ class FileBlobStore {
     const p=path.resolve(this.uploadDir,'.'+('/'+String(key||'')));
     return p.startsWith(path.resolve(this.uploadDir))?p:null;
   }
+  remove(key){
+    const p=this.pathFor(key);
+    if(!p||!fs.existsSync(p)) return false;
+    fs.unlinkSync(p);
+    return true;
+  }
+  removeMany(keys=[]){
+    let removed=0;
+    for(const key of new Set(keys||[])){
+      try{if(this.remove(key))removed++}catch(_){}
+    }
+    return removed;
+  }
   info(){return {kind:'file',path:this.uploadDir}}
 }
 
