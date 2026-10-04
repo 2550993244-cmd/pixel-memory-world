@@ -249,3 +249,21 @@ body.pm-world .quest-stage.edit-mode .quest-memory.curatable{
   outline:2px dashed rgba(170,126,91,.58);
   outline-offset:4px;
 }
+
+body.pm-world .quest-stage.edit-mode .quest-memory.is-hidden-memory{
+  opacity:.36;
+  filter:grayscale(.35);
+}
+body.pm-world .quest-stage.edit-mode .quest-memory.is-hidden-memory:after{
+  content:"已收起";
+  position:absolute;
+  left:50%;
+  top:-18px;
+  transform:translateX(-50%);
+  padding:2px 5px;
+  border-radius:999px;
+  background:rgba(255,250,244,.92);
+  color:#8a7467;
+  font-size:7px;
+  white-space:nowrap;
+}
