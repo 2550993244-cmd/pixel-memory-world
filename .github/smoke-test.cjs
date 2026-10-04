@@ -10,7 +10,21 @@ const { chromium } = require('playwright');
   const base = 'http://127.0.0.1:8787';
   await page.goto(base, { waitUntil: 'networkidle' });
 
-  // V13 control language must be loaded.
+  // V14 progressive visual system must load without breaking the base app.
+  await page.waitForFunction(() => window.PixelV14?.version === '14.0');
+  const v14State = await page.evaluate(() => ({
+    ready: document.body.classList.contains('v14-ready'),
+    ambient: !!document.querySelector('.v14-ambient-canvas'),
+    rail: !!document.querySelector('.v14-chapter-rail'),
+    pixelWipe: !!document.querySelector('.v14-pixel-wipe'),
+    bodyFont: getComputedStyle(document.body).fontFamily,
+    flags: window.PixelV14
+  }));
+  if (!v14State.ready || !v14State.ambient || !v14State.rail || !v14State.pixelWipe) throw new Error('V14 experience layer incomplete');
+  if (/Courier New/i.test(v14State.bodyFont)) throw new Error('V14 readable UI font did not override Courier New');
+  console.log('V14_FLAGS', v14State.flags);
+
+  // V13 control language must still be loaded underneath V14.
   const v13Styles = await page.evaluate(() => {
     const primary = getComputedStyle(document.querySelector('#createWorldBtn'));
     const icon = getComputedStyle(document.querySelector('#globalSoundBtn'));
@@ -31,6 +45,11 @@ const { chromium } = require('playwright');
   }
 
   // Landing core buttons.
+  // Doorbell keeps the room preview interactive and exercises the V14 pixel transition.
+  await page.locator('#heroDoorbell').click();
+  await page.waitForTimeout(120);
+  if (!(await page.locator('.v14-pixel-wipe').count())) throw new Error('V14 pixel transition missing');
+
   await page.locator('#createWorldBtn').click();
   await active('creator');
   const creatorType = await page.evaluate(() => ({
