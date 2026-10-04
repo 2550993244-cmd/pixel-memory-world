@@ -99,14 +99,31 @@
 
   const ownerStorageKey = code => `pixel-memory-owner-${String(code||'').toUpperCase()}`;
   const getOwnerToken = code => localStorage.getItem(ownerStorageKey(code)) || '';
-  const saveOwnerToken = (code, token) => { if (code && token) localStorage.setItem(ownerStorageKey(code), token); };
+  const saveOwnerToken = (code, token) => {
+    if(!code) return;
+    const key=ownerStorageKey(code);
+    if(token) localStorage.setItem(key,token);
+    else localStorage.removeItem(key);
+  };
   const ownerHeaders = code => {
     const token=getOwnerToken(code);
     return token ? {'X-Room-Owner':token} : {};
   };
+  const getActorCredential = () => ({
+    id:localStorage.getItem('pixel-memory-actor-v1')||'',
+    token:localStorage.getItem('pixel-memory-actor-token-v1')||''
+  });
+  const setActorCredential = (id,token) => {
+    if(id&&token){
+      localStorage.setItem('pixel-memory-actor-v1',String(id));
+      localStorage.setItem('pixel-memory-actor-token-v1',String(token));
+    }else{
+      localStorage.removeItem('pixel-memory-actor-v1');
+      localStorage.removeItem('pixel-memory-actor-token-v1');
+    }
+  };
   const actorHeaders = () => {
-    const id=localStorage.getItem('pixel-memory-actor-v1')||'';
-    const token=localStorage.getItem('pixel-memory-actor-token-v1')||'';
+    const {id,token}=getActorCredential();
     return id&&token ? {'X-Actor-Id':id,'X-Actor-Token':token} : {};
   };
   const mutationHeaders = code => ({...actorHeaders(),...ownerHeaders(code)});
@@ -119,7 +136,10 @@
     onStatus(fn){ listeners.add(fn); return () => listeners.delete(fn); },
     createChannel(name, roomCode, playerId){ return new RealtimeChannel(name, roomCode, playerId); },
     getOwnerToken,
+    saveOwnerToken,
     hasOwnerToken(code){ return !!getOwnerToken(code); },
+    getActorCredential,
+    setActorCredential,
     getActorHeaders(){ return actorHeaders(); },
     async createRoom(code, world, memory={}) {
       const room=await api('/api/rooms',{method:'POST',body:JSON.stringify({code,world,memory})});
@@ -131,6 +151,19 @@
       const room=await api(`/api/rooms/${encodeURIComponent(code)}/claim`,{method:'POST',body:'{}'});
       if(room?.ownerToken) saveOwnerToken(code,room.ownerToken);
       return room;
+    },
+    async verifyRecovery(code,{ownerToken='',actorId='',actorToken=''}={}){
+      const headers={};
+      if(ownerToken) headers['X-Room-Owner']=ownerToken;
+      if(actorId&&actorToken){
+        headers['X-Actor-Id']=actorId;
+        headers['X-Actor-Token']=actorToken;
+      }
+      return api(`/api/rooms/${encodeURIComponent(code)}/recovery/verify`,{
+        method:'POST',
+        headers,
+        body:'{}'
+      });
     },
     async updateOwnerLayout(code, layout, label='房间布置'){
       return api(`/api/rooms/${encodeURIComponent(code)}/layout`,{
