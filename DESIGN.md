@@ -1,5 +1,5 @@
 ---
-version: 15.15
+version: 15.16
 name: Pixel Memory World
 description: A warm multiplayer pixel-memory space. The interface should feel like a keepsake box that became a tiny playable world: soft paper surfaces, restrained pastel accents, readable modern Chinese typography, pixel-art scenes, and motion that responds to people rather than decorating every surface.
 ---
@@ -184,6 +184,17 @@ A memory's displayed author name is part of the moment in which the memory was c
 - Contributor renames on later visits must not retroactively rewrite old content.
 - Editing memory text, moving objects or host curation must never mutate the author-name snapshot.
 - Keep actor identity and display-name history conceptually separate: one secures continuity, the other preserves presentation at creation time.
+
+## Returning contributor continuity
+
+Long-term return flows should make private continuity useful without turning it into a public profile.
+
+- Contributor self-service entry points belong next to “我的小人”: one shortcut for private authored traces and one for identity recovery.
+- Deleting authored content offers a short client-side undo window. Undo re-creates the same authored record through normal server authorization rather than bypassing permissions.
+- Cross-device continuity reuses the existing verified personal recovery key; no name matching, email account, or public profile is introduced.
+- “我留下的” is a private timeline sorted newest-first and grouped by year.
+- The private timeline supports type filtering and historical-name filtering. Historical names are taken from immutable per-memory authorName snapshots.
+- None of the private timeline aggregation, filters, or recovery metadata is serialized into public room data.
 
 ## Private author continuity
 
