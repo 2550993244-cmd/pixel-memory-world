@@ -645,6 +645,8 @@ const { chromium } = require('playwright');
   });
   console.log('V15_7_VIEW_UI_AUDIT',viewUiAudit);
   if(!viewUiAudit.viewOnly||viewUiAudit.blocked!==false||!viewUiAudit.notesUnchanged||!viewUiAudit.noteHidden||!viewUiAudit.settingsHidden||!viewUiAudit.questModeHidden||!viewUiAudit.musicReadOnly) throw new Error('V15.7 view-only UI/local write guard incomplete');
+  await page.locator('#worldSettingsBtn').click();
+  await page.waitForSelector('#roomDrawer:not(.hidden)', { timeout: 3000 });
   await page.waitForSelector('#startRoomEditorV15', { timeout: 3000 });
   const storageCopy = await page.locator('.pm-storage-state-v15').innerText();
   if (!storageCopy) throw new Error('V15 persistence status missing');
