@@ -30,11 +30,14 @@
     }catch(_){lenis=null}
   }
 
-  var screens=$$('.screen');
+  var screens=$('.screen');
+  var lastScreenId=null;
   function activeScreen(){return screens.find(function(s){return s.classList.contains('active')})||null}
   function syncScreen(){
     var active=activeScreen();
     var id=active?active.id:'';
+    if(id===lastScreenId)return;
+    lastScreenId=id;
     if(lenis){
       if(id==='world'||id==='quest')lenis.stop();
       else lenis.start();
@@ -332,6 +335,7 @@
       }
     }
 
+    lastScreenId=null;
     syncScreen();
     window.PixelV14.lenis=!!lenis;
     window.PixelV14.gsap=!!window.gsap;
