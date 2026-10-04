@@ -1,4 +1,4 @@
-/* Pixel Memory World · V15.11 returning contributor profiles + instant spectators */
+/* Pixel Memory World · V15.12 live contributor appearance editing + remembered profiles */
 body.v14-ready .pm-invite-entry-v15>p{margin:0 0 10px;color:#7b716a;font-size:11px;line-height:1.55}
 body.v14-ready .invite-panel-v15{display:grid;gap:14px}
 body.v14-ready .invite-panel-v15 section{
@@ -104,4 +104,13 @@ body.v14-ready .contributor-identity-note-v15.returning{
   border-color:rgba(105,133,111,.18);
   background:linear-gradient(180deg,rgba(246,250,244,.96),rgba(239,246,236,.9));
   color:#5f735f
+}
+
+body.v14-ready .contributor-live-editor-v15 .contributor-live-note-v15{
+  border-color:rgba(158,119,87,.18);
+  background:linear-gradient(180deg,rgba(255,249,241,.96),rgba(248,241,232,.92));
+  color:#755f50
+}
+body.v14-ready .contributor-live-editor-v15 .contributor-live-note-v15 b{
+  font-size:11px;
 }
