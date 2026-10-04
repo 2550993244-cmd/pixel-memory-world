@@ -283,11 +283,13 @@ const { chromium } = require('playwright');
   console.log('V15_OWNER_AUDIT', ownerAudit);
   if (ownerAudit.online && !ownerAudit.owner) throw new Error('V15 creator did not retain owner token');
 
+  await page.evaluate(()=>addActivity('CI identity check'));
+  await page.waitForTimeout(80);
   const identityAudit=await page.evaluate(()=>({
     actor:window.PixelIdentity?.actorId||'',
     session:window.PixelIdentity?.sessionId||'',
     stored:localStorage.getItem('pixel-memory-actor-v1')||'',
-    activityAuthor:state.activity.at(-1)?.authorId||''
+    activityAuthor:state.activity.find(x=>x.text==='CI identity check')?.authorId||''
   }));
   console.log('V15_2_IDENTITY_AUDIT',identityAudit);
   if(!identityAudit.actor||identityAudit.actor===identityAudit.session||identityAudit.actor!==identityAudit.stored) throw new Error('V15.2 persistent actor identity missing');
