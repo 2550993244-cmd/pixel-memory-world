@@ -434,12 +434,12 @@ async function openMyTracesDrawer(){
   const questRows=quests.slice().reverse().map(q=>`<div class="activity-row" style="display:block"><b>✦ ${escapeHTML(q.title||'门外回忆')}${editedMarker(q)}</b><p style="margin:6px 0;line-height:1.55">${escapeHTML(q.text||'')}</p><small>${escapeHTML(authorSnapshot(q))} · Outside</small><div class="memory-detail-actions"><button class="button secondary small press" data-my-quest-edit="${escapeHTML(q.id)}">✎ 修改</button><button class="button danger small press" data-my-quest-delete="${escapeHTML(q.id)}">⌫ 删除</button></div></div>`).join('');
   showDrawer('我留下的',`<div class="drawer-section"><h4>PRIVATE · 只有你能看到这条身份连续线</h4><div class="person-row"><span>跨名字留下的内容</span><b>${total}</b></div><small style="display:block;margin-top:6px;color:#8c7d73;line-height:1.5">这里会把你过去用不同名字留下的内容汇合，但不会向其他人公开这些名字属于同一个人。</small></div>${total?`<div class="drawer-section"><h4>留言 · ${notes.length}</h4><div class="activity-list">${noteRows||empty}</div></div><div class="drawer-section"><h4>纪念物 · ${mementos.length}</h4><div class="activity-list">${mementoRows||empty}</div></div><div class="drawer-section"><h4>合影 · ${photos.length}</h4><div class="activity-list">${photoRows||empty}</div></div><div class="drawer-section"><h4>Outside · ${quests.length}</h4><div class="activity-list">${questRows||empty}</div></div>`:empty}`);
   setTimeout(()=>{
-    $('[data-my-note-edit]').forEach(b=>b.onclick=()=>{const n=notes.find(x=>x.id===b.dataset.myNoteEdit);if(n)openNoteEdit(n,openMyTracesDrawer)});
-    $('[data-my-note-delete]').forEach(b=>b.onclick=()=>{const n=notes.find(x=>x.id===b.dataset.myNoteDelete);if(n)removeOwnNote(n,openMyTracesDrawer)});
-    $('[data-my-memento]').forEach(b=>b.onclick=()=>{const m=mementos.find(x=>x.id===b.dataset.myMemento);if(m)openMementoDetail(m)});
-    $('[data-my-photo-delete]').forEach(b=>b.onclick=()=>{const p=photos.find(x=>x.id===b.dataset.myPhotoDelete);if(p)removeOwnPhoto(p,openMyTracesDrawer)});
-    $('[data-my-quest-edit]').forEach(b=>b.onclick=()=>{const q=quests.find(x=>x.id===b.dataset.myQuestEdit);if(q)editOwnQuestTrace(q)});
-    $('[data-my-quest-delete]').forEach(b=>b.onclick=()=>{const q=quests.find(x=>x.id===b.dataset.myQuestDelete);if(q)removeOwnQuestTrace(q)});
+    $$('[data-my-note-edit]').forEach(b=>b.onclick=()=>{const n=notes.find(x=>x.id===b.dataset.myNoteEdit);if(n)openNoteEdit(n,openMyTracesDrawer)});
+    $$('[data-my-note-delete]').forEach(b=>b.onclick=()=>{const n=notes.find(x=>x.id===b.dataset.myNoteDelete);if(n)removeOwnNote(n,openMyTracesDrawer)});
+    $$('[data-my-memento]').forEach(b=>b.onclick=()=>{const m=mementos.find(x=>x.id===b.dataset.myMemento);if(m)openMementoDetail(m)});
+    $$('[data-my-photo-delete]').forEach(b=>b.onclick=()=>{const p=photos.find(x=>x.id===b.dataset.myPhotoDelete);if(p)removeOwnPhoto(p,openMyTracesDrawer)});
+    $$('[data-my-quest-edit]').forEach(b=>b.onclick=()=>{const q=quests.find(x=>x.id===b.dataset.myQuestEdit);if(q)editOwnQuestTrace(q)});
+    $$('[data-my-quest-delete]').forEach(b=>b.onclick=()=>{const q=quests.find(x=>x.id===b.dataset.myQuestDelete);if(q)removeOwnQuestTrace(q)});
   },0)
 }
 
