@@ -1,0 +1,27 @@
+/* Pixel Memory World · V15.5 archive / delete */
+body.v14-ready .pm-retention-entry-v15>p{margin:0 0 10px;color:#7b716a;font-size:11px;line-height:1.55}
+body.v14-ready .retention-panel-v15{display:grid;gap:14px}
+body.v14-ready .retention-panel-v15 section{
+  padding:14px;border:1px solid rgba(82,75,69,.10);border-radius:16px;background:rgba(250,248,244,.72)
+}
+body.v14-ready .retention-panel-v15 h4{margin:0 0 6px;color:#4e4742;font-size:12px}
+body.v14-ready .retention-panel-v15 p{margin:0 0 11px;color:#756b65;font-size:11px;line-height:1.55}
+body.v14-ready .retention-archive-card{
+  display:grid;gap:4px;padding:13px 14px;border:1px solid rgba(126,145,111,.20);border-radius:14px;background:#f1f4ec;color:#65725f
+}
+body.v14-ready .retention-archive-card.guest{background:#f4f1ec;color:#746c64;border-color:rgba(91,82,74,.12)}
+body.v14-ready .retention-archive-card b{font-size:12px}
+body.v14-ready .retention-archive-card span{font-size:10px;line-height:1.5}
+body.v14-ready .retention-danger{
+  border-color:rgba(176,93,86,.18)!important;background:#fbf0ee!important
+}
+body.v14-ready .retention-danger h4{color:#8c514c}
+body.v14-ready .retention-danger label{display:grid;gap:6px;margin:10px 0}
+body.v14-ready .retention-danger label span{color:#806762;font-size:10px}
+body.v14-ready .retention-danger input{
+  width:100%;padding:10px 11px;border:1px solid rgba(144,79,73,.20);border-radius:11px;background:#fffafa;
+  color:#664a47;font:700 13px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.12em;text-transform:uppercase;outline:none
+}
+body.v14-ready .retention-danger input:focus{border-color:rgba(144,79,73,.55);box-shadow:0 0 0 3px rgba(144,79,73,.10)}
+body.v14-ready .button.danger{background:#9b5b55;color:#fff;border-color:#9b5b55}
+body.v14-ready .button.danger:disabled{opacity:.35;cursor:not-allowed}
