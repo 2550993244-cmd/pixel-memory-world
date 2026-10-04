@@ -1,0 +1,32 @@
+/* Pixel Memory World · V15.6 secret invite */
+body.v14-ready .pm-invite-entry-v15>p{margin:0 0 10px;color:#7b716a;font-size:11px;line-height:1.55}
+body.v14-ready .invite-panel-v15{display:grid;gap:14px}
+body.v14-ready .invite-panel-v15 section{
+  padding:14px;border:1px solid rgba(82,75,69,.10);border-radius:16px;background:rgba(250,248,244,.72)
+}
+body.v14-ready .invite-panel-v15 h4{margin:0 0 6px;color:#4e4742;font-size:12px}
+body.v14-ready .invite-panel-v15 p{margin:0 0 11px;color:#756b65;font-size:11px;line-height:1.55}
+body.v14-ready .invite-lock-card{
+  display:grid;gap:4px;padding:13px 14px;border:1px solid rgba(105,127,143,.18);border-radius:14px;background:#eef3f5;color:#596c78
+}
+body.v14-ready .invite-lock-card b{font-size:12px}
+body.v14-ready .invite-lock-card span{font-size:10px;line-height:1.5}
+body.v14-ready .invite-panel-v15 textarea{
+  width:100%;min-height:76px;margin:4px 0 9px;padding:11px 12px;resize:vertical;
+  border:1px solid rgba(76,70,65,.13);border-radius:12px;background:#fffefa;color:#514a45;
+  font:500 10px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;outline:none
+}
+body.v14-ready .invite-panel-v15 textarea:focus{border-color:rgba(102,131,148,.5);box-shadow:0 0 0 3px rgba(102,131,148,.09)}
+body.v14-ready .invite-panel-v15 small{display:block;margin-top:7px;color:#928b85;font-size:9px;line-height:1.45}
+body.v14-ready .invite-actions{display:flex;gap:8px;flex-wrap:wrap}
+body.v14-ready .invite-actions .button{flex:1;min-width:150px}
+body.v14-ready .invite-rotate{background:#f7f4ef!important}
+body.v14-ready .invite-rotate-warning{
+  display:grid;gap:5px;padding:13px 14px;border:1px solid rgba(177,126,87,.20);border-radius:14px;background:#fbf2e8;color:#815f49
+}
+body.v14-ready .invite-rotate-warning b{font-size:12px}
+body.v14-ready .invite-rotate-warning span{font-size:10px;line-height:1.5}
+@media(max-width:520px){
+  body.v14-ready .invite-actions{display:grid}
+  body.v14-ready .invite-actions .button{min-width:0;width:100%}
+}
