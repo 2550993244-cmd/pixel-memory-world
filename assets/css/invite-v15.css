@@ -1,4 +1,4 @@
-/* Pixel Memory World · V15.6 secret invite */
+/* Pixel Memory World · V15.7 collaborative + view-only invites */
 body.v14-ready .pm-invite-entry-v15>p{margin:0 0 10px;color:#7b716a;font-size:11px;line-height:1.55}
 body.v14-ready .invite-panel-v15{display:grid;gap:14px}
 body.v14-ready .invite-panel-v15 section{
@@ -30,3 +30,21 @@ body.v14-ready .invite-rotate-warning span{font-size:10px;line-height:1.5}
   body.v14-ready .invite-actions{display:grid}
   body.v14-ready .invite-actions .button{min-width:0;width:100%}
 }
+body.v14-ready .invite-role-card.contributor{border-color:rgba(143,114,89,.16);background:#fbf6ef}
+body.v14-ready .invite-role-card.viewer{border-color:rgba(95,126,145,.16);background:#f1f5f7}
+body.v14-ready .invite-role-card.viewer h4{color:#5d7381}
+body.v14-ready .pm-view-only-badge{
+  position:fixed;z-index:1200;left:50%;top:12px;transform:translateX(-50%);
+  max-width:min(92vw,520px);padding:8px 13px;border:1px solid rgba(93,115,129,.18);
+  border-radius:999px;background:rgba(241,245,247,.94);backdrop-filter:blur(10px);
+  color:#5c707c;font-size:10px;font-weight:700;letter-spacing:.03em;
+  box-shadow:0 8px 24px rgba(58,73,82,.08);pointer-events:none
+}
+body.pm-view-only [data-dock="talk"],
+body.pm-view-only [data-dock="hug"],
+body.pm-view-only [data-dock="note"],
+body.pm-view-only [data-dock="memento"],
+body.pm-view-only [data-dock="photo"],
+body.pm-view-only [data-dock="celebrate"],
+body.pm-view-only #worldSettingsBtn,
+body.pm-view-only #questModeBtn{display:none!important}
