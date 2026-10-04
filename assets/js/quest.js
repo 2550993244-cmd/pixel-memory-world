@@ -554,8 +554,13 @@
         });
         $('#questRemoveMemory')&&($('#questRemoveMemory').onclick=async()=>{
           if(!confirm(`确定移除「${item.title}」吗？房主操作会保留可恢复历史。`))return;
+          const snapshot=typeof undoItemSnapshot==='function'?undoItemSnapshot(item):JSON.parse(JSON.stringify(item));
           const ok=await questOp({kind:'remove',id:item.id});
-          if(ok){closeModal();renderQuestItems();toast('已经从门外地图移除了')}
+          if(ok){
+            closeModal();renderQuestItems();
+            if(author&&typeof toastUndo==='function')toastUndo('已经移除这段门外回忆',async()=>{await questOp({kind:'add',item:snapshot});renderQuestItems()});
+            else toast('已经从门外地图移除了')
+          }
         });
         $('#questEditOwn')&&($('#questEditOwn').onclick=()=>{
           if(!author)return;
