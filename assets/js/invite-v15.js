@@ -1,4 +1,4 @@
-/* Pixel Memory World · V15.11 returning contributor profiles + contributor ceremony */
+/* Pixel Memory World · V15.12 live contributor appearance + returning profiles */
 (() => {
   const $=(s,r=document)=>r.querySelector(s);
 
@@ -177,7 +177,7 @@
   },0);
 
   const apiState={
-    version:'15.11',
+    version:'15.12',
     rotatingRole:'',
     tokenFromText,
     ensureToken,
