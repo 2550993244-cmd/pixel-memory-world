@@ -66,8 +66,8 @@ const { chromium } = require('playwright');
     inviteVersion: window.PixelInvite?.version || null
   }));
   console.log('V15_1_DIAG', v15Diag);
-  if (v15Diag.runtime?.version !== '15.6') throw new Error('V15.6 systems runtime missing');
-  if (v15Diag.retentionVersion !== '15.5' || v15Diag.recoveryVersion !== '15.4' || v15Diag.inviteVersion !== '15.6') throw new Error('V15.6 invite/retention/recovery runtime missing');
+  if (v15Diag.runtime?.version !== '15.7') throw new Error('V15.7 systems runtime missing');
+  if (v15Diag.retentionVersion !== '15.5' || v15Diag.recoveryVersion !== '15.7' || v15Diag.inviteVersion !== '15.7') throw new Error('V15.7 invite/retention/recovery runtime missing');
   if (v15Diag.sceneVersion !== '15.0') throw new Error('V15 layered scene map missing');
   if (v15Diag.mapRuntime.source !== 'tiled-json' || v15Diag.mapRuntime.collisionCount < 3 || v15Diag.mapRuntime.pathCount < 6) {
     throw new Error('V15.1 Tiled map runtime did not load canonical JSON');
@@ -356,49 +356,76 @@ const { chromium } = require('playwright');
   if(recoveryAudit.badOwner!==false) throw new Error('V15.4 recovery verification accepts a wrong owner token');
   if(!recoveryAudit.corruptRejected) throw new Error('V15.4 corrupt recovery key was accepted');
 
-  // V15.6 D006=A: friendly room code + high-entropy secret invite token.
+  // V15.7 D007=B: independently rotatable collaborative + view-only links.
   const inviteCode=('I'+Math.random().toString(36).slice(2,7)).toUpperCase();
   const inviteCreateRes=await fetch(`${base}/api/rooms`,{
     method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({code:inviteCode,world:{occasion:'邀请测试'},memory:{mementos:[],notes:[],photos:[],activity:[]}})
+    body:JSON.stringify({code:inviteCode,world:{occasion:'双邀请测试'},memory:{mementos:[],notes:[],photos:[],activity:[]}})
   });
-  if(!inviteCreateRes.ok) throw new Error('V15.6 invite room create failed '+inviteCreateRes.status);
+  if(!inviteCreateRes.ok) throw new Error('V15.7 invite room create failed '+inviteCreateRes.status);
   const inviteRoom=await inviteCreateRes.json();
-  if(!inviteRoom.inviteToken || inviteRoom.inviteToken.length<24) throw new Error('V15.6 high-entropy invite token missing');
+  if(!inviteRoom.inviteToken||inviteRoom.inviteToken.length<24||!inviteRoom.viewInviteToken||inviteRoom.viewInviteToken.length<24) throw new Error('V15.7 dual invite tokens missing');
+  if(inviteRoom.inviteToken===inviteRoom.viewInviteToken) throw new Error('V15.7 invite roles share the same token');
 
   let inviteRes=await fetch(`${base}/api/rooms/${inviteCode}`);
-  if(inviteRes.status!==404) throw new Error('V15.6 room code alone reveals or opens protected room');
-  inviteRes=await fetch(`${base}/api/rooms/${inviteCode}`,{headers:{'X-Room-Invite':'wrong-secret'}});
-  if(inviteRes.status!==404) throw new Error('V15.6 wrong invite token reveals protected room');
+  if(inviteRes.status!==404) throw new Error('V15.7 room code alone opens protected room');
+
   inviteRes=await fetch(`${base}/api/rooms/${inviteCode}`,{headers:{'X-Room-Invite':inviteRoom.inviteToken}});
-  if(inviteRes.status!==200) throw new Error('V15.6 valid secret invite cannot open room');
-  const invitePublic=await inviteRes.json();
-  if(invitePublic.inviteHash||invitePublic.inviteToken) throw new Error('V15.6 invite secret leaked in public room payload');
+  if(inviteRes.status!==200) throw new Error('V15.7 contributor invite cannot read room');
+  const contributorRoom=await inviteRes.json();
+  if(contributorRoom.accessRole!=='contributor') throw new Error('V15.7 contributor role not identified');
 
-  const inviteActor={'Content-Type':'application/json','X-Actor-Id':'invite-guest','X-Actor-Token':'invite-guest-secret'};
-  inviteRes=await fetch(`${base}/api/rooms/${inviteCode}/ops`,{
-    method:'POST',headers:inviteActor,
-    body:JSON.stringify({scope:'memory',op:{kind:'note:add',item:{id:'invite-note',text:'secret gate',by:'guest',time:Date.now()}}})
-  });
-  if(inviteRes.status!==403) throw new Error('V15.6 actor credential bypasses invite gate');
-  inviteRes=await fetch(`${base}/api/rooms/${inviteCode}/ops`,{
-    method:'POST',headers:{...inviteActor,'X-Room-Invite':inviteRoom.inviteToken},
-    body:JSON.stringify({scope:'memory',op:{kind:'note:add',item:{id:'invite-note',text:'secret gate',by:'guest',time:Date.now()}}})
-  });
-  if(inviteRes.status!==200) throw new Error('V15.6 invited guest cannot write');
+  inviteRes=await fetch(`${base}/api/rooms/${inviteCode}`,{headers:{'X-Room-Invite':inviteRoom.viewInviteToken}});
+  if(inviteRes.status!==200) throw new Error('V15.7 viewer invite cannot read room');
+  const viewerRoom=await inviteRes.json();
+  if(viewerRoom.accessRole!=='viewer') throw new Error('V15.7 viewer role not identified');
+  if(viewerRoom.inviteHash||viewerRoom.viewInviteHash||viewerRoom.inviteToken||viewerRoom.viewInviteToken) throw new Error('V15.7 invite secrets leaked in room payload');
 
-  const oldInvite=inviteRoom.inviteToken;
-  const rotateRes=await fetch(`${base}/api/rooms/${inviteCode}/invite/rotate`,{
+  const viewerActor={'Content-Type':'application/json','X-Room-Invite':inviteRoom.viewInviteToken,'X-Actor-Id':'viewer-a','X-Actor-Token':'viewer-secret'};
+  inviteRes=await fetch(`${base}/api/rooms/${inviteCode}/ops`,{
+    method:'POST',headers:viewerActor,
+    body:JSON.stringify({scope:'memory',op:{kind:'note:add',item:{id:'viewer-note',text:'must fail',by:'viewer',time:Date.now()}}})
+  });
+  if(inviteRes.status!==403) throw new Error('V15.7 viewer invite can write memories');
+  const viewerErr=await inviteRes.json();
+  if(viewerErr.error!=='view_only') throw new Error('V15.7 viewer write rejection is not role-aware');
+
+  const contributorActor={'Content-Type':'application/json','X-Room-Invite':inviteRoom.inviteToken,'X-Actor-Id':'contributor-a','X-Actor-Token':'contributor-secret'};
+  inviteRes=await fetch(`${base}/api/rooms/${inviteCode}/ops`,{
+    method:'POST',headers:contributorActor,
+    body:JSON.stringify({scope:'memory',op:{kind:'note:add',item:{id:'contrib-note',text:'allowed',by:'contributor',time:Date.now()}}})
+  });
+  if(inviteRes.status!==200) throw new Error('V15.7 contributor invite cannot write');
+
+  const viewerUpload=new FormData();
+  viewerUpload.append('file',new Blob(['viewer upload should fail'],{type:'text/plain'}),'viewer.txt');
+  inviteRes=await fetch(`${base}/api/uploads`,{
+    method:'POST',headers:{'X-Room-Code':inviteCode,'X-Room-Invite':inviteRoom.viewInviteToken,'X-Actor-Id':'viewer-a','X-Actor-Token':'viewer-secret'},body:viewerUpload
+  });
+  if(inviteRes.status!==403) throw new Error('V15.7 viewer invite can upload');
+
+  const oldContributor=inviteRoom.inviteToken;
+  const oldViewer=inviteRoom.viewInviteToken;
+  let rotateRes=await fetch(`${base}/api/rooms/${inviteCode}/invite/viewer/rotate`,{
     method:'POST',headers:{'Content-Type':'application/json','X-Room-Owner':inviteRoom.ownerToken},body:'{}'
   });
-  if(rotateRes.status!==200) throw new Error('V15.6 owner cannot rotate invite token');
-  const rotated=await rotateRes.json();
-  if(!rotated.inviteToken||rotated.inviteToken===oldInvite) throw new Error('V15.6 invite rotation did not issue a new token');
-  const oldAfterRotate=await fetch(`${base}/api/rooms/${inviteCode}`,{headers:{'X-Room-Invite':oldInvite}});
-  if(oldAfterRotate.status!==404) throw new Error('V15.6 old invite token still works after rotation');
-  const newAfterRotate=await fetch(`${base}/api/rooms/${inviteCode}`,{headers:{'X-Room-Invite':rotated.inviteToken}});
-  if(newAfterRotate.status!==200) throw new Error('V15.6 rotated invite token does not work');
-  console.log('V15_6_INVITE_AUDIT',{room:inviteCode,inviteVersion:rotated.inviteVersion,ok:true});
+  if(rotateRes.status!==200) throw new Error('V15.7 owner cannot rotate viewer invite');
+  const viewerRotated=await rotateRes.json();
+  if(!viewerRotated.viewInviteToken||viewerRotated.viewInviteToken===oldViewer) throw new Error('V15.7 viewer rotation failed');
+  if((await fetch(`${base}/api/rooms/${inviteCode}`,{headers:{'X-Room-Invite':oldViewer}})).status!==404) throw new Error('V15.7 old viewer invite still works');
+  if((await fetch(`${base}/api/rooms/${inviteCode}`,{headers:{'X-Room-Invite':viewerRotated.viewInviteToken}})).status!==200) throw new Error('V15.7 new viewer invite fails');
+  if((await fetch(`${base}/api/rooms/${inviteCode}`,{headers:{'X-Room-Invite':oldContributor}})).status!==200) throw new Error('V15.7 viewer rotation broke contributor invite');
+
+  rotateRes=await fetch(`${base}/api/rooms/${inviteCode}/invite/contributor/rotate`,{
+    method:'POST',headers:{'Content-Type':'application/json','X-Room-Owner':inviteRoom.ownerToken},body:'{}'
+  });
+  if(rotateRes.status!==200) throw new Error('V15.7 owner cannot rotate contributor invite');
+  const contributorRotated=await rotateRes.json();
+  if(!contributorRotated.inviteToken||contributorRotated.inviteToken===oldContributor) throw new Error('V15.7 contributor rotation failed');
+  if((await fetch(`${base}/api/rooms/${inviteCode}`,{headers:{'X-Room-Invite':oldContributor}})).status!==404) throw new Error('V15.7 old contributor invite still works');
+  if((await fetch(`${base}/api/rooms/${inviteCode}`,{headers:{'X-Room-Invite':contributorRotated.inviteToken}})).status!==200) throw new Error('V15.7 new contributor invite fails');
+  if((await fetch(`${base}/api/rooms/${inviteCode}`,{headers:{'X-Room-Invite':viewerRotated.viewInviteToken}})).status!==200) throw new Error('V15.7 contributor rotation broke viewer invite');
+  console.log('V15_7_DUAL_INVITE_AUDIT',{room:inviteCode,contributorVersion:contributorRotated.inviteVersion,viewerVersion:viewerRotated.viewInviteVersion,ok:true});
 
   // V15.5 D005=A: archive -> guest blocked -> owner restore -> permanent purge incl. uploads.
   const lifecycleCode=('R'+Math.random().toString(36).slice(2,7)).toUpperCase();
@@ -589,11 +616,35 @@ const { chromium } = require('playwright');
   const recoveryEntry=await page.locator('#recoveryEntryV15').innerText();
   const retentionEntry=await page.locator('#retentionEntryV15').innerText();
   const inviteEntry=await page.locator('#inviteEntryV15').innerText();
-  const shareUrlAudit=await page.evaluate(()=>PixelInvite.shareUrl(state.roomCode));
+  const shareUrlAudit=await page.evaluate(async()=>({
+    contributor:await PixelInvite.shareUrl(state.roomCode,'contributor'),
+    viewer:await PixelInvite.shareUrl(state.roomCode,'viewer')
+  }));
   if(!/换设备恢复/.test(recoveryEntry)) throw new Error('V15.4 recovery center entry missing from room settings');
   if(!/30 天/.test(retentionEntry)) throw new Error('V15.5 retention center entry missing from room settings');
   if(!/秘密邀请/.test(inviteEntry)) throw new Error('V15.6 secret invite center missing from room settings');
-  if(!/[?&]invite=/.test(shareUrlAudit)||!/[?&]room=/.test(shareUrlAudit)) throw new Error('V15.6 share URL does not carry room + invite token');
+  if(!/[?&]invite=/.test(shareUrlAudit.contributor)||!/[?&]room=/.test(shareUrlAudit.contributor)||/[?&]role=view/.test(shareUrlAudit.contributor)) throw new Error('V15.7 contributor share URL malformed');
+  if(!/[?&]invite=/.test(shareUrlAudit.viewer)||!/[?&]room=/.test(shareUrlAudit.viewer)||!/[?&]role=view/.test(shareUrlAudit.viewer)) throw new Error('V15.7 viewer share URL malformed');
+  const viewUiAudit=await page.evaluate(()=>{
+    const before=state.notes.length;
+    applyAccessMode('viewer');
+    const blocked=memoryOp({kind:'note:add',item:{id:'ui-viewer-note',text:'no',by:'viewer',time:Date.now()}});
+    openMusicDrawer();
+    const audit={
+      viewOnly:isViewOnly(),
+      blocked,
+      notesUnchanged:state.notes.length===before,
+      noteHidden:document.querySelector('[data-dock="note"]')?.classList.contains('hidden'),
+      settingsHidden:document.querySelector('#worldSettingsBtn')?.classList.contains('hidden'),
+      questModeHidden:document.querySelector('#questModeBtn')?.classList.contains('hidden'),
+      musicReadOnly:/VIEW ONLY/.test(document.querySelector('#drawerBody')?.innerText||'')
+    };
+    applyAccessMode('owner');
+    closeDrawer();
+    return audit;
+  });
+  console.log('V15_7_VIEW_UI_AUDIT',viewUiAudit);
+  if(!viewUiAudit.viewOnly||viewUiAudit.blocked!==false||!viewUiAudit.notesUnchanged||!viewUiAudit.noteHidden||!viewUiAudit.settingsHidden||!viewUiAudit.questModeHidden||!viewUiAudit.musicReadOnly) throw new Error('V15.7 view-only UI/local write guard incomplete');
   await page.waitForSelector('#startRoomEditorV15', { timeout: 3000 });
   const storageCopy = await page.locator('.pm-storage-state-v15').innerText();
   if (!storageCopy) throw new Error('V15 persistence status missing');
@@ -769,7 +820,7 @@ const { chromium } = require('playwright');
     throw new Error('Browser errors:\n' + errors.join('\n'));
   }
 
-  console.log('SMOKE_OK V15.6 secret invite -> archive retention -> account-free recovery -> A-curator -> warm atlas -> tiled camera -> revisions -> join');
+  console.log('SMOKE_OK V15.7 dual invite roles -> archive retention -> recovery -> curator -> warm atlas -> tiled camera -> revisions -> join');
   await browser.close();
 })().catch(async err => {
   console.error(err);
