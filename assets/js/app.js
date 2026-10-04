@@ -459,7 +459,7 @@ $('#leaveWorldBtn').onclick=()=>{broadcast('leave');stopMusic();state.channel?.c
 if(window.PixelNet){PixelNet.onStatus(({status})=>{if(status==='online')renderNetworkStatus();else if(status==='local'){state.net.latency=null;const el=$('#globalStatus');if(el)el.textContent='本地联机模式 · 当前没有走公网服务器'}else if(status==='disconnected'){state.net.latency=null;const el=$('#globalStatus');if(el)el.textContent='网络断开 · 正在切回本地模式'}});}
 
 // auto join via URL
-const q=new URLSearchParams(location.search),r=q.get('room');if(r&&r.length===6){const code=r.toUpperCase();$('#joinCodeInput').value=code;state.roomCode=code;if(window.PixelInviteEntry?.room===code&&window.PixelNet?.enabled){loadRoomRemote(code).then(remote=>{if(remote===true){if(isViewOnly())enterViewerWorld();else showScreen('avatarBuilder')}else if(remote!=='archived'&&remote!=='invite-required')showScreen('joiner')})}else showScreen('joiner')}
+const q=new URLSearchParams(location.search),r=q.get('room');if(r&&r.length===6){const code=r.toUpperCase();$('#joinCodeInput').value=code;state.roomCode=code;const hasLocalAccess=window.PixelNet?.hasInviteToken?.(code)||window.PixelNet?.hasOwnerToken?.(code);if((window.PixelInviteEntry?.room===code||hasLocalAccess)&&window.PixelNet?.enabled){loadRoomRemote(code).then(remote=>{if(remote===true){if(isViewOnly())enterViewerWorld();else showScreen('avatarBuilder')}else if(remote!=='archived'&&remote!=='invite-required')showScreen('joiner')})}else showScreen('joiner')}
 
 
 // =========================================================
