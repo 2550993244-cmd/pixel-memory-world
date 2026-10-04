@@ -87,12 +87,12 @@ https://pixel-memory-world.onrender.com
 https://你的-render-域名/api/health
 ~~~
 
-V15.12 正常应返回类似：
+V15.13 正常应返回类似：
 
 ~~~json
 {
   "ok": true,
-  "version": "v15.12"
+  "version": "v15.13"
 }
 ~~~
 
