@@ -749,7 +749,7 @@ server.on('upgrade', (req, socket) => {
     try { m = JSON.parse(text); } catch (_) { return; }
     const rr = rooms[room];
     if (m.type === 'ping') return wsSend(socket, { type: 'pong', sender: 'server', t: m.t, serverTime: Date.now() });
-    if (socket._meta?.role === 'viewer' && !new Set(['hello','state','move','leave']).has(m.type)) return;
+    if (socket._meta?.role === 'viewer' && !new Set(['hello','state','move','leave','quest-hello','quest-player','quest-leave']).has(m.type)) return;
     if (rr) {
       normalizeRoom(rr);
       // V15.3: memory persistence is REST-authorized; websocket messages are transient only.
