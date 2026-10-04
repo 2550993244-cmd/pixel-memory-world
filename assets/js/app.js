@@ -85,6 +85,21 @@ async function loadRoomRemote(code){loadRoom(code);if(!window.PixelNet?.enabled)
 function randomCode(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';return Array.from({length:6},()=>chars[Math.floor(Math.random()*chars.length)]).join('')}
 function escapeHTML(s=''){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function toast(t){const el=$('#toast');el.textContent=t;el.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('show'),1800)}
+function undoItemSnapshot(item){if(!item||typeof item!=='object')return item;const copy=JSON.parse(JSON.stringify(item));delete copy.authorId;delete copy.isAuthor;return copy}
+function toastUndo(t,undo,label='撤销'){
+  const el=$('#toast');
+  clearTimeout(toast.t);
+  el.innerHTML=`<span>${escapeHTML(t)}</span><button class="toast-undo-v16 press" type="button">${escapeHTML(label)}</button>`;
+  el.classList.add('show','has-action-v16');
+  const btn=el.querySelector('.toast-undo-v16');
+  btn.onclick=async()=>{
+    btn.disabled=true;
+    clearTimeout(toast.t);
+    try{await undo();el.classList.remove('show','has-action-v16');setTimeout(()=>toast('已经撤销删除'),20)}
+    catch(_){btn.disabled=false;toast('撤销没有成功')}
+  };
+  toast.t=setTimeout(()=>el.classList.remove('show','has-action-v16'),6500);
+}
 const CONTRIBUTOR_PROFILE_PREFIX='pixel-memory-contributor-profile-v1:';
 function contributorProfileKey(){
   return CONTRIBUTOR_PROFILE_PREFIX+String(state.player.actorId||persistentActorId());
@@ -261,6 +276,7 @@ function openContributorAvatarCustomizer(){
         ['🎁','🌷','📷','🎈'].map(v=>'<button class="mini-choice press '+(v===item?'selected':'')+'" data-contributor-item="'+v+'"><i>'+v+'</i></button>').join('')+
       '</div></section>'+
       '<button id="saveContributorAvatarV15" class="button primary full press">保存造型，让大家看到</button>'+
+      '<div class="contributor-continuity-actions-v16"><button id="openMyTracesFromAvatarV16" class="button secondary full press">⌁ 我留下的</button><button id="openIdentityRecoveryFromAvatarV16" class="button secondary full press">⇄ 换设备继续</button></div>'+
     '</div>');
   setTimeout(()=>{
     $$('[data-contributor-hair]').forEach(b=>b.onclick=()=>{$$('[data-contributor-hair]').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');state.player.hair=b.dataset.contributorHair});
@@ -274,6 +290,8 @@ function openContributorAvatarCustomizer(){
       closeModal();
       toast('新造型已经同步给房间里的朋友');
     };
+    $('#openMyTracesFromAvatarV16').onclick=()=>{closeModal();openMyTracesDrawer()};
+    $('#openIdentityRecoveryFromAvatarV16').onclick=()=>{closeModal();window.PixelRecovery?.open?.()};
   },0);
 }
 
@@ -337,8 +355,10 @@ async function runMementoAction(m,action){
     }
     if(action==='remove'){
       if(!confirm(`确定要移除「${m.title}」吗？房主操作会保留可恢复历史。`))return;
+      const snapshot=undoItemSnapshot(m),author=isAuthoredByMe(m);
       await commitMemoryOp({kind:'memento:remove',id:m.id});
-      toast('已经从房间里移除了')
+      if(author)toastUndo('已经移除这件纪念物',async()=>{await commitMemoryOp({kind:'memento:add',item:snapshot});renderMementos()});
+      else toast('已经从房间里移除了')
     }
     closeModal();
   }catch(e){
@@ -380,12 +400,22 @@ function openNoteEdit(n,after){
 async function removeOwnNote(n,after){
   if(!isAuthoredByMe(n))return toast('只有原作者可以删除这张留言');
   if(!confirm('确定删除这张留言吗？'))return;
-  try{await commitMemoryOp({kind:'note:remove',id:n.id});toast('这张留言已经删除');after?.()}catch(_){toast('删除没有成功')}
+  const snapshot=undoItemSnapshot(n);
+  try{
+    await commitMemoryOp({kind:'note:remove',id:n.id});
+    after?.();
+    toastUndo('这张留言已经删除',async()=>{await commitMemoryOp({kind:'note:add',item:snapshot});after?.()})
+  }catch(_){toast('删除没有成功')}
 }
 async function removeOwnPhoto(p,after){
   if(!isAuthoredByMe(p))return toast('只有按下快门的人可以删除这次合影记录');
   if(!confirm('确定删除这次合影记录吗？'))return;
-  try{await commitMemoryOp({kind:'photo:remove',id:p.id});toast('这次合影记录已经删除');after?.()}catch(_){toast('删除没有成功')}
+  const snapshot=undoItemSnapshot(p);
+  try{
+    await commitMemoryOp({kind:'photo:remove',id:p.id});
+    after?.();
+    toastUndo('这次合影记录已经删除',async()=>{await commitMemoryOp({kind:'photo:add',item:snapshot});after?.()})
+  }catch(_){toast('删除没有成功')}
 }
 function questTraceStorageKey(){return `pixel-memory-v9-quest-${state.roomCode||'draft'}`}
 async function commitOwnQuestTraceOp(op){
@@ -394,6 +424,7 @@ async function commitOwnQuestTraceOp(op){
   let data={items:[]};try{data=JSON.parse(localStorage.getItem(key)||'{"items":[]}')||data}catch(_){}
   data.items=Array.isArray(data.items)?data.items:[];
   const item=data.items.find(x=>x.id===op.id);
+  if(op.kind==='add'&&op.item){const i=data.items.findIndex(x=>x.id===op.item.id);if(i>=0)data.items[i]={...data.items[i],...op.item};else data.items.push(op.item)}
   if(op.kind==='update'&&item){if(typeof op.title==='string')item.title=op.title;if(typeof op.text==='string')item.text=op.text;item.editedAt=Date.now()}
   if(op.kind==='remove')data.items=data.items.filter(x=>x.id!==op.id);
   localStorage.setItem(key,JSON.stringify(data));
@@ -411,8 +442,18 @@ function editOwnQuestTrace(item){
 async function removeOwnQuestTrace(item){
   if(!isAuthoredByMe(item))return toast('只有原作者可以删除这段门外回忆');
   if(!confirm(`确定删除「${item.title}」吗？房主仍可从可恢复历史中找回。`))return;
-  try{await commitOwnQuestTraceOp({kind:'remove',id:item.id});toast('这段门外回忆已经删除');openMyTracesDrawer()}catch(_){toast('删除没有成功')}
+  const snapshot=undoItemSnapshot(item);
+  try{
+    await commitOwnQuestTraceOp({kind:'remove',id:item.id});
+    await openMyTracesDrawer();
+    toastUndo('这段门外回忆已经删除',async()=>{await commitOwnQuestTraceOp({kind:'add',item:snapshot});await openMyTracesDrawer()})
+  }catch(_){toast('删除没有成功')}
 }
+let myTraceTypeFilterV16='all';
+let myTraceNameFilterV16='all';
+function traceTimeV16(item){const n=Number(item?.time);if(Number.isFinite(n)&&n>0)return n;const p=Date.parse(item?.time||'');return Number.isFinite(p)?p:0}
+function traceDateV16(ts){return ts?new Date(ts).toLocaleDateString('zh-CN',{month:'short',day:'numeric'}):'时间未记录'}
+function traceYearV16(ts){return ts?String(new Date(ts).getFullYear()):'更早'}
 async function openMyTracesDrawer(){
   if(isViewOnly())return toast('只看模式没有作者内容');
   showDrawer('我留下的','<div class="drawer-section"><div class="activity-row">正在把你以前留下的东西整理出来…</div></div>');
@@ -426,14 +467,45 @@ async function openMyTracesDrawer(){
   const mementos=(memory.mementos||[]).filter(isAuthoredByMe);
   const photos=(memory.photos||[]).filter(isAuthoredByMe);
   const quests=(outside||[]).filter(isAuthoredByMe);
-  const total=notes.length+mementos.length+photos.length+quests.length;
-  const empty='<div class="activity-row">还没有留下内容。以后写下的留言、纪念物、合影和门外回忆会在这里汇合。</div>';
-  const noteRows=notes.slice().reverse().map(n=>`<div class="activity-row" style="display:block"><b>${escapeHTML(authorSnapshot(n))}${editedMarker(n)}</b><p style="margin:6px 0;line-height:1.55">${escapeHTML(n.text)}</p><div class="memory-detail-actions"><button class="button secondary small press" data-my-note-edit="${escapeHTML(n.id)}">✎ 修改</button><button class="button danger small press" data-my-note-delete="${escapeHTML(n.id)}">⌫ 删除</button></div></div>`).join('');
-  const mementoRows=mementos.slice().reverse().map(m=>`<div class="activity-row"><span>${m.type||'✦'} ${escapeHTML(m.title||'纪念物')}${editedMarker(m)}<small> · ${escapeHTML(authorSnapshot(m))}</small></span><button class="mini-manage press" data-my-memento="${escapeHTML(m.id)}">管理</button></div>`).join('');
-  const photoRows=photos.slice().reverse().map(p=>`<div class="activity-row"><span>📷 ${(p.names||[]).map(escapeHTML).join('、')}<small> · ${escapeHTML(authorSnapshot(p))}</small></span><button class="mini-manage press" data-my-photo-delete="${escapeHTML(p.id)}">删除</button></div>`).join('');
-  const questRows=quests.slice().reverse().map(q=>`<div class="activity-row" style="display:block"><b>✦ ${escapeHTML(q.title||'门外回忆')}${editedMarker(q)}</b><p style="margin:6px 0;line-height:1.55">${escapeHTML(q.text||'')}</p><small>${escapeHTML(authorSnapshot(q))} · Outside</small><div class="memory-detail-actions"><button class="button secondary small press" data-my-quest-edit="${escapeHTML(q.id)}">✎ 修改</button><button class="button danger small press" data-my-quest-delete="${escapeHTML(q.id)}">⌫ 删除</button></div></div>`).join('');
-  showDrawer('我留下的',`<div class="drawer-section"><h4>PRIVATE · 只有你能看到这条身份连续线</h4><div class="person-row"><span>跨名字留下的内容</span><b>${total}</b></div><small style="display:block;margin-top:6px;color:#8c7d73;line-height:1.5">这里会把你过去用不同名字留下的内容汇合，但不会向其他人公开这些名字属于同一个人。</small></div>${total?`<div class="drawer-section"><h4>留言 · ${notes.length}</h4><div class="activity-list">${noteRows||empty}</div></div><div class="drawer-section"><h4>纪念物 · ${mementos.length}</h4><div class="activity-list">${mementoRows||empty}</div></div><div class="drawer-section"><h4>合影 · ${photos.length}</h4><div class="activity-list">${photoRows||empty}</div></div><div class="drawer-section"><h4>Outside · ${quests.length}</h4><div class="activity-list">${questRows||empty}</div></div>`:empty}`);
+  const entries=[
+    ...notes.map(item=>({kind:'note',label:'留言',icon:'✎',item,ts:traceTimeV16(item)})),
+    ...mementos.map(item=>({kind:'memento',label:'纪念物',icon:item.type||'✦',item,ts:traceTimeV16(item)})),
+    ...photos.map(item=>({kind:'photo',label:'合影',icon:'📷',item,ts:traceTimeV16(item)})),
+    ...quests.map(item=>({kind:'quest',label:'Outside',icon:'✦',item,ts:traceTimeV16(item)}))
+  ].sort((a,b)=>b.ts-a.ts);
+  const names=[...new Set(entries.map(e=>authorSnapshot(e.item)).filter(Boolean))];
+  if(myTraceNameFilterV16!=='all'&&!names.includes(myTraceNameFilterV16))myTraceNameFilterV16='all';
+  const filtered=entries.filter(e=>(myTraceTypeFilterV16==='all'||e.kind===myTraceTypeFilterV16)&&(myTraceNameFilterV16==='all'||authorSnapshot(e.item)===myTraceNameFilterV16));
+  const groups=new Map();
+  filtered.forEach(e=>{const y=traceYearV16(e.ts);if(!groups.has(y))groups.set(y,[]);groups.get(y).push(e)});
+  const typeButtons=[['all','全部'],['note','留言'],['memento','纪念物'],['photo','合影'],['quest','Outside']].map(([k,v])=>`<button class="trace-filter-v16 press ${myTraceTypeFilterV16===k?'selected':''}" data-trace-type-v16="${k}">${v}</button>`).join('');
+  const nameOptions=['<option value="all">全部历史名字</option>',...names.map(n=>`<option value="${escapeHTML(n)}" ${myTraceNameFilterV16===n?'selected':''}>${escapeHTML(n)}</option>`)].join('');
+  const entryHtml=e=>{
+    const i=e.item,name=escapeHTML(authorSnapshot(i)),date=traceDateV16(e.ts);
+    if(e.kind==='note')return `<article class="trace-card-v16" data-trace-kind="note"><div class="trace-card-head-v16"><span>✎ 留言</span><small>${date} · ${name}${editedMarker(i)}</small></div><p>${escapeHTML(i.text||'')}</p><div class="memory-detail-actions"><button class="button secondary small press" data-my-note-edit="${escapeHTML(i.id)}">✎ 修改</button><button class="button danger small press" data-my-note-delete="${escapeHTML(i.id)}">⌫ 删除</button></div></article>`;
+    if(e.kind==='memento')return `<article class="trace-card-v16" data-trace-kind="memento"><div class="trace-card-head-v16"><span>${i.type||'✦'} 纪念物</span><small>${date} · ${name}${editedMarker(i)}</small></div><p><b>${escapeHTML(i.title||'纪念物')}</b><br>${escapeHTML(i.meaning||'')}</p><button class="mini-manage press" data-my-memento="${escapeHTML(i.id)}">管理这件纪念物</button></article>`;
+    if(e.kind==='photo')return `<article class="trace-card-v16" data-trace-kind="photo"><div class="trace-card-head-v16"><span>📷 合影</span><small>${date} · ${name}</small></div><p>${(i.names||[]).map(escapeHTML).join('、')||'一次合影'}</p><button class="button danger small press" data-my-photo-delete="${escapeHTML(i.id)}">⌫ 删除这次记录</button></article>`;
+    return `<article class="trace-card-v16" data-trace-kind="quest"><div class="trace-card-head-v16"><span>✦ Outside</span><small>${date} · ${name}${editedMarker(i)}</small></div><p><b>${escapeHTML(i.title||'门外回忆')}</b><br>${escapeHTML(i.text||'')}</p><div class="memory-detail-actions"><button class="button secondary small press" data-my-quest-edit="${escapeHTML(i.id)}">✎ 修改</button><button class="button danger small press" data-my-quest-delete="${escapeHTML(i.id)}">⌫ 删除</button></div></article>`;
+  };
+  const timeline=[...groups.entries()].map(([year,list])=>`<section class="trace-year-v16"><div class="trace-year-label-v16"><b>${escapeHTML(year)}</b><span>${list.length} 条</span></div><div class="trace-year-list-v16">${list.map(entryHtml).join('')}</div></section>`).join('');
+  const empty='<div class="activity-row">这个筛选条件下还没有内容。</div>';
+  showDrawer('我留下的',`
+    <div class="drawer-section my-traces-summary-v16">
+      <h4>PRIVATE TIMELINE · 只有你能看到</h4>
+      <div class="person-row"><span>跨名字留下的内容</span><b>${entries.length}</b></div>
+      <small>系统只在你本人视角把历史身份连续起来。别人仍只会看到每条回忆当时的名字。</small>
+      <div class="trace-recovery-row-v16"><button id="myTraceRecoveryV16" class="button secondary full press">⇄ 换设备继续 · 保存/恢复个人身份</button></div>
+    </div>
+    <div class="drawer-section trace-controls-v16">
+      <h4>整理方式</h4>
+      <div class="trace-filter-row-v16">${typeButtons}</div>
+      <label class="trace-name-filter-v16"><span>按历史名字</span><select id="myTraceNameFilterV16">${nameOptions}</select></label>
+    </div>
+    <div class="drawer-section my-trace-timeline-v16"><h4>我的时间线 · 按年份</h4>${timeline||empty}</div>`);
   setTimeout(()=>{
+    $$('[data-trace-type-v16]').forEach(b=>b.onclick=()=>{myTraceTypeFilterV16=b.dataset.traceTypeV16;openMyTracesDrawer()});
+    $('#myTraceNameFilterV16').onchange=e=>{myTraceNameFilterV16=e.target.value;openMyTracesDrawer()};
+    $('#myTraceRecoveryV16').onclick=()=>window.PixelRecovery?.open?.();
     $$('[data-my-note-edit]').forEach(b=>b.onclick=()=>{const n=notes.find(x=>x.id===b.dataset.myNoteEdit);if(n)openNoteEdit(n,openMyTracesDrawer)});
     $$('[data-my-note-delete]').forEach(b=>b.onclick=()=>{const n=notes.find(x=>x.id===b.dataset.myNoteDelete);if(n)removeOwnNote(n,openMyTracesDrawer)});
     $$('[data-my-memento]').forEach(b=>b.onclick=()=>{const m=mementos.find(x=>x.id===b.dataset.myMemento);if(m)openMementoDetail(m)});
