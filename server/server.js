@@ -305,16 +305,23 @@ function stampAuthorSnapshot(item) {
   const name=cleanAuthorName(item.authorName || item.by);
   item.authorName=name;
   if (!item.by) item.by=name;
+  delete item.authorAvatar;
+  delete item.authorAppearance;
+  delete item.authorHair;
+  delete item.authorOutfit;
+  delete item.authorItem;
+  delete item.authorSprite;
   return item;
 }
 function addAuthoredUnique(arr,item) {
   if (!item?.id) return;
-  const i=arr.findIndex(x=>x.id===item.id);
+  const incoming=stampAuthorSnapshot({...item});
+  const i=arr.findIndex(x=>x.id===incoming.id);
   if(i>=0){
     const prev=arr[i];
-    arr[i]={...prev,...item,authorId:prev.authorId,authorName:prev.authorName||prev.by||item.authorName||item.by,by:prev.by||prev.authorName||item.by||item.authorName};
+    arr[i]={...prev,...incoming,authorId:prev.authorId,authorName:prev.authorName||prev.by||incoming.authorName||incoming.by,by:prev.by||prev.authorName||incoming.by||incoming.authorName};
   }else{
-    arr.push(stampAuthorSnapshot({...item}));
+    arr.push(incoming);
   }
 }
 function applyMemoryOp(r, op) {
@@ -328,9 +335,11 @@ function applyMemoryOp(r, op) {
   if (op.kind === 'memento:update') {
     const item = r.memory.mementos.find(x => x.id === op.id);
     if (item) {
-      if (typeof op.title === 'string') item.title = op.title.slice(0,80);
-      if (typeof op.meaning === 'string') item.meaning = op.meaning.slice(0,500);
-      if (typeof op.type === 'string') item.type = op.type.slice(0,8);
+      let changed=false;
+      if (typeof op.title === 'string') { const v=op.title.slice(0,80); changed=changed||v!==item.title; item.title=v; }
+      if (typeof op.meaning === 'string') { const v=op.meaning.slice(0,500); changed=changed||v!==item.meaning; item.meaning=v; }
+      if (typeof op.type === 'string') { const v=op.type.slice(0,8); changed=changed||v!==item.type; item.type=v; }
+      if (changed) { op.editedAt=Date.now(); item.editedAt=op.editedAt; }
     }
   }
   if (op.kind === 'memento:hide') {
@@ -339,6 +348,13 @@ function applyMemoryOp(r, op) {
   }
   if (op.kind === 'memento:remove') r.memory.mementos = r.memory.mementos.filter(x => x.id !== op.id);
   if (op.kind === 'note:add') addAuthoredUnique(r.memory.notes, op.item);
+  if (op.kind === 'note:update') {
+    const item=r.memory.notes.find(x=>x.id===op.id);
+    if(item&&typeof op.text==='string'){
+      const v=op.text.slice(0,120);
+      if(v!==item.text){item.text=v;op.editedAt=Date.now();item.editedAt=op.editedAt;}
+    }
+  }
   if (op.kind === 'note:remove') r.memory.notes = r.memory.notes.filter(x => x.id !== op.id);
   if (op.kind === 'photo:add') addAuthoredUnique(r.memory.photos, op.item);
   if (op.kind === 'photo:remove') r.memory.photos = r.memory.photos.filter(x => x.id !== op.id);
@@ -360,8 +376,10 @@ function applyQuestOp(r, op) {
   if (op.kind === 'update') {
     const item = r.quest.items.find(x => x.id === op.id);
     if (item) {
-      if (typeof op.title === 'string') item.title = op.title.slice(0,100);
-      if (typeof op.text === 'string') item.text = op.text.slice(0,800);
+      let changed=false;
+      if (typeof op.title === 'string') { const v=op.title.slice(0,100); changed=changed||v!==item.title; item.title=v; }
+      if (typeof op.text === 'string') { const v=op.text.slice(0,800); changed=changed||v!==item.text; item.text=v; }
+      if (changed) { op.editedAt=Date.now(); item.editedAt=op.editedAt; }
     }
   }
   if (op.kind === 'hide') {
@@ -376,7 +394,7 @@ function applyQuestOp(r, op) {
 function itemForOp(r, scope, op) {
   if (scope === 'memory') {
     if (op.kind?.startsWith('memento:')) return r.memory.mementos.find(x=>x.id===op.id) || null;
-    if (op.kind === 'note:remove') return r.memory.notes.find(x=>x.id===op.id) || null;
+    if (op.kind === 'note:update' || op.kind === 'note:remove') return r.memory.notes.find(x=>x.id===op.id) || null;
     if (op.kind === 'photo:remove') return r.memory.photos.find(x=>x.id===op.id) || null;
   }
   if (scope === 'quest' && ['move','hide','remove'].includes(op.kind)) return r.quest.items.find(x=>x.id===op.id) || null;
@@ -396,7 +414,7 @@ function authorizeOp(req, r, scope, op) {
     }
     return { ok:true, role:'author', actorId:actor.id };
   }
-  if (scope === 'memory' && op?.kind === 'memento:update') {
+  if (scope === 'memory' && new Set(['memento:update','note:update']).has(op?.kind)) {
     const item=itemForOp(r,scope,op);
     if (!item) return { ok:false, error:'item_not_found', status:404 };
     const actor=verifyActor(req,r);
@@ -465,7 +483,7 @@ const server = http.createServer(async (req, res) => {
   const pathname = u.pathname;
   try {
     sweepExpiredArchives();
-    if (pathname === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, version: 'v15.14', rooms: Object.keys(rooms).length, archivedRooms: Object.values(rooms).filter(r=>isArchived(r)).length, retentionDays:30, connections: connectionCount(), roomStore: roomStore.info().kind, blobStore: blobStore.info().kind, durableDataDir: !!process.env.PIXEL_DATA_DIR, durableUploadDir: !!process.env.PIXEL_UPLOAD_DIR, time: Date.now() });
+    if (pathname === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, version: 'v15.15', rooms: Object.keys(rooms).length, archivedRooms: Object.values(rooms).filter(r=>isArchived(r)).length, retentionDays:30, connections: connectionCount(), roomStore: roomStore.info().kind, blobStore: blobStore.info().kind, durableDataDir: !!process.env.PIXEL_DATA_DIR, durableUploadDir: !!process.env.PIXEL_UPLOAD_DIR, time: Date.now() });
     if (pathname === '/api/rooms' && req.method === 'POST') {
       const body = JSON.parse((await readBody(req)).toString('utf8') || '{}');
       const code = String(body.code || randomCode()).toUpperCase();
@@ -654,14 +672,14 @@ const server = http.createServer(async (req, res) => {
       const auth=authorizeOp(req,r,scope,op);
       if (!auth.ok) return json(res, auth.status || (auth.error === 'item_not_found' ? 404 : 403), { error: auth.error || 'forbidden' });
       if (scope === 'memory') {
-        if (auth.role === 'owner' && ['memento:move','memento:hide','memento:remove'].includes(op?.kind)) {
+        if (op?.kind === 'memento:remove' || (auth.role === 'owner' && ['memento:move','memento:hide'].includes(op?.kind))) {
           recordRevision(r,'mementos',r.memory.mementos || [], op.kind === 'memento:remove' ? '删除纪念物前' : '整理纪念物前');
         }
         applyMemoryOp(r, op);
       }
       else if (scope === 'quest') {
-        if (auth.role === 'owner' && ['move','hide','remove','clear','set'].includes(op?.kind)) {
-          recordRevision(r,'quest',r.quest.items || [], '整理门外回忆前');
+        if (op?.kind === 'remove' || (auth.role === 'owner' && ['move','hide','clear','set'].includes(op?.kind))) {
+          recordRevision(r,'quest',r.quest.items || [], op.kind === 'remove' ? '删除门外回忆前' : '整理门外回忆前');
         }
         applyQuestOp(r, op);
       }
@@ -871,4 +889,4 @@ server.on('upgrade', (req, socket) => {
 const retentionSweep=setInterval(()=>{try{sweepExpiredArchives()}catch(e){console.error('retention sweep',e)}},60*60*1000);
 retentionSweep.unref?.();
 
-server.listen(PORT, () => console.log(`Pixel Memory V15.14 server: http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`Pixel Memory V15.15 server: http://localhost:${PORT}`));
