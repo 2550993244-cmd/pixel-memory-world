@@ -159,3 +159,23 @@ body.pm-world .quest-stage.pm-camera-active .pm-camera-world-v15{transition:none
   body.pm-world .pm-sprite[data-action] .pm-arm-b,
   body.pm-world .pm-sprite[data-action] .pm-sprite-core{animation:none!important}
 }
+
+/* V15.1 editor history controls */
+body.pm-world .pm-room-editor-toolbar-v15 button:disabled{
+  opacity:.38;
+  cursor:not-allowed;
+  transform:none!important;
+}
+body.pm-world .pm-room-editor-toolbar-v15 button:disabled:active{transform:none!important}
+body.pm-world .pm-room-editor-toolbar-v15 [data-room-editor-undo],
+body.pm-world .pm-room-editor-toolbar-v15 [data-room-editor-redo]{
+  min-width:62px;
+}
+@media(max-width:700px){
+  body.pm-world .pm-room-editor-toolbar-v15{
+    grid-template-columns:repeat(3,1fr);
+  }
+  body.pm-world .pm-room-editor-toolbar-v15 [data-room-editor-done]{
+    grid-column:auto;
+  }
+}
