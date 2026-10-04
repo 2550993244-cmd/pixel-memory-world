@@ -126,7 +126,7 @@
     const points=rt.pathPoints?.()||[];
     const d=tiledPathD(points);
     if(d){
-      $('.pm-path-bank,.pm-path-core,.pm-path-dashes').forEach(path=>path.setAttribute('d',d));
+      $$('.pm-path-bank,.pm-path-core,.pm-path-dashes').forEach(path=>path.setAttribute('d',d));
     }
     const fishing=rt.object?.('fishing');
     const fishEl=$('#questFishingSpot');
