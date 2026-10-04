@@ -30,7 +30,7 @@
     }catch(_){lenis=null}
   }
 
-  var screens=$('.screen');
+  var screens=$$('.screen');
   var lastScreenId=null;
   function activeScreen(){return screens.find(function(s){return s.classList.contains('active')})||null}
   function syncScreen(){
