@@ -66,8 +66,8 @@ const { chromium } = require('playwright');
     inviteVersion: window.PixelInvite?.version || null
   }));
   console.log('V15_1_DIAG', v15Diag);
-  if (v15Diag.runtime?.version !== '15.9') throw new Error('V15.9 systems runtime missing');
-  if (v15Diag.retentionVersion !== '15.5' || v15Diag.recoveryVersion !== '15.7' || v15Diag.inviteVersion !== '15.9') throw new Error('V15.9 invite/retention/recovery runtime missing');
+  if (v15Diag.runtime?.version !== '15.10') throw new Error('V15.10 systems runtime missing');
+  if (v15Diag.retentionVersion !== '15.5' || v15Diag.recoveryVersion !== '15.7' || v15Diag.inviteVersion !== '15.10') throw new Error('V15.10 invite/retention/recovery runtime missing');
   if (v15Diag.sceneVersion !== '15.0') throw new Error('V15 layered scene map missing');
   if (v15Diag.mapRuntime.source !== 'tiled-json' || v15Diag.mapRuntime.collisionCount < 3 || v15Diag.mapRuntime.pathCount < 6) {
     throw new Error('V15.1 Tiled map runtime did not load canonical JSON');
@@ -381,7 +381,45 @@ const { chromium } = require('playwright');
     throw new Error('V15.8 spectator cleanup failed '+JSON.stringify({spectatorClosed,viewerErrors}));
   }
 
-  await page.evaluate(()=>addActivity('CI identity check'));
+  // V15.10 D010=A: contributor must deliberately create a visible identity before entering.
+  const contributorUrl=await page.evaluate(()=>PixelInvite.shareUrl(state.roomCode,'contributor'));
+  const contributorErrors=[];
+  const contributorPage=await browser.newPage({viewport:{width:1100,height:800}});
+  contributorPage.on('pageerror',e=>contributorErrors.push('PAGEERROR: '+(e.stack||e.message)));
+  contributorPage.on('console',m=>{if(m.type()==='error')contributorErrors.push('CONSOLE: '+m.text())});
+  await contributorPage.goto(contributorUrl,{waitUntil:'networkidle'});
+  await contributorPage.waitForFunction(()=>document.querySelector('#avatarBuilder')?.classList.contains('active'),null,{timeout:5000});
+  const contributorEntryAudit=await contributorPage.evaluate(()=>({
+    role:state.accessRole,
+    screen:state.screen,
+    worldActive:document.querySelector('#world')?.classList.contains('active')||false,
+    noteVisible:document.querySelector('#contributorIdentityNoteV15')?.classList.contains('hidden')===false,
+    noteText:document.querySelector('#contributorIdentityNoteV15')?.innerText||'',
+    nameVisible:!!document.querySelector('#playerNameInput')?.offsetParent
+  }));
+  if(contributorEntryAudit.role!=='contributor'||contributorEntryAudit.screen!=='avatarBuilder'||contributorEntryAudit.worldActive||!contributorEntryAudit.noteVisible||!/作者身份/.test(contributorEntryAudit.noteText)||!contributorEntryAudit.nameVisible) {
+    throw new Error('V15.10 contributor skipped ceremonial avatar setup '+JSON.stringify(contributorEntryAudit));
+  }
+  await contributorPage.locator('#playerNameInput').fill('参与者测试');
+  await contributorPage.locator('[data-hair="3"]').click();
+  await contributorPage.locator('[data-outfit="butter"]').click();
+  await contributorPage.locator('[data-item="🎈"]').click();
+  await contributorPage.locator('#enterWorldBtn').click();
+  await contributorPage.waitForFunction(()=>document.querySelector('#world')?.classList.contains('active'),null,{timeout:5000});
+  await page.waitForFunction(()=>[...state.players.values()].some(p=>p.name==='参与者测试'),null,{timeout:5000});
+  const contributorVisibleAudit=await page.evaluate(()=>{
+    const p=[...state.players.values()].find(p=>p.name==='参与者测试');
+    return p?{name:p.name,hair:p.hair,outfit:p.outfit,item:p.item,actorId:p.actorId||''}:null;
+  });
+  if(!contributorVisibleAudit||contributorVisibleAudit.hair!=='3'||contributorVisibleAudit.outfit!=='butter'||contributorVisibleAudit.item!=='🎈'||!contributorVisibleAudit.actorId) {
+    throw new Error('V15.10 contributor visible identity did not propagate '+JSON.stringify(contributorVisibleAudit));
+  }
+  await contributorPage.close();
+  await page.waitForFunction(()=>![...state.players.values()].some(p=>p.name==='参与者测试'),null,{timeout:5000});
+  console.log('V15_10_CONTRIBUTOR_ENTRY_AUDIT',{entry:contributorEntryAudit,visible:contributorVisibleAudit,errors:contributorErrors});
+  if(contributorErrors.length)throw new Error('V15.10 contributor page errors '+JSON.stringify(contributorErrors));
+
+    await page.evaluate(()=>addActivity('CI identity check'));
   await page.waitForTimeout(80);
   const identityAudit=await page.evaluate(()=>({
     actor:window.PixelIdentity?.actorId||'',
@@ -916,7 +954,7 @@ const { chromium } = require('playwright');
     throw new Error('Browser errors:\n' + errors.join('\n'));
   }
 
-  console.log('SMOKE_OK V15.9 instant spectators -> invisible viewers -> dual invite roles -> archive retention -> recovery -> curator -> warm atlas -> tiled camera -> revisions -> join');
+  console.log('SMOKE_OK V15.10 contributor ceremony -> instant spectators -> invisible viewers -> dual invite roles -> archive retention -> recovery -> curator -> warm atlas -> tiled camera -> revisions -> join');
   await browser.close();
 })().catch(async err => {
   console.error(err);
