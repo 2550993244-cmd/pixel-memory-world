@@ -68,7 +68,9 @@
       if (baseUrl && 'WebSocket' in window) {
         const wsBase = baseUrl.replace(/^http:/,'ws:').replace(/^https:/,'wss:');
         const invite=getInviteToken(this.roomCode);
-        const url = `${wsBase}/ws?room=${encodeURIComponent(this.roomCode)}&channel=${encodeURIComponent(this.name)}&player=${encodeURIComponent(this.playerId||'anon')}${invite?'&invite='+encodeURIComponent(invite):''}`;
+        const actor=getActorCredential();
+        const actorQuery=actor.id&&actor.token?`&actorId=${encodeURIComponent(actor.id)}&actorToken=${encodeURIComponent(actor.token)}`:'';
+        const url = `${wsBase}/ws?room=${encodeURIComponent(this.roomCode)}&channel=${encodeURIComponent(this.name)}&player=${encodeURIComponent(this.playerId||'anon')}${invite?'&invite='+encodeURIComponent(invite):''}${actorQuery}`;
         try {
           this.ws = new WebSocket(url);
           this.ws.onopen = () => {
@@ -226,7 +228,7 @@
       return room;
     },
     async getRoom(code){
-      const room=await api(`/api/rooms/${encodeURIComponent(code)}`,{headers:accessHeaders(code)});
+      const room=await api(`/api/rooms/${encodeURIComponent(code)}`,{headers:mutationHeaders(code)});
       if(room?.accessRole==='viewer')saveInviteRole(code,'viewer');
       else if(room?.accessRole==='contributor')saveInviteRole(code,'contributor');
       return room;
