@@ -261,13 +261,15 @@
   function questObstacle(nx, ny) {
     // V15: collision comes from the authored map layer, with the old values as
     // a backward-compatible fallback for cached / older scene data.
+    const runtime = window.PixelMapRuntime;
     const layer = window.PixelSceneMap?.outdoor?.layers?.collision;
-    const blocks = Array.isArray(layer?.ellipses) && layer.ellipses.length ? layer.ellipses : [
+    const runtimeBlocks = runtime?.collisionEllipses?.() || [];
+    const blocks = runtimeBlocks.length ? runtimeBlocks : (Array.isArray(layer?.ellipses) && layer.ellipses.length ? layer.ellipses : [
       {x:19,y:32,rx:12,ry:13},
       {x:41,y:29,rx:9,ry:9},
       {x:83,y:26,rx:10,ry:10}
-    ];
-    const b = layer?.bounds || {left:3.5,right:96.5,top:8,bottom:93};
+    ]);
+    const b = runtime?.collisionBounds?.() || layer?.bounds || {left:3.5,right:96.5,top:8,bottom:93};
     if (nx < b.left || nx > b.right || ny < b.top || ny > b.bottom) return true;
     return blocks.some(o => (((nx-o.x)/o.rx)**2 + ((ny-o.y)/o.ry)**2) < 1);
   }
