@@ -245,5 +245,5 @@
     requestAnimationFrame(visualLoop);
   }
   visualLoop();
-  var brandSmall=$('.brand small');if(brandSmall)brandSmall.textContent='PIXEL MEMORY · V12 WORLD';
+  var brandSmall=$('.brand small');if(brandSmall)brandSmall.textContent='PIXEL MEMORY · V15.2';
 })();
