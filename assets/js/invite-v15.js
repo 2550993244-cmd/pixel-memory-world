@@ -1,4 +1,4 @@
-/* Pixel Memory World · V15.8 invite roles + invisible spectator mode */
+/* Pixel Memory World · V15.9 instant spectator entry + local avatar customization */
 (() => {
   const $=(s,r=document)=>r.querySelector(s);
 
@@ -78,8 +78,13 @@
     const result=await loadRoomRemote(code);
     if(result===true){
       closeModal();
-      showScreen('avatarBuilder');
-      toast(role==='viewer'?'只看邀请验证成功':'参与邀请验证成功');
+      if(role==='viewer'){
+        enterViewerWorld();
+        toast('已经打开这份纪念 · 你的小人只有自己看得到');
+      }else{
+        showScreen('avatarBuilder');
+        toast('参与邀请验证成功');
+      }
       return true;
     }
     if(result==='archived')return false;
@@ -172,7 +177,7 @@
   },0);
 
   const apiState={
-    version:'15.8',
+    version:'15.9',
     rotatingRole:'',
     tokenFromText,
     ensureToken,
