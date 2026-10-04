@@ -1,8 +1,8 @@
 {
   "name": "pixel-memory-world-server",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "private": true,
-  "description": "Realtime room server for Pixel Memory World V15.1",
+  "description": "Realtime room server for Pixel Memory World V15.2",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
