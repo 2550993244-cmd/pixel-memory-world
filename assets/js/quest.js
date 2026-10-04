@@ -117,6 +117,7 @@
     if (!op?.kind) return;
     if (op.kind === 'add' && op.item && !questState.items.some(x => x.id === op.item.id)) questState.items.push(op.item);
     if (op.kind === 'move') { const item = questState.items.find(x => x.id === op.id); if (item) { item.x = Number(op.x); item.y = Number(op.y); } }
+    if (op.kind === 'update') { const item = questState.items.find(x => x.id === op.id); if (item) { if(typeof op.title==='string')item.title=op.title;if(typeof op.text==='string')item.text=op.text; } }
     if (op.kind === 'hide') { const item = questState.items.find(x => x.id === op.id); if (item) item.hidden=!!op.hidden; }
     if (op.kind === 'remove') questState.items = questState.items.filter(x=>x.id!==op.id);
     if (op.kind === 'clear') { questState.items = []; questState.found.clear(); }
@@ -213,7 +214,8 @@
       if (!revealed) return;
       const near = questState.nearby?.id === item.id;
       const el = document.createElement('div');
-      el.className = `quest-memory${found ? ' found' : ' mystery'}${near ? ' near' : ''}`;
+      const canCurate=!window.PixelNet?.enabled||!!window.PixelNet?.hasOwnerToken?.(state.roomCode)||item.authorId===state.player.actorId;
+      el.className = `quest-memory${found ? ' found' : ' mystery'}${near ? ' near' : ''}${canCurate ? ' curatable' : ' locked'}`;
       el.dataset.id = item.id;
       el.style.left = `${item.x}%`;
       el.style.top = `${item.y}%`;
@@ -536,7 +538,33 @@
       addActivity(`${state.player.name} 找到了「${item.title}」`);
     }
     const voiceHtml = (item.voiceKey||item.voiceUrl) ? `<div class="memory-voice"><button id="questPlayVoice" class="press">▶</button><div><b>有人把声音留在这里</b><small>点一下，听听当时想说的话</small></div></div>` : '';
-    openModal('MEMORY FOUND', escapeHTML(item.title), `<div class="memory-found-card"><div class="memory-found-visual">${item.image ? `<img src="${item.image}" alt="">` : `<span>${item.icon || '✦'}</span>`}</div><div class="memory-found-copy">${escapeHTML(item.text || '有人觉得这一刻值得被留下。')}</div>${voiceHtml}<div class="memory-detail-meta">${escapeHTML(item.by || '朋友')} 把它藏在这条路上 · 第 ${item.order || 1} 站</div></div>`);
+    const owner=!window.PixelNet?.enabled||!!window.PixelNet?.hasOwnerToken?.(state.roomCode);
+    const author=item.authorId===state.player.actorId;
+    const manage=(owner||author)?`<div class="memory-detail-actions">${author?'<button id="questEditOwn" class="button secondary small press">✎ 修改文字</button>':''}<button id="questHideMemory" class="button secondary small press">${item.hidden?'◉ 重新显示':'◌ 暂时收起'}</button><button id="questRemoveMemory" class="button danger small press">⌫ 移除</button></div>`:'';
+    openModal('MEMORY FOUND', escapeHTML(item.title), `<div class="memory-found-card"><div class="memory-found-visual">${item.image ? `<img src="${item.image}" alt="">` : `<span>${item.icon || '✦'}</span>`}</div><div class="memory-found-copy">${escapeHTML(item.text || '有人觉得这一刻值得被留下。')}</div>${voiceHtml}<div class="memory-detail-meta">${escapeHTML(item.by || '朋友')} 把它藏在这条路上 · 第 ${item.order || 1} 站</div>${manage}</div>`);
+    if (owner||author) {
+      setTimeout(()=>{
+        $('#questHideMemory')&&($('#questHideMemory').onclick=async()=>{
+          const ok=await questOp({kind:'hide',id:item.id,hidden:!item.hidden});
+          if(ok){closeModal();renderQuestItems();toast(item.hidden?'已经重新放回地图':'已经先从地图收起来')}
+        });
+        $('#questRemoveMemory')&&($('#questRemoveMemory').onclick=async()=>{
+          if(!confirm(`确定移除「${item.title}」吗？房主操作会保留可恢复历史。`))return;
+          const ok=await questOp({kind:'remove',id:item.id});
+          if(ok){closeModal();renderQuestItems();toast('已经从门外地图移除了')}
+        });
+        $('#questEditOwn')&&($('#questEditOwn').onclick=()=>{
+          if(!author)return;
+          openModal('EDIT YOUR MEMORY','修改你藏下的回忆',`<div class="modal-form"><label class="field"><span>标题</span><input id="questEditTitle" maxlength="40" value="${escapeHTML(item.title)}"></label><label class="field"><span>想说的话</span><textarea id="questEditText" rows="4" maxlength="280">${escapeHTML(item.text||'')}</textarea></label><button id="questSaveEdit" class="button primary full press">保存修改 <span>→</span></button></div>`);
+          setTimeout(()=>$('#questSaveEdit').onclick=async()=>{
+            const title=$('#questEditTitle').value.trim()||item.title;
+            const text=$('#questEditText').value.trim()||item.text||'';
+            const ok=await questOp({kind:'update',id:item.id,title,text});
+            if(ok){closeModal();renderQuestItems();toast('这段门外回忆已经更新')}
+          },0)
+        });
+      },0);
+    }
     if (item.voiceKey || item.voiceUrl) {
       setTimeout(() => {
         const btn = $('#questPlayVoice');
@@ -713,6 +741,8 @@
     if(!node)return;
     dragItem=questState.items.find(x=>x.id===node.dataset.id)||null;
     if(!dragItem)return;
+    const canCurate=!window.PixelNet?.enabled||!!window.PixelNet?.hasOwnerToken?.(state.roomCode)||dragItem.authorId===state.player.actorId;
+    if(!canCurate){dragItem=null;return toast('这段回忆只能由原作者或房主移动')}
     dragOrigin={x:dragItem.x,y:dragItem.y};
     e.preventDefault();
     questStage.setPointerCapture?.(e.pointerId);
