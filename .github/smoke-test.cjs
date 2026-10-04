@@ -66,8 +66,8 @@ const { chromium } = require('playwright');
     inviteVersion: window.PixelInvite?.version || null
   }));
   console.log('V15_1_DIAG', v15Diag);
-  if (v15Diag.runtime?.version !== '15.11') throw new Error('V15.11 systems runtime missing');
-  if (v15Diag.retentionVersion !== '15.5' || v15Diag.recoveryVersion !== '15.7' || v15Diag.inviteVersion !== '15.11') throw new Error('V15.11 invite/retention/recovery runtime missing');
+  if (v15Diag.runtime?.version !== '15.12') throw new Error('V15.12 systems runtime missing');
+  if (v15Diag.retentionVersion !== '15.5' || v15Diag.recoveryVersion !== '15.7' || v15Diag.inviteVersion !== '15.12') throw new Error('V15.12 invite/retention/recovery runtime missing');
   if (v15Diag.sceneVersion !== '15.0') throw new Error('V15 layered scene map missing');
   if (v15Diag.mapRuntime.source !== 'tiled-json' || v15Diag.mapRuntime.collisionCount < 3 || v15Diag.mapRuntime.pathCount < 6) {
     throw new Error('V15.1 Tiled map runtime did not load canonical JSON');
@@ -426,6 +426,45 @@ const { chromium } = require('playwright');
   if(!contributorVisibleAudit||contributorVisibleAudit.hair!=='3'||contributorVisibleAudit.outfit!=='butter'||contributorVisibleAudit.item!=='🎈'||!contributorVisibleAudit.actorId) {
     throw new Error('V15.10 contributor visible identity did not propagate '+JSON.stringify(contributorVisibleAudit));
   }
+
+  // V15.12 D012=A: contributor can change visible appearance live, but current visit name stays fixed.
+  const contributorAvatarButtonAudit=await contributorPage.evaluate(()=>({
+    visible:document.querySelector('#viewerAvatarBtnV15')?.classList.contains('hidden')===false,
+    label:document.querySelector('#viewerAvatarBtnV15')?.innerText||'',
+    name:state.player.name
+  }));
+  if(!contributorAvatarButtonAudit.visible||contributorAvatarButtonAudit.name!=='参与者测试') {
+    throw new Error('V15.12 contributor in-room avatar control missing '+JSON.stringify(contributorAvatarButtonAudit));
+  }
+  await contributorPage.locator('#viewerAvatarBtnV15').click();
+  await contributorPage.waitForSelector('#saveContributorAvatarV15',{timeout:3000});
+  const contributorEditorAudit=await contributorPage.evaluate(()=>({
+    title:document.querySelector('#modal')?.innerText||'',
+    hasNameInput:!!document.querySelector('#modal input[type="text"], #modal #playerNameInput'),
+    playerName:state.player.name
+  }));
+  if(contributorEditorAudit.hasNameInput||contributorEditorAudit.playerName!=='参与者测试'||!/名字这次保持不变/.test(contributorEditorAudit.title)) {
+    throw new Error('V15.12 contributor editor allows current-visit rename '+JSON.stringify(contributorEditorAudit));
+  }
+  await contributorPage.locator('[data-contributor-hair="2"]').click();
+  await contributorPage.locator('[data-contributor-outfit="blue"]').click();
+  await contributorPage.locator('[data-contributor-item="📷"]').click();
+  await contributorPage.locator('#saveContributorAvatarV15').click();
+  await page.waitForFunction(()=>{
+    const p=[...state.players.values()].find(p=>p.name==='参与者测试');
+    return !!p&&p.hair==='2'&&p.outfit==='blue'&&p.item==='📷';
+  },null,{timeout:5000});
+  const liveAppearanceAudit=await page.evaluate(()=>{
+    const p=[...state.players.values()].find(p=>p.name==='参与者测试');
+    return p?{name:p.name,hair:p.hair,outfit:p.outfit,item:p.item}:null;
+  });
+  const contributorStoredProfile=await contributorPage.evaluate(()=>{
+    const key=Object.keys(localStorage).find(k=>k.startsWith('pixel-memory-contributor-profile-v1:'));
+    return key?JSON.parse(localStorage.getItem(key)||'null'):null;
+  });
+  if(!liveAppearanceAudit||liveAppearanceAudit.name!=='参与者测试'||liveAppearanceAudit.hair!=='2'||liveAppearanceAudit.outfit!=='blue'||liveAppearanceAudit.item!=='📷'||contributorStoredProfile?.name!=='参与者测试'||contributorStoredProfile?.hair!=='2'||contributorStoredProfile?.outfit!=='blue'||contributorStoredProfile?.item!=='📷') {
+    throw new Error('V15.12 live contributor appearance did not sync/persist '+JSON.stringify({liveAppearanceAudit,contributorStoredProfile}));
+  }
   await contributorPage.evaluate(()=>broadcast('leave'));
   await page.waitForFunction(()=>![...state.players.values()].some(p=>p.name==='参与者测试'),null,{timeout:5000});
 
@@ -443,13 +482,13 @@ const { chromium } = require('playwright');
     noteText:document.querySelector('#contributorIdentityNoteV15')?.innerText||'',
     profileKeys:Object.keys(localStorage).filter(k=>k.startsWith('pixel-memory-contributor-profile-v1:'))
   }));
-  if(returningContributorAudit.screen!=='avatarBuilder'||returningContributorAudit.worldActive||returningContributorAudit.name!=='参与者测试'||returningContributorAudit.hair!=='3'||returningContributorAudit.outfit!=='butter'||returningContributorAudit.item!=='🎈'||!returningContributorAudit.remembered||!/记得你/.test(returningContributorAudit.noteText)||returningContributorAudit.profileKeys.length!==1) {
+  if(returningContributorAudit.screen!=='avatarBuilder'||returningContributorAudit.worldActive||returningContributorAudit.name!=='参与者测试'||returningContributorAudit.hair!=='2'||returningContributorAudit.outfit!=='blue'||returningContributorAudit.item!=='📷'||!returningContributorAudit.remembered||!/记得你/.test(returningContributorAudit.noteText)||returningContributorAudit.profileKeys.length!==1) {
     throw new Error('V15.11 returning contributor profile was not prefilled '+JSON.stringify(returningContributorAudit));
   }
   const ownerBeforeReturningConfirm=await page.evaluate(()=>[...state.players.values()].some(p=>p.name==='参与者测试'));
   if(ownerBeforeReturningConfirm)throw new Error('V15.11 returning contributor became visible before confirming builder');
   await contributorPage.close();
-  console.log('V15_11_RETURNING_CONTRIBUTOR_AUDIT',{entry:contributorEntryAudit,visible:contributorVisibleAudit,returning:returningContributorAudit,errors:contributorErrors});
+  console.log('V15_12_CONTRIBUTOR_AVATAR_AUDIT',{entry:contributorEntryAudit,visible:contributorVisibleAudit,editor:contributorEditorAudit,live:liveAppearanceAudit,returning:returningContributorAudit,errors:contributorErrors});
   if(contributorErrors.length)throw new Error('V15.11 contributor page errors '+JSON.stringify(contributorErrors));
 
     await page.evaluate(()=>addActivity('CI identity check'));
@@ -987,7 +1026,7 @@ const { chromium } = require('playwright');
     throw new Error('Browser errors:\n' + errors.join('\n'));
   }
 
-  console.log('SMOKE_OK V15.11 returning contributor prefill -> contributor ceremony -> instant spectators -> invisible viewers -> dual invite roles -> archive retention -> recovery -> curator -> warm atlas -> tiled camera -> revisions -> join');
+  console.log('SMOKE_OK V15.12 live contributor appearance -> returning prefill -> contributor ceremony -> instant spectators -> invisible viewers -> dual invite roles -> archive retention -> recovery -> curator -> warm atlas -> tiled camera -> revisions -> join');
   await browser.close();
 })().catch(async err => {
   console.error(err);
