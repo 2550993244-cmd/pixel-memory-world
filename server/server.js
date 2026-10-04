@@ -45,9 +45,13 @@ function normalizeRoom(r) {
   if (!('archivedAt' in r.meta)) r.meta.archivedAt = null;
   if (!('purgeAfter' in r.meta)) r.meta.purgeAfter = null;
   r.meta.uploads ||= [];
+  if (!('inviteHash' in r)) r.inviteHash = null;
+  r.meta.inviteVersion ||= r.inviteHash ? 1 : 0;
+  r.meta.inviteRequired = !!r.inviteHash;
   return r;
 }
 function roomToken() { return crypto.randomBytes(24).toString('base64url'); }
+function inviteToken() { return crypto.randomBytes(24).toString('base64url'); }
 function tokenHash(token) { return crypto.createHash('sha256').update(String(token || '')).digest('hex'); }
 function isOwner(req, r) {
   if (!r.ownerHash) return false;
@@ -56,6 +60,21 @@ function isOwner(req, r) {
   const a = Buffer.from(tokenHash(token));
   const b = Buffer.from(r.ownerHash);
   return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+function inviteCredential(req) {
+  return String(req.headers['x-room-invite'] || '').trim();
+}
+function validSecretHash(secret, hash) {
+  if (!secret || !hash) return false;
+  const a=Buffer.from(tokenHash(secret)), b=Buffer.from(String(hash));
+  return a.length===b.length && crypto.timingSafeEqual(a,b);
+}
+function hasInviteAccess(req,r,{token=''}={}) {
+  normalizeRoom(r);
+  if (isOwner(req,r)) return true;
+  if (!r.inviteHash) return true;
+  const supplied=token || inviteCredential(req);
+  return validSecretHash(supplied,r.inviteHash);
 }
 function actorCredential(req) {
   return {
@@ -87,7 +106,7 @@ function canCurate(req, r, item, { allowRegister=false } = {}) {
 }
 function publicRoom(r) {
   normalizeRoom(r);
-  const { ownerHash, actors, revisions, ...safe } = r;
+  const { ownerHash, inviteHash, actors, revisions, ...safe } = r;
   return safe;
 }
 function recordRevision(r, kind, data, label='') {
@@ -167,7 +186,7 @@ function json(res, status, obj) {
     'Content-Type': 'application/json; charset=utf-8',
     'Content-Length': b.length,
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, X-Room-Owner, X-Actor-Id, X-Actor-Token, X-Room-Code',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Room-Owner, X-Actor-Id, X-Actor-Token, X-Room-Code, X-Room-Invite',
     'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS'
   });
   res.end(b);
@@ -338,23 +357,24 @@ function connectionCount() { let n = 0; for (const s of channels.values()) n += 
 
 const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') {
-    res.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type, X-Room-Owner, X-Actor-Id, X-Actor-Token, X-Room-Code', 'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS' });
+    res.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type, X-Room-Owner, X-Actor-Id, X-Actor-Token, X-Room-Code, X-Room-Invite', 'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS' });
     return res.end();
   }
   const u = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = u.pathname;
   try {
     sweepExpiredArchives();
-    if (pathname === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, version: 'v15.5', rooms: Object.keys(rooms).length, archivedRooms: Object.values(rooms).filter(r=>isArchived(r)).length, retentionDays:30, connections: connectionCount(), roomStore: roomStore.info().kind, blobStore: blobStore.info().kind, durableDataDir: !!process.env.PIXEL_DATA_DIR, durableUploadDir: !!process.env.PIXEL_UPLOAD_DIR, time: Date.now() });
+    if (pathname === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, version: 'v15.6', rooms: Object.keys(rooms).length, archivedRooms: Object.values(rooms).filter(r=>isArchived(r)).length, retentionDays:30, connections: connectionCount(), roomStore: roomStore.info().kind, blobStore: blobStore.info().kind, durableDataDir: !!process.env.PIXEL_DATA_DIR, durableUploadDir: !!process.env.PIXEL_UPLOAD_DIR, time: Date.now() });
     if (pathname === '/api/rooms' && req.method === 'POST') {
       const body = JSON.parse((await readBody(req)).toString('utf8') || '{}');
       const code = String(body.code || randomCode()).toUpperCase();
       if (!validCode(code)) return json(res, 400, { error: 'invalid_room_code' });
       if (rooms[code]) return json(res, 409, { error: 'room_exists' });
       const ownerToken = roomToken();
-      rooms[code] = normalizeRoom({ code, world: body.world || {}, memory: body.memory || {}, quest: { items: [] }, music: null, ownerHash: tokenHash(ownerToken), createdAt: Date.now(), updatedAt: Date.now() });
+      const invite = inviteToken();
+      rooms[code] = normalizeRoom({ code, world: body.world || {}, memory: body.memory || {}, quest: { items: [] }, music: null, ownerHash: tokenHash(ownerToken), inviteHash: tokenHash(invite), meta:{inviteVersion:1}, createdAt: Date.now(), updatedAt: Date.now() });
       saveDB();
-      return json(res, 200, { ...publicRoom(rooms[code]), ownerToken });
+      return json(res, 200, { ...publicRoom(rooms[code]), ownerToken, inviteToken:invite });
     }
     const claimm = /^\/api\/rooms\/([A-Z0-9]{6})\/claim$/.exec(pathname);
     if (claimm && req.method === 'POST') {
@@ -398,6 +418,22 @@ const server = http.createServer(async (req, res) => {
         canImportActor: actorStatus === 'valid' || actorStatus === 'unknown' || actorStatus === 'missing'
       });
     }
+    const inviterotatem = /^\/api\/rooms\/([A-Z0-9]{6})\/invite\/rotate$/.exec(pathname);
+    if (inviterotatem && req.method === 'POST') {
+      const r=rooms[inviterotatem[1]];
+      if(!r) return json(res,404,{error:'room_not_found'});
+      if(!isOwner(req,r)) return json(res,403,{error:'owner_required'});
+      normalizeRoom(r);
+      if(isArchived(r)) return json(res,423,{error:'room_archived',purgeAfter:r.meta.purgeAfter});
+      const token=inviteToken();
+      r.inviteHash=tokenHash(token);
+      r.meta.inviteVersion=(Number(r.meta.inviteVersion)||0)+1;
+      r.meta.inviteRequired=true;
+      touchRoom(r);
+      closeRoomConnections(inviterotatem[1],'invite-rotated');
+      return json(res,200,{ok:true,inviteToken:token,inviteVersion:r.meta.inviteVersion});
+    }
+
     const archivem = /^\/api\/rooms\/([A-Z0-9]{6})\/archive$/.exec(pathname);
     if (archivem && req.method === 'POST') {
       const r = rooms[archivem[1]];
@@ -494,6 +530,7 @@ const server = http.createServer(async (req, res) => {
       const r = rooms[opm[1]];
       if (!r) return json(res, 404, { error: 'room_not_found' });
       if (isArchived(r)) return json(res, 423, { error:'room_archived', purgeAfter:r.meta.purgeAfter });
+      if (!hasInviteAccess(req,r)) return json(res,403,{error:'invite_required'});
       const b = JSON.parse((await readBody(req)).toString('utf8') || '{}');
       const scope=b.scope;
       const op=b.op;
@@ -525,6 +562,7 @@ const server = http.createServer(async (req, res) => {
       const r = rooms[rm[1]];
       if (!r) return json(res, 404, { error: 'room_not_found' });
       normalizeRoom(r);
+      if (!hasInviteAccess(req,r)) return json(res,404,{error:'room_not_found'});
       if (isArchived(r) && !isOwner(req,r)) return json(res, 410, { error:'room_archived', purgeAfter:r.meta.purgeAfter, recoveryDays:30 });
       r.meta.lastVisitedAt = Date.now();
       saveDB();
@@ -534,6 +572,7 @@ const server = http.createServer(async (req, res) => {
       const r = rooms[rm[1]];
       if (!r) return json(res, 404, { error: 'room_not_found' });
       if (isArchived(r)) return json(res, 423, { error:'room_archived', purgeAfter:r.meta.purgeAfter });
+      if (!hasInviteAccess(req,r)) return json(res,403,{error:'invite_required'});
       const b = JSON.parse((await readBody(req)).toString('utf8') || '{}');
       if (b.memory || b.quest) return json(res, 400, { error:'snapshot_write_disabled', hint:'use_authorized_ops' });
       if (b.world) {
@@ -556,6 +595,7 @@ const server = http.createServer(async (req, res) => {
         if (!uploadRoom) return json(res,404,{error:'room_not_found'});
         normalizeRoom(uploadRoom);
         if (isArchived(uploadRoom)) return json(res,423,{error:'room_archived'});
+        if(!hasInviteAccess(req,uploadRoom)) return json(res,403,{error:'invite_required'});
         const auth=isOwner(req,uploadRoom)?{ok:true}:verifyActor(req,uploadRoom,{allowRegister:true});
         if(!auth.ok) return json(res,403,{error:auth.error||'forbidden'});
       }
@@ -634,12 +674,19 @@ server.on('upgrade', (req, socket) => {
   const player = u.searchParams.get('player') || 'anon';
   if (!validCode(room)) return socket.destroy();
   const roomState=rooms[room];
-  if (roomState) {
-    normalizeRoom(roomState);
-    if (isArchived(roomState)) {
-      socket.write('HTTP/1.1 410 Gone\r\nConnection: close\r\n\r\n');
-      return socket.end();
-    }
+  if (!roomState) {
+    socket.write('HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n');
+    return socket.end();
+  }
+  normalizeRoom(roomState);
+  const wsInvite=String(u.searchParams.get('invite')||'');
+  if (roomState.inviteHash && !validSecretHash(wsInvite,roomState.inviteHash)) {
+    socket.write('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n');
+    return socket.end();
+  }
+  if (isArchived(roomState)) {
+    socket.write('HTTP/1.1 410 Gone\r\nConnection: close\r\n\r\n');
+    return socket.end();
   }
   const key = req.headers['sec-websocket-key'];
   if (!key) return socket.destroy();
@@ -687,4 +734,4 @@ server.on('upgrade', (req, socket) => {
 const retentionSweep=setInterval(()=>{try{sweepExpiredArchives()}catch(e){console.error('retention sweep',e)}},60*60*1000);
 retentionSweep.unref?.();
 
-server.listen(PORT, () => console.log(`Pixel Memory V15.5 server: http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`Pixel Memory V15.6 server: http://localhost:${PORT}`));
