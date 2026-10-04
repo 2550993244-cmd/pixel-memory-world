@@ -35,6 +35,7 @@ function normalizeRoom(r) {
   r.quest.items ||= [];
   r.music ||= null;
   r.meta ||= {};
+  r.actors ||= {};
   r.revisions ||= [];
   r.meta.revision ||= 1;
   r.meta.createdAt ||= r.createdAt || Date.now();
@@ -52,9 +53,37 @@ function isOwner(req, r) {
   const b = Buffer.from(r.ownerHash);
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
+function actorCredential(req) {
+  return {
+    id: String(req.headers['x-actor-id'] || '').trim(),
+    token: String(req.headers['x-actor-token'] || '')
+  };
+}
+function verifyActor(req, r, { allowRegister=false } = {}) {
+  normalizeRoom(r);
+  const { id, token } = actorCredential(req);
+  if (!id || !token || id.length > 120 || token.length > 240) return { ok:false, error:'actor_required' };
+  const hash = tokenHash(token);
+  const known = r.actors[id];
+  if (!known) {
+    if (!allowRegister) return { ok:false, error:'actor_unknown' };
+    r.actors[id] = hash;
+    return { ok:true, id, registered:true };
+  }
+  const a = Buffer.from(hash), b = Buffer.from(known);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a,b)) return { ok:false, error:'actor_invalid' };
+  return { ok:true, id };
+}
+function canCurate(req, r, item, { allowRegister=false } = {}) {
+  if (isOwner(req,r)) return { ok:true, role:'owner', actorId:actorCredential(req).id || '' };
+  const actor = verifyActor(req,r,{allowRegister});
+  if (!actor.ok) return actor;
+  if (!item || item.authorId === actor.id) return { ok:true, role:'author', actorId:actor.id };
+  return { ok:false, error:'not_author' };
+}
 function publicRoom(r) {
   normalizeRoom(r);
-  const { ownerHash, revisions, ...safe } = r;
+  const { ownerHash, actors, revisions, ...safe } = r;
   return safe;
 }
 function recordRevision(r, kind, data, label='') {
@@ -88,7 +117,7 @@ function json(res, status, obj) {
     'Content-Type': 'application/json; charset=utf-8',
     'Content-Length': b.length,
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, X-Room-Owner',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Room-Owner, X-Actor-Id, X-Actor-Token',
     'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS'
   });
   res.end(b);
@@ -145,8 +174,19 @@ function applyMemoryOp(r, op) {
   normalizeRoom(r);
   if (!op?.kind) return;
   if (op.kind === 'memento:add') addUnique(r.memory.mementos, op.item);
+  if (op.kind === 'memento:move') {
+    const item = r.memory.mementos.find(x => x.id === op.id);
+    if (item) { item.x = Number(op.x); item.y = Number(op.y); }
+  }
+  if (op.kind === 'memento:hide') {
+    const item = r.memory.mementos.find(x => x.id === op.id);
+    if (item) item.hidden = !!op.hidden;
+  }
+  if (op.kind === 'memento:remove') r.memory.mementos = r.memory.mementos.filter(x => x.id !== op.id);
   if (op.kind === 'note:add') addUnique(r.memory.notes, op.item);
+  if (op.kind === 'note:remove') r.memory.notes = r.memory.notes.filter(x => x.id !== op.id);
   if (op.kind === 'photo:add') addUnique(r.memory.photos, op.item);
+  if (op.kind === 'photo:remove') r.memory.photos = r.memory.photos.filter(x => x.id !== op.id);
   if (op.kind === 'activity:add') {
     addUnique(r.memory.activity, op.item);
     r.memory.activity = r.memory.activity.slice(-60);
@@ -160,14 +200,59 @@ function applyQuestOp(r, op) {
   if (op.kind === 'add' && op.item) addUnique(r.quest.items, op.item);
   if (op.kind === 'move') {
     const item = r.quest.items.find(x => x.id === op.id);
-    if (item) { item.x = op.x; item.y = op.y; }
+    if (item) { item.x = Number(op.x); item.y = Number(op.y); }
   }
+  if (op.kind === 'hide') {
+    const item = r.quest.items.find(x => x.id === op.id);
+    if (item) item.hidden = !!op.hidden;
+  }
+  if (op.kind === 'remove') r.quest.items = r.quest.items.filter(x => x.id !== op.id);
   if (op.kind === 'clear') r.quest.items = [];
   if (op.kind === 'set' && Array.isArray(op.items)) r.quest.items = op.items;
   touchRoom(r);
 }
+function itemForOp(r, scope, op) {
+  if (scope === 'memory') {
+    if (op.kind?.startsWith('memento:')) return r.memory.mementos.find(x=>x.id===op.id) || null;
+    if (op.kind === 'note:remove') return r.memory.notes.find(x=>x.id===op.id) || null;
+    if (op.kind === 'photo:remove') return r.memory.photos.find(x=>x.id===op.id) || null;
+  }
+  if (scope === 'quest' && ['move','hide','remove'].includes(op.kind)) return r.quest.items.find(x=>x.id===op.id) || null;
+  return null;
+}
+function authorizeOp(req, r, scope, op) {
+  normalizeRoom(r);
+  const addKinds = scope === 'memory'
+    ? new Set(['memento:add','note:add','photo:add','activity:add'])
+    : new Set(['add']);
+  if (addKinds.has(op?.kind)) {
+    const actor = verifyActor(req,r,{allowRegister:true});
+    if (!actor.ok) return actor;
+    if (op.item && typeof op.item === 'object') op.item.authorId = actor.id;
+    return { ok:true, role:'author', actorId:actor.id };
+  }
+  const privilegedMemory = scope === 'memory' && new Set(['memento:move','memento:hide','memento:remove','note:remove','photo:remove']).has(op?.kind);
+  const privilegedQuest = scope === 'quest' && new Set(['move','hide','remove']).has(op?.kind);
+  if (privilegedMemory || privilegedQuest) {
+    const item=itemForOp(r,scope,op);
+    if (!item) return { ok:false, error:'item_not_found', status:404 };
+    return canCurate(req,r,item);
+  }
+  if (scope === 'quest' && ['clear','set'].includes(op?.kind)) return isOwner(req,r) ? {ok:true,role:'owner'} : {ok:false,error:'owner_required'};
+  if (scope === 'world') return {ok:true};
+  return {ok:false,error:'invalid_op'};
+}
 
 const channels = new Map();
+function broadcastRoomScope(room, scope, payload) {
+  const wantQuest = scope === 'quest';
+  for (const [key,set] of channels) {
+    if (!key.startsWith(room+'::')) continue;
+    const isQuest = key.toLowerCase().includes('quest');
+    if (isQuest !== wantQuest) continue;
+    for (const socket of set) if (!socket.destroyed) wsSend(socket,payload);
+  }
+}
 const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 function chset(key) { if (!channels.has(key)) channels.set(key, new Set()); return channels.get(key); }
 function connectionCount() { let n = 0; for (const s of channels.values()) n += s.size; return n; }
@@ -180,7 +265,7 @@ const server = http.createServer(async (req, res) => {
   const u = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = u.pathname;
   try {
-    if (pathname === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, version: 'v15.2', rooms: Object.keys(rooms).length, connections: connectionCount(), roomStore: roomStore.info().kind, blobStore: blobStore.info().kind, durableDataDir: !!process.env.PIXEL_DATA_DIR, durableUploadDir: !!process.env.PIXEL_UPLOAD_DIR, time: Date.now() });
+    if (pathname === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, version: 'v15.3', rooms: Object.keys(rooms).length, connections: connectionCount(), roomStore: roomStore.info().kind, blobStore: blobStore.info().kind, durableDataDir: !!process.env.PIXEL_DATA_DIR, durableUploadDir: !!process.env.PIXEL_UPLOAD_DIR, time: Date.now() });
     if (pathname === '/api/rooms' && req.method === 'POST') {
       const body = JSON.parse((await readBody(req)).toString('utf8') || '{}');
       const code = String(body.code || randomCode()).toUpperCase();
@@ -242,14 +327,20 @@ const server = http.createServer(async (req, res) => {
       const r = rooms[opm[1]];
       if (!r) return json(res, 404, { error: 'room_not_found' });
       const b = JSON.parse((await readBody(req)).toString('utf8') || '{}');
-      if (b.scope === 'memory') applyMemoryOp(r, b.op);
-      else if (b.scope === 'quest') applyQuestOp(r, b.op);
-      else if (b.scope === 'world' && b.op?.patch) {
-        const { layout, ...safePatch } = b.op.patch;
+      const scope=b.scope;
+      const op=b.op;
+      const auth=authorizeOp(req,r,scope,op);
+      if (!auth.ok) return json(res, auth.status || (auth.error === 'item_not_found' ? 404 : 403), { error: auth.error || 'forbidden' });
+      if (scope === 'memory') applyMemoryOp(r, op);
+      else if (scope === 'quest') applyQuestOp(r, op);
+      else if (scope === 'world' && op?.patch) {
+        const { layout, ...safePatch } = op.patch;
         applyMemoryOp(r, { kind: 'world:patch', patch: safePatch });
       }
       else return json(res, 400, { error: 'invalid_op' });
-      return json(res, 200, { ok: true, updatedAt: r.updatedAt });
+      if (scope === 'memory') broadcastRoomScope(opm[1],'memory',{type:'memory-op',sender:'server',authorized:true,op});
+      if (scope === 'quest') broadcastRoomScope(opm[1],'quest',{type:'quest-op',sender:'server',authorized:true,op});
+      return json(res, 200, { ok: true, role:auth.role || '', updatedAt: r.updatedAt });
     }
     const rm = /^\/api\/rooms\/([A-Z0-9]{6})$/.exec(pathname);
     if (rm && req.method === 'GET') {
@@ -377,20 +468,22 @@ server.on('upgrade', (req, socket) => {
     if (m.type === 'ping') return wsSend(socket, { type: 'pong', sender: 'server', t: m.t, serverTime: Date.now() });
     if (rr) {
       normalizeRoom(rr);
-      if (m.type === 'memory' && m.memory) { rr.memory = m.memory; normalizeRoom(rr); rr.updatedAt = Date.now(); saveDB(); }
-      if (m.type === 'memory-op' && m.op) applyMemoryOp(rr, m.op);
+      // V15.3: memory persistence is REST-authorized; websocket messages are transient only.
+      if (m.type === 'memory' && m.memory) { /* snapshot writes disabled */ }
+      if (m.type === 'memory-op' && m.op) { /* op writes disabled */ }
       if (m.type === 'world-patch' && m.patch) {
         const { layout, ...safePatch } = m.patch;
         applyMemoryOp(rr, { kind: 'world:patch', patch: safePatch });
       }
       if (m.type === 'music-sync' && m.music) { rr.music = m.music; rr.world = { ...rr.world, music: m.music.track || rr.world.music, customMusicName: m.music.name || rr.world.customMusicName, customMusicUrl: m.music.url || rr.world.customMusicUrl }; rr.updatedAt = Date.now(); saveDB(); }
-      if (m.type === 'quest-update' && Array.isArray(m.items)) { rr.quest = { items: m.items }; rr.updatedAt = Date.now(); saveDB(); }
-      if (m.type === 'quest-op' && m.op) applyQuestOp(rr, m.op);
+      if (m.type === 'quest-update' && Array.isArray(m.items)) { /* snapshot writes disabled */ }
+      if (m.type === 'quest-op' && m.op) { /* op writes disabled */ }
     }
+    if (m.type === 'memory-op' || m.type === 'quest-op' || m.type === 'memory' || m.type === 'quest-update') return;
     wsBroadcast(ck, m, socket);
   }));
   const close = () => { const s = channels.get(ck); s?.delete(socket); if (s && !s.size) channels.delete(ck); };
   socket.on('close', close); socket.on('end', close); socket.on('error', close);
 });
 
-server.listen(PORT, () => console.log(`Pixel Memory V15.2 server: http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`Pixel Memory V15.3 server: http://localhost:${PORT}`));
