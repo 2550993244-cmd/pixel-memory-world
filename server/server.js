@@ -407,12 +407,11 @@ const server = http.createServer(async (req, res) => {
       const r = rooms[rm[1]];
       if (!r) return json(res, 404, { error: 'room_not_found' });
       const b = JSON.parse((await readBody(req)).toString('utf8') || '{}');
+      if (b.memory || b.quest) return json(res, 400, { error:'snapshot_write_disabled', hint:'use_authorized_ops' });
       if (b.world) {
         const { layout, ...safeWorld } = b.world;
         r.world = { ...r.world, ...safeWorld };
       }
-      if (b.memory) r.memory = b.memory;
-      if (b.quest) r.quest = b.quest;
       if ('music' in b) r.music = b.music;
       normalizeRoom(r);
       touchRoom(r);
