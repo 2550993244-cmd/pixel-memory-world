@@ -259,7 +259,7 @@ function connectionCount() { let n = 0; for (const s of channels.values()) n += 
 
 const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') {
-    res.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type, X-Room-Owner', 'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS' });
+    res.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type, X-Room-Owner, X-Actor-Id, X-Actor-Token', 'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS' });
     return res.end();
   }
   const u = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
@@ -303,11 +303,21 @@ const server = http.createServer(async (req, res) => {
       normalizeRoom(r);
       const rev = r.revisions.find(x => x.id === restorem[2]);
       if (!rev) return json(res, 404, { error: 'revision_not_found' });
-      if (rev.kind !== 'layout') return json(res, 400, { error: 'unsupported_revision_kind' });
-      recordRevision(r, 'layout', r.world.layout || {}, '恢复前自动备份');
-      r.world = { ...r.world, layout: JSON.parse(JSON.stringify(rev.data || {})) };
+      if (!['layout','mementos','quest'].includes(rev.kind)) return json(res, 400, { error: 'unsupported_revision_kind' });
+      if (rev.kind === 'layout') {
+        recordRevision(r, 'layout', r.world.layout || {}, '恢复前自动备份');
+        r.world = { ...r.world, layout: JSON.parse(JSON.stringify(rev.data || {})) };
+      }
+      if (rev.kind === 'mementos') {
+        recordRevision(r, 'mementos', r.memory.mementos || [], '恢复前自动备份');
+        r.memory.mementos = JSON.parse(JSON.stringify(rev.data || []));
+      }
+      if (rev.kind === 'quest') {
+        recordRevision(r, 'quest', r.quest.items || [], '恢复前自动备份');
+        r.quest.items = JSON.parse(JSON.stringify(rev.data || []));
+      }
       touchRoom(r);
-      return json(res, 200, { ok: true, layout: r.world.layout, restoredRevision: rev.id, meta: r.meta });
+      return json(res, 200, { ok: true, kind:rev.kind, layout:r.world.layout, mementos:r.memory.mementos, quest:r.quest.items, restoredRevision: rev.id, meta: r.meta });
     }
     const layoutm = /^\/api\/rooms\/([A-Z0-9]{6})\/layout$/.exec(pathname);
     if (layoutm && req.method === 'PUT') {
@@ -331,8 +341,18 @@ const server = http.createServer(async (req, res) => {
       const op=b.op;
       const auth=authorizeOp(req,r,scope,op);
       if (!auth.ok) return json(res, auth.status || (auth.error === 'item_not_found' ? 404 : 403), { error: auth.error || 'forbidden' });
-      if (scope === 'memory') applyMemoryOp(r, op);
-      else if (scope === 'quest') applyQuestOp(r, op);
+      if (scope === 'memory') {
+        if (auth.role === 'owner' && ['memento:move','memento:hide','memento:remove'].includes(op?.kind)) {
+          recordRevision(r,'mementos',r.memory.mementos || [], op.kind === 'memento:remove' ? '删除纪念物前' : '整理纪念物前');
+        }
+        applyMemoryOp(r, op);
+      }
+      else if (scope === 'quest') {
+        if (auth.role === 'owner' && ['move','hide','remove','clear','set'].includes(op?.kind)) {
+          recordRevision(r,'quest',r.quest.items || [], '整理门外回忆前');
+        }
+        applyQuestOp(r, op);
+      }
       else if (scope === 'world' && op?.patch) {
         const { layout, ...safePatch } = op.patch;
         applyMemoryOp(r, { kind: 'world:patch', patch: safePatch });
