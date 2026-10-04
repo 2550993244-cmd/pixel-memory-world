@@ -53,6 +53,17 @@ Start Command: npm start
 
 Node 版本要求：20 或更高。
 
+#### V15 持久磁盘配置（推荐）
+
+如果部署平台提供 Persistent Disk / Volume，把两个环境变量指向挂载目录：
+
+~~~text
+PIXEL_DATA_DIR=/var/data/pixel-memory/data
+PIXEL_UPLOAD_DIR=/var/data/pixel-memory/uploads
+~~~
+
+服务器会把房间 JSON 和上传文件写到这两个目录；JSON 使用“临时文件 → rename”的原子替换方式，降低进程异常时写坏主数据文件的风险。若不配置这两个变量，仍回退到 `server/data` 与 `server/uploads`，适合本地开发但不建议作为长期线上保存方案。
+
 部署成功后，你会得到类似：
 
 ~~~text
@@ -67,12 +78,12 @@ https://pixel-memory-world.onrender.com
 https://你的-render-域名/api/health
 ~~~
 
-V12 正常应返回类似：
+V15 正常应返回类似：
 
 ~~~json
 {
   "ok": true,
-  "version": "v12"
+  "version": "v15.0"
 }
 ~~~
 
@@ -223,6 +234,8 @@ POST /api/rooms
 GET  /api/rooms/:code
 PUT  /api/rooms/:code
 POST /api/rooms/:code/ops
+POST /api/rooms/:code/claim
+PUT  /api/rooms/:code/layout    # 需要 X-Room-Owner
 POST /api/uploads
 WS    /ws?room=...&channel=...&player=...
 ~~~
@@ -237,9 +250,9 @@ WS    /ws?room=...&channel=...&player=...
 
 正式产品至少建议继续做：
 
-- 数据库持久化；
-- 对象存储；
-- 房主权限；
+- 将 V15 的持久盘 JSON 适配层切换到正式数据库；
+- 将 V15 的本地上传目录切换到对象存储；
+- 将 V15 的房主令牌升级为完整用户身份 / 登录体系；
 - 房间锁定 / 删除；
 - 上传文件类型与大小校验；
 - 内容删除机制；
