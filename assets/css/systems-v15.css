@@ -4,7 +4,8 @@
 body.pm-world .quest-stage{overflow:hidden}
 body.pm-world .pm-camera-world-v15{
   position:absolute;
-  inset:0;
+  left:0;
+  top:0;
   z-index:1;
   transform-origin:0 0;
   will-change:transform;
@@ -179,3 +180,6 @@ body.pm-world .pm-room-editor-toolbar-v15 [data-room-editor-redo]{
     grid-column:auto;
   }
 }
+body.pm-world .quest-stage.pm-camera-fit .pm-camera-badge-v15 span:after{content:" · EDIT FIT"}
+body.pm-world .quest-stage.pm-camera-active .pm-camera-world-v15{cursor:default}
+body.pm-world .quest-stage.pm-camera-fit .pm-camera-world-v15{cursor:crosshair}
