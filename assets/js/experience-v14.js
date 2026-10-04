@@ -252,7 +252,7 @@
   }
 
   window.PixelV14={
-    version:'14.1',
+    version:'14.2',
     lenis:!!lenis,
     gsap:!!window.gsap,
     scrollTrigger:!!window.ScrollTrigger,
