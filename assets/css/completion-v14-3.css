@@ -1,0 +1,346 @@
+/* V14.3 completion layer
+   White embossed keepsake + responsive polish.
+   Loaded after the V14 experience layer so it can safely refine existing UI. */
+
+:root{
+  --paper-white:#fbfaf7;
+  --paper-warm:#f5f4f0;
+  --paper-ink:#343638;
+  --paper-muted:#777a7d;
+  --paper-emboss-hi:rgba(255,255,255,.96);
+  --paper-emboss-lo:rgba(91,96,101,.13);
+  --paper-line:rgba(78,82,87,.11);
+}
+
+body.v14-ready .keepsake-shell{
+  width:min(790px,94vw);
+  max-height:min(92dvh,920px);
+  perspective:none;
+}
+body.v14-ready .keepsake-shell>.modal-close{
+  top:-14px;right:-14px;
+  background:rgba(255,255,255,.94);
+  color:#62666a;
+  border:1px solid rgba(58,62,67,.12);
+  box-shadow:0 10px 28px rgba(35,39,43,.12);
+}
+
+/* A real paper keepsake rather than a jewelry box:
+   warm white stock, fine fibre texture and low-contrast pressed ornament. */
+body.v14-ready .keepsake-card{
+  isolation:isolate;
+  min-height:560px;
+  padding:66px 68px 48px;
+  overflow:hidden;
+  text-align:center;
+  border:0;
+  border-radius:26px;
+  color:var(--paper-ink);
+  background-color:var(--paper-white);
+  background-image:
+    radial-gradient(circle at 14% 12%,rgba(80,84,88,.028) 0 .8px,transparent 1px),
+    radial-gradient(circle at 72% 36%,rgba(80,84,88,.022) 0 .7px,transparent .95px),
+    radial-gradient(circle at 38% 79%,rgba(255,255,255,.9) 0 .8px,transparent 1px),
+    repeating-linear-gradient(93deg,rgba(70,75,80,.012) 0 1px,transparent 1px 6px),
+    linear-gradient(145deg,#fff 0%,#fbfaf7 42%,#f4f3ef 100%);
+  background-size:11px 11px,13px 13px,9px 9px,auto,auto;
+  box-shadow:
+    0 32px 76px rgba(41,45,49,.18),
+    0 6px 18px rgba(41,45,49,.08),
+    inset 0 0 0 1px rgba(255,255,255,.92),
+    inset 0 0 0 2px rgba(69,73,77,.045);
+  backdrop-filter:none;
+}
+
+/* Embossed frame + corner botanicals. Paired highlight/shadow gradients
+   imitate blind-debossed paper without introducing a visible border. */
+body.v14-ready .keepsake-card:before{
+  content:"";
+  position:absolute;
+  inset:18px;
+  width:auto;height:auto;
+  border:0;
+  border-radius:18px;
+  pointer-events:none;
+  z-index:0;
+  opacity:1;
+  background:
+    radial-gradient(ellipse at 7% 8%,transparent 0 9px,rgba(91,96,101,.09) 10px 11px,rgba(255,255,255,.88) 12px 13px,transparent 14px 100%),
+    radial-gradient(ellipse at 12% 5%,transparent 0 6px,rgba(91,96,101,.075) 7px 8px,rgba(255,255,255,.84) 9px 10px,transparent 11px 100%),
+    radial-gradient(ellipse at 93% 8%,transparent 0 9px,rgba(91,96,101,.09) 10px 11px,rgba(255,255,255,.88) 12px 13px,transparent 14px 100%),
+    radial-gradient(ellipse at 88% 5%,transparent 0 6px,rgba(91,96,101,.075) 7px 8px,rgba(255,255,255,.84) 9px 10px,transparent 11px 100%),
+    radial-gradient(ellipse at 7% 92%,transparent 0 9px,rgba(91,96,101,.08) 10px 11px,rgba(255,255,255,.88) 12px 13px,transparent 14px 100%),
+    radial-gradient(ellipse at 93% 92%,transparent 0 9px,rgba(91,96,101,.08) 10px 11px,rgba(255,255,255,.88) 12px 13px,transparent 14px 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(83,88,93,.075),
+    inset 0 0 0 2px rgba(255,255,255,.72),
+    inset 0 0 26px rgba(75,80,85,.018);
+}
+
+/* Small pressed medallion, kept tonal instead of metallic. */
+body.v14-ready .keepsake-card:after{
+  content:"✦";
+  position:absolute;
+  left:50%;top:27px;
+  transform:translateX(-50%);
+  width:38px;height:38px;
+  display:grid;place-items:center;
+  border-radius:50%;
+  background:#f8f7f4;
+  color:#a1a4a7;
+  font:14px/1 Georgia,serif;
+  text-shadow:
+    -1px -1px 0 rgba(255,255,255,.94),
+    1px 1px 0 rgba(82,87,92,.10);
+  box-shadow:
+    inset 1px 1px 2px rgba(88,93,98,.11),
+    inset -1px -1px 2px rgba(255,255,255,.95),
+    0 1px 0 rgba(255,255,255,.85);
+  z-index:3;
+}
+
+body.v14-ready .keepsake-card>*{position:relative;z-index:2}
+body.v14-ready .keepsake-card>.eyebrow{
+  display:block;
+  margin-top:16px;
+  color:#8b8e91;
+  font-size:10px;
+  letter-spacing:.24em;
+}
+body.v14-ready .keepsake-date{
+  margin-top:10px;
+  color:#85888b;
+  font:500 11px/1.4 var(--v14-mono);
+  letter-spacing:.12em;
+}
+body.v14-ready .keepsake-card h2{
+  max-width:640px;
+  margin:24px auto 12px;
+  color:#303235;
+  font-family:"Songti SC","STSong","Times New Roman",serif;
+  font-size:clamp(38px,4.2vw,52px);
+  font-weight:700;
+  line-height:1.14;
+  letter-spacing:-.035em;
+  text-wrap:balance;
+}
+body.v14-ready .keepsake-card h2:after{
+  content:"";
+  display:block;
+  width:54px;height:8px;
+  margin:17px auto 0;
+  border-radius:50%;
+  background:
+    radial-gradient(ellipse at center,transparent 0 12px,rgba(98,103,108,.09) 13px 14px,rgba(255,255,255,.88) 15px 16px,transparent 17px);
+}
+body.v14-ready .keepsake-card>p{
+  max-width:560px;
+  margin:0 auto;
+  color:#666a6e;
+  font-family:"Songti SC","STSong",serif;
+  font-size:14px;
+  line-height:1.9;
+}
+body.v14-ready .keepsake-people{
+  justify-content:center;
+  flex-wrap:wrap;
+  gap:9px;
+  margin:24px auto 25px;
+}
+body.v14-ready .keepsake-people span{
+  width:38px;height:38px;
+  border:0;
+  border-radius:50%;
+  background:#f3f2ef;
+  color:#5f6367;
+  font-size:10px;
+  font-weight:700;
+  box-shadow:
+    inset 1px 1px 2px rgba(76,81,86,.12),
+    inset -1px -1px 2px rgba(255,255,255,.98),
+    0 2px 5px rgba(52,57,62,.04);
+}
+body.v14-ready .keepsake-people:empty:after{
+  content:"这一晚的名字会留在这里";
+  color:#9a9da0;
+  font-size:10px;
+  letter-spacing:.08em;
+}
+
+body.v14-ready .keepsake-stats{
+  position:relative;
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:0;
+  max-width:630px;
+  margin:0 auto 24px;
+  padding:18px 0 16px;
+  border:0;
+  border-top:1px solid rgba(83,88,93,.10);
+  border-bottom:1px solid rgba(255,255,255,.92);
+  box-shadow:0 -1px 0 rgba(255,255,255,.76),0 1px 0 rgba(85,90,95,.055);
+}
+body.v14-ready .keepsake-stats>div{
+  border:0!important;
+  background:none!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+}
+body.v14-ready .keepsake-stats>div+div:before{
+  content:"";
+  position:absolute;
+  width:1px;height:35px;
+  margin-left:-1px;
+  background:linear-gradient(to bottom,transparent,rgba(85,90,95,.10),transparent);
+}
+body.v14-ready .keepsake-stats b{
+  color:#3e4144;
+  font-family:Georgia,"Times New Roman",serif;
+  font-size:27px;
+  font-weight:500;
+}
+body.v14-ready .keepsake-stats small{
+  display:block;
+  margin-top:5px;
+  color:#96999c;
+  font-size:9px;
+  letter-spacing:.12em;
+}
+body.v14-ready .keepsake-line{
+  max-width:570px;
+  margin:18px auto 0;
+  padding:15px 18px;
+  color:#666a6e;
+  border:0;
+  border-radius:12px;
+  background:rgba(243,242,239,.58);
+  box-shadow:
+    inset 1px 1px 2px rgba(78,83,88,.06),
+    inset -1px -1px 2px rgba(255,255,255,.9);
+  font-family:"Songti SC","STSong",serif;
+  font-size:11px;
+  line-height:1.65;
+}
+body.v14-ready .keepsake-footer{
+  margin-top:24px;
+  padding-top:14px;
+  color:#9a9da0;
+  border-top:1px solid rgba(84,89,94,.08);
+  font-size:9px;
+  letter-spacing:.08em;
+}
+body.v14-ready .keepsake-actions{
+  justify-content:center;
+  gap:10px;
+  margin-top:16px;
+}
+body.v14-ready .keepsake-actions .button{
+  min-height:44px;
+}
+
+/* Completion pass: prevent drawers/editor/modals from feeling like desktop
+   panels squeezed onto small screens. */
+body.v14-ready .side-drawer,
+body.v14-ready .quest-editor{
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable;
+}
+body.v14-ready .drawer-body,
+body.v14-ready #drawerBody,
+body.v14-ready .quest-editor{
+  scrollbar-width:thin;
+  scrollbar-color:rgba(72,78,84,.18) transparent;
+}
+body.v14-ready .modal-card,
+body.v14-ready .keepsake-card,
+body.v14-ready .join-card,
+body.v14-ready #creator .creator-preview,
+body.v14-ready .avatar-controls{
+  text-rendering:optimizeLegibility;
+}
+
+@media (hover:hover) and (pointer:fine){
+  body.v14-ready .keepsake-card{
+    transition:transform .35s ease,box-shadow .35s ease;
+  }
+  body.v14-ready .keepsake-card:hover{
+    transform:translateY(-2px);
+    box-shadow:
+      0 38px 86px rgba(41,45,49,.19),
+      0 8px 20px rgba(41,45,49,.08),
+      inset 0 0 0 1px rgba(255,255,255,.94),
+      inset 0 0 0 2px rgba(69,73,77,.045);
+  }
+}
+
+@media(max-width:760px){
+  body.v14-ready .keepsake-shell{
+    width:min(94vw,620px);
+    max-height:94dvh;
+    overflow:auto;
+    padding:10px 0 max(12px,env(safe-area-inset-bottom));
+  }
+  body.v14-ready .keepsake-shell>.modal-close{
+    position:sticky;
+    top:8px;
+    float:right;
+    margin:0 6px -42px 0;
+    z-index:12;
+  }
+  body.v14-ready .keepsake-card{
+    min-height:0;
+    padding:58px 28px 34px;
+    border-radius:22px;
+  }
+  body.v14-ready .keepsake-card:before{inset:13px;border-radius:14px}
+  body.v14-ready .keepsake-card:after{top:21px;width:34px;height:34px}
+  body.v14-ready .keepsake-card h2{font-size:clamp(31px,10vw,42px)}
+  body.v14-ready .keepsake-card>p{font-size:13px;line-height:1.78}
+  body.v14-ready .keepsake-stats{
+    grid-template-columns:repeat(2,1fr);
+    row-gap:17px;
+    padding:17px 0;
+  }
+  body.v14-ready .keepsake-stats>div+div:before{display:none}
+  body.v14-ready .keepsake-actions{
+    position:sticky;
+    bottom:0;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    padding:12px 0 4px;
+    background:linear-gradient(to top,rgba(247,241,232,.98) 68%,rgba(247,241,232,0));
+  }
+  body.v14-ready .keepsake-actions .button{width:100%;padding-inline:10px}
+
+  body.v14-ready .side-drawer{
+    width:min(92vw,430px);
+    max-height:82dvh;
+    top:auto;
+    bottom:max(12px,env(safe-area-inset-bottom));
+    right:4vw;
+    border-radius:22px;
+  }
+  body.v14-ready .quest-editor{
+    max-height:76dvh;
+  }
+  body.v14-ready .world-bar,
+  body.v14-ready .quest-bar{
+    padding-left:max(14px,env(safe-area-inset-left));
+    padding-right:max(14px,env(safe-area-inset-right));
+  }
+}
+
+@media(max-width:430px){
+  body.v14-ready .keepsake-card{padding-inline:22px}
+  body.v14-ready .keepsake-people span{width:35px;height:35px}
+  body.v14-ready .keepsake-actions{grid-template-columns:1fr}
+  body.v14-ready .keepsake-footer{
+    display:grid;
+    gap:5px;
+    justify-items:center;
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  body.v14-ready .keepsake-card{transition:none!important}
+}
