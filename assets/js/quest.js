@@ -206,7 +206,7 @@
     const layer = $('#questAssetLayer');
     if (!layer) return;
     layer.innerHTML = '';
-    const ordered = questState.items.filter(item=>!item.hidden).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+    const ordered = questState.items.filter(item=>!item.hidden||questState.editorOpen).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
     const next = ordered.find(item => !questState.found.has(item.id));
     ordered.forEach((item, idx) => {
       const found = questState.found.has(item.id);
@@ -215,7 +215,7 @@
       const near = questState.nearby?.id === item.id;
       const el = document.createElement('div');
       const canCurate=(window.PixelNet?.enabled?!!window.PixelNet?.hasOwnerToken?.(state.roomCode):!!state.player.host)||item.authorId===state.player.actorId;
-      el.className = `quest-memory${found ? ' found' : ' mystery'}${near ? ' near' : ''}${canCurate ? ' curatable' : ' locked'}`;
+      el.className = `quest-memory${found ? ' found' : ' mystery'}${near ? ' near' : ''}${canCurate ? ' curatable' : ' locked'}${item.hidden ? ' is-hidden-memory' : ''}`;
       el.dataset.id = item.id;
       el.style.left = `${item.x}%`;
       el.style.top = `${item.y}%`;
