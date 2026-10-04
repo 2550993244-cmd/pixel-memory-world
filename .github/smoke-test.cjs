@@ -52,8 +52,10 @@ const { chromium } = require('playwright');
       version: window.PixelCharacterRuntime?.version,
       mode: window.PixelCharacterRuntime?.mode,
       atlasReady: window.PixelCharacterRuntime?.atlasReady,
+      artDirection: window.PixelCharacterRuntime?.artDirection,
       status: window.PixelCharacterRuntime?.manifest?.status,
-      actions: Object.keys(window.PixelCharacterRuntime?.manifest?.actions || {})
+      actions: Object.keys(window.PixelCharacterRuntime?.manifest?.actions || {}),
+      base: window.PixelCharacterRuntime?.manifest?.atlas?.base || ''
     },
     hasSystemsCss: !!document.querySelector('link[href*="systems-v15.css"]'),
     hasSystemsJs: !!document.querySelector('script[src*="systems-v15.js"]'),
@@ -66,8 +68,11 @@ const { chromium } = require('playwright');
   if (v15Diag.mapRuntime.source !== 'tiled-json' || v15Diag.mapRuntime.collisionCount < 3 || v15Diag.mapRuntime.pathCount < 6) {
     throw new Error('V15.1 Tiled map runtime did not load canonical JSON');
   }
-  if (v15Diag.characterRuntime.version !== '15.1' || v15Diag.characterRuntime.mode !== 'layered-spritesheet') {
-    throw new Error('V15.1 character manifest runtime missing');
+  if (v15Diag.characterRuntime.version !== '15.2' || v15Diag.characterRuntime.mode !== 'layered-spritesheet') {
+    throw new Error('V15.2 character manifest runtime missing');
+  }
+  if (!v15Diag.characterRuntime.atlasReady || v15Diag.characterRuntime.artDirection !== 'A-warm-keepsake-pixel' || !/warm-v1\/body\.svg/.test(v15Diag.characterRuntime.base)) {
+    throw new Error('V15.2 A-style production atlas did not load');
   }
   for (const a of ['idle','walk','sit','wave','hug','celebrate']) {
     if (!v15Diag.characterRuntime.actions.includes(a)) throw new Error('V15.1 character manifest action missing: ' + a);
@@ -218,10 +223,40 @@ const { chromium } = require('playwright');
   await page.locator('[data-hair="2"]').click();
   await page.locator('[data-outfit="blue"]').click();
   await page.locator('[data-item="📷"]').click();
+  await page.waitForFunction(() => document.querySelector('#avatarPreview')?.classList.contains('pm-atlas-ready'));
+  const avatarAtlasAudit = await page.evaluate(() => {
+    const root=document.querySelector('#avatarPreview');
+    const stack=root?.querySelector('.pm-atlas-stack');
+    const hair=stack?.querySelector('.pm-atlas-hair');
+    const outfit=stack?.querySelector('.pm-atlas-outfit');
+    return {
+      ready:root?.classList.contains('pm-atlas-ready'),
+      layers:stack?.querySelectorAll('.pm-atlas-layer').length||0,
+      hair:getComputedStyle(hair).backgroundImage,
+      outfit:getComputedStyle(outfit).backgroundImage
+    };
+  });
+  console.log('V15_2_AVATAR_ATLAS', avatarAtlasAudit);
+  if(!avatarAtlasAudit.ready||avatarAtlasAudit.layers!==3||!/hair-2\.svg/.test(avatarAtlasAudit.hair)||!/outfit-blue\.svg/.test(avatarAtlasAudit.outfit)) {
+    throw new Error('V15.2 DIY preview is not using selected warm atlas variants');
+  }
   await page.locator('#playerNameInput').fill('测试玩家');
   await page.locator('#enterWorldBtn').click();
   await active('world');
   await page.waitForSelector('#playersLayer .player', { timeout: 5000 });
+  await page.waitForFunction(() => document.querySelector('#playersLayer .player.me')?.classList.contains('pm-atlas-ready'));
+  const roomAtlasAudit = await page.evaluate(() => {
+    const p=document.querySelector('#playersLayer .player.me');
+    const stack=p?.querySelector('.pm-atlas-stack');
+    return {
+      ready:p?.classList.contains('pm-atlas-ready'),
+      outfitClass:p?.className||'',
+      layers:stack?.querySelectorAll('.pm-atlas-layer').length||0,
+      frame:stack?.dataset.frame||''
+    };
+  });
+  console.log('V15_2_ROOM_ATLAS',roomAtlasAudit);
+  if(!roomAtlasAudit.ready||roomAtlasAudit.layers!==3||!/outfit-blue/.test(roomAtlasAudit.outfitClass)) throw new Error('V15.2 room avatar atlas missing');
 
   // V15 P2: action state is a stable runtime vocabulary and Q triggers wave.
   await page.locator('#worldStage').press('q');
@@ -233,6 +268,8 @@ const { chromium } = require('playwright');
   }));
   console.log('V15_ACTION_AUDIT', actionAudit);
   if (actionAudit.action !== 'wave' || actionAudit.domAction !== 'wave') throw new Error('V15 wave action did not render');
+  const waveFrame = await page.locator('#playersLayer .player.me .pm-atlas-stack').getAttribute('data-frame');
+  if (Number(waveFrame) < 8 || Number(waveFrame) > 11) throw new Error('V15.2 wave did not switch to atlas wave frames');
   for (const a of ['idle','walk','sit','wave','hug','celebrate']) {
     if (!actionAudit.actions.includes(a)) throw new Error('V15 action vocabulary incomplete: ' + a);
   }
@@ -381,6 +418,14 @@ const { chromium } = require('playwright');
   })), errors);
   await active('quest');
   await page.waitForSelector('#questPlayerLayer .quest-player', { timeout: 5000 });
+  await page.waitForFunction(() => document.querySelector('#questPlayerLayer .quest-player.me')?.classList.contains('pm-atlas-ready'));
+  const questAtlasAudit=await page.evaluate(()=>({
+    ready:document.querySelector('#questPlayerLayer .quest-player.me')?.classList.contains('pm-atlas-ready'),
+    outfitClass:document.querySelector('#questPlayerLayer .quest-player.me')?.className||'',
+    layers:document.querySelectorAll('#questPlayerLayer .quest-player.me .pm-atlas-layer').length
+  }));
+  console.log('V15_2_QUEST_ATLAS',questAtlasAudit);
+  if(!questAtlasAudit.ready||questAtlasAudit.layers!==3||!/outfit-blue/.test(questAtlasAudit.outfitClass)) throw new Error('V15.2 Outside avatar atlas missing');
   await page.waitForTimeout(260);
   const cameraAudit = await page.evaluate(() => ({
     wrapper: !!document.querySelector('.pm-camera-world-v15'),
@@ -407,7 +452,7 @@ const { chromium } = require('playwright');
     throw new Error('Browser errors:\n' + errors.join('\n'));
   }
 
-  console.log('SMOKE_OK V15.1 tiled map -> character manifest -> editor history -> owner revisions -> keepsake -> outside camera -> join');
+  console.log('SMOKE_OK V15.2 A-style atlas -> tiled map -> editor history -> owner revisions -> keepsake -> outside camera -> join');
   await browser.close();
 })().catch(async err => {
   console.error(err);
