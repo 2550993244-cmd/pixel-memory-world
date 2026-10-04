@@ -66,8 +66,8 @@ const { chromium } = require('playwright');
     inviteVersion: window.PixelInvite?.version || null
   }));
   console.log('V15_1_DIAG', v15Diag);
-  if (v15Diag.runtime?.version !== '15.8') throw new Error('V15.8 systems runtime missing');
-  if (v15Diag.retentionVersion !== '15.5' || v15Diag.recoveryVersion !== '15.7' || v15Diag.inviteVersion !== '15.8') throw new Error('V15.8 invite/retention/recovery runtime missing');
+  if (v15Diag.runtime?.version !== '15.9') throw new Error('V15.9 systems runtime missing');
+  if (v15Diag.retentionVersion !== '15.5' || v15Diag.recoveryVersion !== '15.7' || v15Diag.inviteVersion !== '15.9') throw new Error('V15.9 invite/retention/recovery runtime missing');
   if (v15Diag.sceneVersion !== '15.0') throw new Error('V15 layered scene map missing');
   if (v15Diag.mapRuntime.source !== 'tiled-json' || v15Diag.mapRuntime.collisionCount < 3 || v15Diag.mapRuntime.pathCount < 6) {
     throw new Error('V15.1 Tiled map runtime did not load canonical JSON');
@@ -299,10 +299,19 @@ const { chromium } = require('playwright');
   viewerPage.on('pageerror',e=>viewerErrors.push('PAGEERROR: '+(e.stack||e.message)));
   viewerPage.on('console',m=>{if(m.type()==='error')viewerErrors.push('CONSOLE: '+m.text())});
   await viewerPage.goto(viewerUrl,{waitUntil:'networkidle'});
-  await viewerPage.waitForFunction(()=>document.querySelector('#avatarBuilder')?.classList.contains('active'),null,{timeout:5000});
-  await viewerPage.locator('#playerNameInput').fill('隐形观众测试');
-  await viewerPage.locator('#enterWorldBtn').click();
   await viewerPage.waitForFunction(()=>document.querySelector('#world')?.classList.contains('active'),null,{timeout:5000});
+  const instantEntryAudit=await viewerPage.evaluate(()=>({
+    screen:state.screen,
+    role:state.accessRole,
+    name:state.player.name,
+    avatarBuilderActive:document.querySelector('#avatarBuilder')?.classList.contains('active')||false,
+    localButtonVisible:document.querySelector('#viewerAvatarBtnV15')?.classList.contains('hidden')===false,
+    localProfile:JSON.parse(localStorage.getItem('pixel-memory-viewer-avatar-v1')||'null'),
+    hair:state.player.hair,outfit:state.player.outfit,item:state.player.item
+  }));
+  if(instantEntryAudit.screen!=='world'||instantEntryAudit.role!=='viewer'||instantEntryAudit.name!=='我'||instantEntryAudit.avatarBuilderActive||!instantEntryAudit.localButtonVisible) {
+    throw new Error('V15.9 viewer did not enter instantly '+JSON.stringify(instantEntryAudit));
+  }
   await page.waitForFunction(()=>state.net.viewerCount===1,null,{timeout:5000});
   await page.waitForTimeout(250);
   let spectatorAudit=await page.evaluate(()=>({
@@ -316,7 +325,26 @@ const { chromium } = require('playwright');
     throw new Error('V15.8 viewer leaked into participant presence '+JSON.stringify(spectatorAudit));
   }
 
-  // Server must ignore a forged viewer presence event even if someone bypasses the UI helper.
+  // Viewer can customize a local-only avatar after entry; owner still learns nothing.
+  const ownerBeforeCustomize=await page.evaluate(()=>JSON.stringify([...state.players.values()]));
+  await viewerPage.locator('#viewerAvatarBtnV15').click();
+  await viewerPage.waitForSelector('#saveViewerAvatarV15',{timeout:3000});
+  await viewerPage.locator('[data-viewer-hair="3"]').click();
+  await viewerPage.locator('[data-viewer-outfit="sage"]').click();
+  await viewerPage.locator('[data-viewer-item="🌷"]').click();
+  await viewerPage.locator('#saveViewerAvatarV15').click();
+  await viewerPage.waitForTimeout(180);
+  const viewerCustomizeAudit=await viewerPage.evaluate(()=>({
+    hair:state.player.hair,outfit:state.player.outfit,item:state.player.item,
+    stored:JSON.parse(localStorage.getItem('pixel-memory-viewer-avatar-v1')||'null'),
+    modalClosed:document.querySelector('#modal')?.classList.contains('hidden')!==false
+  }));
+  const ownerAfterCustomize=await page.evaluate(()=>JSON.stringify([...state.players.values()]));
+  if(viewerCustomizeAudit.hair!=='3'||viewerCustomizeAudit.outfit!=='sage'||viewerCustomizeAudit.item!=='🌷'||viewerCustomizeAudit.stored?.hair!=='3'||viewerCustomizeAudit.stored?.outfit!=='sage'||viewerCustomizeAudit.stored?.item!=='🌷'||ownerAfterCustomize!==ownerBeforeCustomize) {
+    throw new Error('V15.9 local-only viewer customization leaked or failed '+JSON.stringify(viewerCustomizeAudit));
+  }
+
+    // Server must ignore a forged viewer presence event even if someone bypasses the UI helper.
   await viewerPage.evaluate(()=>{
     state.channel?.postMessage({type:'hello',sender:state.player.id,player:{...state.player,name:'FORGED_VIEWER_LEAK'}});
     window.__ciViewerExtra=PixelNet.createChannel('ci-viewer-second-channel',state.roomCode,state.player.id);
@@ -348,7 +376,7 @@ const { chromium } = require('playwright');
     pillHidden:document.querySelector('#viewerPillV15')?.classList.contains('hidden')!==false,
     players:state.players.size
   }));
-  console.log('V15_8_INVISIBLE_SPECTATOR_AUDIT',{open:spectatorAudit,viewerLocalAudit,closed:spectatorClosed,errors:viewerErrors});
+  console.log('V15_9_INSTANT_SPECTATOR_AUDIT',{instantEntryAudit,open:spectatorAudit,viewerLocalAudit,viewerCustomizeAudit,closed:spectatorClosed,errors:viewerErrors});
   if(spectatorClosed.viewerCount!==0||!spectatorClosed.pillHidden||spectatorClosed.players!==ownerPresenceBefore.players||viewerErrors.length) {
     throw new Error('V15.8 spectator cleanup failed '+JSON.stringify({spectatorClosed,viewerErrors}));
   }
@@ -888,7 +916,7 @@ const { chromium } = require('playwright');
     throw new Error('Browser errors:\n' + errors.join('\n'));
   }
 
-  console.log('SMOKE_OK V15.8 invisible spectators -> dual invite roles -> archive retention -> recovery -> curator -> warm atlas -> tiled camera -> revisions -> join');
+  console.log('SMOKE_OK V15.9 instant spectators -> invisible viewers -> dual invite roles -> archive retention -> recovery -> curator -> warm atlas -> tiled camera -> revisions -> join');
   await browser.close();
 })().catch(async err => {
   console.error(err);
