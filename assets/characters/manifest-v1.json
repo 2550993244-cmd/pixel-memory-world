@@ -1,45 +1,58 @@
 {
   "schemaVersion": 1,
-  "runtimeVersion": "15.1",
+  "runtimeVersion": "15.2",
+  "artDirection": "A-warm-keepsake-pixel",
   "mode": "layered-spritesheet",
-  "status": "pipeline-ready-art-pending",
+  "status": "production-warm-keepsake-v1",
   "logicalFrame": {
     "width": 32,
     "height": 48
   },
-  "directions": [
-    "down",
-    "left",
-    "right",
-    "up"
-  ],
+  "sheet": {
+    "columns": 19,
+    "rows": 4,
+    "width": 608,
+    "height": 192
+  },
+  "directionRows": {
+    "down": 0,
+    "left": 1,
+    "right": 2,
+    "up": 3
+  },
   "actions": {
     "idle": {
+      "start": 0,
       "frames": 2,
       "fps": 2,
       "loop": true
     },
     "walk": {
+      "start": 2,
       "frames": 4,
       "fps": 8,
       "loop": true
     },
     "sit": {
+      "start": 6,
       "frames": 2,
       "fps": 2,
       "loop": true
     },
     "wave": {
+      "start": 8,
       "frames": 4,
       "fps": 8,
       "loop": false
     },
     "hug": {
+      "start": 12,
       "frames": 3,
       "fps": 7,
       "loop": false
     },
     "celebrate": {
+      "start": 15,
       "frames": 4,
       "fps": 9,
       "loop": true
@@ -86,9 +99,29 @@
     }
   ],
   "atlas": {
-    "image": null,
-    "metadata": null,
-    "note": "Final atlas intentionally unset until the pixel-art direction is chosen."
+    "format": "layered-svg-spritesheet",
+    "base": "./assets/characters/warm-v1/body.svg",
+    "hair": {
+      "1": "./assets/characters/warm-v1/hair-1.svg",
+      "2": "./assets/characters/warm-v1/hair-2.svg",
+      "3": "./assets/characters/warm-v1/hair-3.svg"
+    },
+    "outfit": {
+      "coral": "./assets/characters/warm-v1/outfit-coral.svg",
+      "blue": "./assets/characters/warm-v1/outfit-blue.svg",
+      "sage": "./assets/characters/warm-v1/outfit-sage.svg",
+      "butter": "./assets/characters/warm-v1/outfit-butter.svg"
+    }
+  },
+  "palette": {
+    "outline": "#5a463d",
+    "skin": "#e7b18f",
+    "hairDark": "#57443e",
+    "paperShadow": "#b79c88",
+    "coral": "#d98586",
+    "blue": "#7fa6b8",
+    "sage": "#8da78d",
+    "butter": "#e7bd62"
   },
   "compatibility": {
     "domFallback": true,
