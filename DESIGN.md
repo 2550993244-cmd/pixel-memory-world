@@ -1,5 +1,5 @@
 ---
-version: 15.3
+version: 15.4
 name: Pixel Memory World
 description: A warm multiplayer pixel-memory space. The interface should feel like a keepsake box that became a tiny playable world: soft paper surfaces, restrained pastel accents, readable modern Chinese typography, pixel-art scenes, and motion that responds to people rather than decorating every surface.
 ---
@@ -174,6 +174,16 @@ The technical sprite contract is fixed and the production direction is now **War
 - The runtime must keep the current DOM sprite as a fallback until a real atlas is present.
 - Production atlas language: warm brown outlines, muted clothing, small facial features, restrained handmade irregularity, readable four-direction silhouettes, and expressive-but-not-cartoonish social poses.
 - Keep the DOM sprite only as a compatibility fallback; new character work should extend the warm layered atlas instead of creating a second visual system.
+
+## Recovery-key language
+
+Recovery is intentionally account-free.
+
+- Recovery keys are bearer secrets, visually treated like passwords rather than invitation codes.
+- Never place a recovery key in decorative public-facing surfaces, screenshots, keepsake exports or share cards.
+- Export and import live inside a deliberate Recovery Center under room settings.
+- Import must verify server ownership/authorship before overwriting current browser credentials.
+- Ordinary guests should never be prompted to create an account merely to enter a room.
 
 ## V15 system interaction contract
 
