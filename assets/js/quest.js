@@ -117,7 +117,7 @@
     if (!op?.kind) return;
     if (op.kind === 'add' && op.item && !questState.items.some(x => x.id === op.item.id)) questState.items.push(op.item);
     if (op.kind === 'move') { const item = questState.items.find(x => x.id === op.id); if (item) { item.x = Number(op.x); item.y = Number(op.y); } }
-    if (op.kind === 'update') { const item = questState.items.find(x => x.id === op.id); if (item) { if(typeof op.title==='string')item.title=op.title;if(typeof op.text==='string')item.text=op.text; } }
+    if (op.kind === 'update') { const item = questState.items.find(x => x.id === op.id); if (item) { if(typeof op.title==='string')item.title=op.title;if(typeof op.text==='string')item.text=op.text;if(op.editedAt)item.editedAt=op.editedAt;else if(!window.PixelNet?.enabled)item.editedAt=Date.now(); } }
     if (op.kind === 'hide') { const item = questState.items.find(x => x.id === op.id); if (item) item.hidden=!!op.hidden; }
     if (op.kind === 'remove') questState.items = questState.items.filter(x=>x.id!==op.id);
     if (op.kind === 'clear') { questState.items = []; questState.found.clear(); }
@@ -545,7 +545,7 @@
     const owner=window.PixelNet?.enabled?!!window.PixelNet?.hasOwnerToken?.(state.roomCode):!!state.player.host;
     const author=isAuthoredByMe(item);
     const manage=(owner||author)?`<div class="memory-detail-actions">${author?'<button id="questEditOwn" class="button secondary small press">✎ 修改文字</button>':''}<button id="questHideMemory" class="button secondary small press">${item.hidden?'◉ 重新显示':'◌ 暂时收起'}</button><button id="questRemoveMemory" class="button danger small press">⌫ 移除</button></div>`:'';
-    openModal('MEMORY FOUND', escapeHTML(item.title), `<div class="memory-found-card"><div class="memory-found-visual">${item.image ? `<img src="${item.image}" alt="">` : `<span>${item.icon || '✦'}</span>`}</div><div class="memory-found-copy">${escapeHTML(item.text || '有人觉得这一刻值得被留下。')}</div>${voiceHtml}<div class="memory-detail-meta">${escapeHTML(item.authorName || item.by || '朋友')} 把它藏在这条路上 · 第 ${item.order || 1} 站</div>${manage}</div>`);
+    openModal('MEMORY FOUND', escapeHTML(item.title), `<div class="memory-found-card"><div class="memory-found-visual">${item.image ? `<img src="${item.image}" alt="">` : `<span>${item.icon || '✦'}</span>`}</div><div class="memory-found-copy">${escapeHTML(item.text || '有人觉得这一刻值得被留下。')}</div>${voiceHtml}<div class="memory-detail-meta">${escapeHTML(item.authorName || item.by || '朋友')} 把它藏在这条路上 · 第 ${item.order || 1} 站${editedMarker(item)}</div>${manage}</div>`);
     if (owner||author) {
       setTimeout(()=>{
         $('#questHideMemory')&&($('#questHideMemory').onclick=async()=>{
