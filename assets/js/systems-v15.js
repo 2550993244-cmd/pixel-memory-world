@@ -5,7 +5,7 @@
 (() => {
   const $=(s,r=document)=>r.querySelector(s);
   const $$=(s,r=document)=>[...r.querySelectorAll(s)];
-  const V='15.11';
+  const V='15.12';
 
   window.PixelV15={
     version:V,
