@@ -66,8 +66,8 @@ const { chromium } = require('playwright');
     inviteVersion: window.PixelInvite?.version || null
   }));
   console.log('V15_1_DIAG', v15Diag);
-  if (v15Diag.runtime?.version !== '15.14') throw new Error('V15.14 systems runtime missing');
-  if (v15Diag.retentionVersion !== '15.5' || v15Diag.recoveryVersion !== '15.7' || v15Diag.inviteVersion !== '15.13') throw new Error('V15.14 invite/retention/recovery runtime missing');
+  if (v15Diag.runtime?.version !== '15.15') throw new Error('V15.15 systems runtime missing');
+  if (v15Diag.retentionVersion !== '15.5' || v15Diag.recoveryVersion !== '15.7' || v15Diag.inviteVersion !== '15.13') throw new Error('V15.15 invite/retention/recovery runtime missing');
   if (v15Diag.sceneVersion !== '15.0') throw new Error('V15 layered scene map missing');
   if (v15Diag.mapRuntime.source !== 'tiled-json' || v15Diag.mapRuntime.collisionCount < 3 || v15Diag.mapRuntime.pathCount < 6) {
     throw new Error('V15.1 Tiled map runtime did not load canonical JSON');
@@ -535,6 +535,31 @@ const { chromium } = require('playwright');
      selfOwnershipAudit.oldNote?.hasAuthorId||selfOwnershipAudit.newNote?.hasAuthorId) {
     throw new Error('V15.14 private alias linkage failed '+JSON.stringify({historicalNameAudit,selfOwnershipAudit}));
   }
+
+  // V15.15 D015/D016/D018=A: private continuity drawer + author edit/delete controls + light edited marker.
+  const privateTraceAudit=await contributorPage.evaluate(async()=>{
+    const old=state.notes.find(n=>n.text==='旧名留言');
+    if(!old)throw new Error('old note missing before V15.15 continuity audit');
+    await commitMemoryOp({kind:'note:update',id:old.id,text:'旧名留言（修订）'});
+    await new Promise(r=>setTimeout(r,120));
+    await openMyTracesDrawer();
+    return {
+      drawerText:document.querySelector('#drawerBody')?.innerText||'',
+      noteEditButtons:document.querySelectorAll('[data-my-note-edit]').length,
+      noteDeleteButtons:document.querySelectorAll('[data-my-note-delete]').length,
+      title:document.querySelector('#drawerTitle')?.textContent||''
+    };
+  });
+  if(privateTraceAudit.title!=='我留下的'||
+     !privateTraceAudit.drawerText.includes('PRIVATE')||
+     !privateTraceAudit.drawerText.includes('参与者测试')||
+     !privateTraceAudit.drawerText.includes('Lynn测试')||
+     !privateTraceAudit.drawerText.includes('旧名留言（修订）')||
+     !privateTraceAudit.drawerText.includes('新名留言')||
+     !privateTraceAudit.drawerText.includes('已编辑')||
+     privateTraceAudit.noteEditButtons<2||privateTraceAudit.noteDeleteButtons<2){
+    throw new Error('V15.15 private my-traces / edited UI failed '+JSON.stringify(privateTraceAudit));
+  }
   await contributorPage.evaluate(()=>broadcast('leave'));
   await page.waitForFunction(()=>![...state.players.values()].some(p=>p.name==='Lynn测试'),null,{timeout:5000});
   await contributorPage.close();
@@ -786,13 +811,14 @@ const { chromium } = require('playwright');
     method:'POST',headers,body:JSON.stringify({scope,op})
   });
 
-  let authRes=await opRequest('memory',{kind:'memento:add',item:{id:'guest-memory',authorId:'spoofed',type:'📷',title:'原始标题',meaning:'原始内容',by:'访客A',x:22,y:66,time:Date.now()}},guestA);
+  let authRes=await opRequest('memory',{kind:'memento:add',item:{id:'guest-memory',authorId:'spoofed',authorHair:'3',authorOutfit:'blue',authorItem:'🎁',authorAvatar:{hair:'3'},type:'📷',title:'原始标题',meaning:'原始内容',by:'访客A',x:22,y:66,time:Date.now()}},guestA);
   if(authRes.status!==200) throw new Error('V15.3 author could not add memento');
   let authRoom=await fetch(`${base}/api/rooms/${curatorCode}`,{headers:{'X-Room-Invite':curatorRoom.inviteToken}}).then(r=>r.json());
   const publicGuestMemory=authRoom.memory.mementos.find(m=>m.id==='guest-memory');
   const authorRoom=await fetch(`${base}/api/rooms/${curatorCode}`,{headers:guestA}).then(r=>r.json());
   const selfGuestMemory=authorRoom.memory.mementos.find(m=>m.id==='guest-memory');
   if(!publicGuestMemory||Object.prototype.hasOwnProperty.call(publicGuestMemory,'authorId')||publicGuestMemory.isAuthor===true||!selfGuestMemory?.isAuthor||Object.prototype.hasOwnProperty.call(selfGuestMemory||{},'authorId')) throw new Error('V15.14 author identity leaked or private ownership missing');
+  if(['authorHair','authorOutfit','authorItem','authorAvatar','authorAppearance','authorSprite'].some(k=>Object.prototype.hasOwnProperty.call(selfGuestMemory||{},k))) throw new Error('V15.15 historical avatar snapshot was not stripped');
 
   authRes=await opRequest('memory',{kind:'memento:move',id:'guest-memory',x:44,y:55},guestB);
   if(authRes.status!==403) throw new Error('V15.3 stranger can move another author memento');
@@ -800,8 +826,35 @@ const { chromium } = require('playwright');
   if(authRes.status!==200) throw new Error('V15.3 host curator cannot move participant memento');
   authRes=await opRequest('memory',{kind:'memento:update',id:'guest-memory',title:'房主不该能改'},hostH);
   if(authRes.status!==403) throw new Error('V15.3 host can rewrite participant memory content');
+  authRes=await opRequest('memory',{kind:'memento:update',id:'guest-memory',title:'同名冒领',authorName:'访客A',by:'访客A'},guestB);
+  if(authRes.status!==403) throw new Error('V15.15 same display name can reclaim another author memory');
   authRes=await opRequest('memory',{kind:'memento:update',id:'guest-memory',title:'作者修改后',meaning:'作者自己的修改'},guestA);
   if(authRes.status!==200) throw new Error('V15.3 author cannot edit own memento');
+  const editedMemoryRoom=await fetch(`${base}/api/rooms/${curatorCode}`,{headers:{'X-Room-Invite':curatorRoom.inviteToken}}).then(r=>r.json());
+  const editedMemory=editedMemoryRoom.memory.mementos.find(m=>m.id==='guest-memory');
+  if(!editedMemory?.editedAt) throw new Error('V15.15 edited memento marker missing');
+  authRes=await opRequest('memory',{kind:'note:add',item:{id:'guest-note',text:'原始留言',by:'访客A',time:Date.now()}},guestA);
+  if(authRes.status!==200) throw new Error('V15.15 author cannot add note for control audit');
+  authRes=await opRequest('memory',{kind:'note:update',id:'guest-note',text:'同名冒领留言',authorName:'访客A',by:'访客A'},guestB);
+  if(authRes.status!==403) throw new Error('V15.15 same-name actor can edit old note');
+  authRes=await opRequest('memory',{kind:'note:update',id:'guest-note',text:'作者修订留言'},guestA);
+  if(authRes.status!==200) throw new Error('V15.15 author cannot edit own note');
+  const editedNoteRoom=await fetch(`${base}/api/rooms/${curatorCode}`,{headers:guestA}).then(r=>r.json());
+  const editedNote=editedNoteRoom.memory.notes.find(n=>n.id==='guest-note');
+  if(!editedNote?.editedAt||editedNote.text!=='作者修订留言'||!editedNote.isAuthor) throw new Error('V15.15 note edit marker/ownership missing');
+  authRes=await opRequest('memory',{kind:'note:remove',id:'guest-note'},guestA);
+  if(authRes.status!==200) throw new Error('V15.15 author cannot delete own note');
+
+  authRes=await opRequest('memory',{kind:'photo:add',item:{id:'guest-photo',names:['访客A'],by:'访客A',time:Date.now()}},guestA);
+  if(authRes.status!==200) throw new Error('V15.15 author cannot add photo for delete audit');
+  authRes=await opRequest('memory',{kind:'photo:remove',id:'guest-photo'},guestA);
+  if(authRes.status!==200) throw new Error('V15.15 author cannot delete own photo');
+
+  authRes=await opRequest('memory',{kind:'memento:add',item:{id:'guest-memory-delete',type:'🌷',title:'作者可删',meaning:'删除权测试',by:'访客A',x:18,y:64,time:Date.now()}},guestA);
+  if(authRes.status!==200) throw new Error('V15.15 author delete memento setup failed');
+  authRes=await opRequest('memory',{kind:'memento:remove',id:'guest-memory-delete'},guestA);
+  if(authRes.status!==200) throw new Error('V15.15 author cannot delete own memento');
+
   authRes=await opRequest('memory',{kind:'memento:hide',id:'guest-memory',hidden:true},hostH);
   if(authRes.status!==200) throw new Error('V15.3 host curator cannot hide memento');
   authRes=await opRequest('memory',{kind:'memento:remove',id:'guest-memory'},hostH);
@@ -825,7 +878,14 @@ const { chromium } = require('playwright');
   if(authRes.status!==403) throw new Error('V15.3 host can rewrite Outside memory content');
   authRes=await opRequest('quest',{kind:'update',id:'guest-quest',title:'作者改写',text:'作者改写内容'},guestA);
   if(authRes.status!==200) throw new Error('V15.3 author cannot edit own Outside memory');
-  console.log('V15_3_CURATOR_AUTH', {room:curatorCode, memoryRevision:memoryRev.id, ok:true});
+  const editedQuestRoom=await fetch(`${base}/api/rooms/${curatorCode}`,{headers:guestA}).then(r=>r.json());
+  const editedQuest=editedQuestRoom.quest.items.find(q=>q.id==='guest-quest');
+  if(!editedQuest?.editedAt||!editedQuest.isAuthor) throw new Error('V15.15 Outside edited marker/ownership missing');
+  authRes=await opRequest('quest',{kind:'remove',id:'guest-quest'},guestA);
+  if(authRes.status!==200) throw new Error('V15.15 author cannot delete own Outside memory');
+  const postAuthorDeleteRevisions=await fetch(`${base}/api/rooms/${curatorCode}/revisions`,{headers:{'X-Room-Owner':curatorRoom.ownerToken}}).then(r=>r.json());
+  if(!(postAuthorDeleteRevisions.revisions||[]).some(r=>r.kind==='quest')||!(postAuthorDeleteRevisions.revisions||[]).some(r=>r.kind==='mementos')) throw new Error('V15.15 author deletes did not leave recoverable host revisions');
+  console.log('V15_15_AUTHOR_CONTINUITY_AUTH', {room:curatorCode, memoryRevision:memoryRev.id, ok:true});
 
   // Inject a real guest-authored memento into the active room so the host editor
   // must curate someone else's object, not merely its own.
@@ -1093,7 +1153,7 @@ const { chromium } = require('playwright');
     throw new Error('Browser errors:\n' + errors.join('\n'));
   }
 
-  console.log('SMOKE_OK V15.14 private alias linkage -> historical author snapshots -> live contributor appearance -> returning prefill -> contributor ceremony -> instant spectators -> invisible viewers -> dual invite roles -> archive retention -> recovery -> curator -> warm atlas -> tiled camera -> revisions -> join');
+  console.log('SMOKE_OK V15.15 private my-traces -> author edit/delete -> name-only history -> edited markers -> no name-based recovery -> private alias linkage -> historical author snapshots -> live contributor appearance -> returning prefill -> contributor ceremony -> instant spectators -> invisible viewers -> dual invite roles -> archive retention -> recovery -> curator -> warm atlas -> tiled camera -> revisions -> join');
   await browser.close();
 })().catch(async err => {
   console.error(err);
