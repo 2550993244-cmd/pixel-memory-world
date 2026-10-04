@@ -162,9 +162,9 @@ function openViewerAvatarCustomizer(){
       '<button id="saveViewerAvatarV15" class="button primary full press">就这样，只给我自己看</button>'+
     '</div>');
   setTimeout(()=>{
-    $('[data-viewer-hair]').forEach(b=>b.onclick=()=>{$('[data-viewer-hair]').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');state.player.hair=b.dataset.viewerHair});
-    $('[data-viewer-outfit]').forEach(b=>b.onclick=()=>{$('[data-viewer-outfit]').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');state.player.outfit=b.dataset.viewerOutfit});
-    $('[data-viewer-item]').forEach(b=>b.onclick=()=>{$('[data-viewer-item]').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');state.player.item=b.dataset.viewerItem});
+    $$('[data-viewer-hair]').forEach(b=>b.onclick=()=>{$$('[data-viewer-hair]').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');state.player.hair=b.dataset.viewerHair});
+    $$('[data-viewer-outfit]').forEach(b=>b.onclick=()=>{$$('[data-viewer-outfit]').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');state.player.outfit=b.dataset.viewerOutfit});
+    $$('[data-viewer-item]').forEach(b=>b.onclick=()=>{$$('[data-viewer-item]').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');state.player.item=b.dataset.viewerItem});
     $('#saveViewerAvatarV15').onclick=()=>{
       saveViewerAvatar();
       state.players.set(state.player.id,{...state.player,lastSeen:Date.now()});
