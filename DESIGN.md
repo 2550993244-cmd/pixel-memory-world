@@ -1,5 +1,5 @@
 ---
-version: 15.14
+version: 15.15
 name: Pixel Memory World
 description: A warm multiplayer pixel-memory space. The interface should feel like a keepsake box that became a tiny playable world: soft paper surfaces, restrained pastel accents, readable modern Chinese typography, pixel-art scenes, and motion that responds to people rather than decorating every surface.
 ---
@@ -184,6 +184,17 @@ A memory's displayed author name is part of the moment in which the memory was c
 - Contributor renames on later visits must not retroactively rewrite old content.
 - Editing memory text, moving objects or host curation must never mutate the author-name snapshot.
 - Keep actor identity and display-name history conceptually separate: one secures continuity, the other preserves presentation at creation time.
+
+## Private author continuity
+
+The contributor owns a private continuity view without turning that continuity into public identity metadata.
+
+- “我留下的” may aggregate only items for which the server has privately marked `isAuthor: true` for the current verified actor.
+- Aggregate notes, mementos, photos and Outside memories across visits and historical display names; do not expose that aggregation to other visitors.
+- Authors may edit textual memories and delete their own authored content. Host recovery revisions remain available for memento / Outside deletion where the revision system already supports them.
+- Text edits set an `editedAt` marker, but the public UI renders only a lightweight “已编辑” label, never a public version history.
+- Historical authorship stores the immutable name snapshot only. Author avatar / hair / outfit / held-item snapshot fields are stripped server-side.
+- Display names are presentation only and must never be used to recover, merge or authorize actor identity.
 
 ## Private alias linkage
 
