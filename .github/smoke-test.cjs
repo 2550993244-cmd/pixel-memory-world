@@ -66,8 +66,8 @@ const { chromium } = require('playwright');
     inviteVersion: window.PixelInvite?.version || null
   }));
   console.log('V15_1_DIAG', v15Diag);
-  if (v15Diag.runtime?.version !== '15.10') throw new Error('V15.10 systems runtime missing');
-  if (v15Diag.retentionVersion !== '15.5' || v15Diag.recoveryVersion !== '15.7' || v15Diag.inviteVersion !== '15.10') throw new Error('V15.10 invite/retention/recovery runtime missing');
+  if (v15Diag.runtime?.version !== '15.11') throw new Error('V15.11 systems runtime missing');
+  if (v15Diag.retentionVersion !== '15.5' || v15Diag.recoveryVersion !== '15.7' || v15Diag.inviteVersion !== '15.11') throw new Error('V15.11 invite/retention/recovery runtime missing');
   if (v15Diag.sceneVersion !== '15.0') throw new Error('V15 layered scene map missing');
   if (v15Diag.mapRuntime.source !== 'tiled-json' || v15Diag.mapRuntime.collisionCount < 3 || v15Diag.mapRuntime.pathCount < 6) {
     throw new Error('V15.1 Tiled map runtime did not load canonical JSON');
@@ -428,9 +428,29 @@ const { chromium } = require('playwright');
   }
   await contributorPage.evaluate(()=>broadcast('leave'));
   await page.waitForFunction(()=>![...state.players.values()].some(p=>p.name==='参与者测试'),null,{timeout:5000});
+
+  // V15.11 D011=A: same actor returns to the full builder with prior visible profile prefilled.
+  await contributorPage.goto(contributorUrl,{waitUntil:'networkidle'});
+  await contributorPage.waitForFunction(()=>document.querySelector('#avatarBuilder')?.classList.contains('active'),null,{timeout:5000});
+  const returningContributorAudit=await contributorPage.evaluate(()=>({
+    screen:state.screen,
+    worldActive:document.querySelector('#world')?.classList.contains('active')||false,
+    name:document.querySelector('#playerNameInput')?.value||'',
+    hair:document.querySelector('[data-hair].selected')?.dataset.hair||'',
+    outfit:document.querySelector('[data-outfit].selected')?.dataset.outfit||'',
+    item:document.querySelector('[data-item].selected')?.dataset.item||'',
+    remembered:document.querySelector('#contributorIdentityNoteV15')?.classList.contains('returning')||false,
+    noteText:document.querySelector('#contributorIdentityNoteV15')?.innerText||'',
+    profileKeys:Object.keys(localStorage).filter(k=>k.startsWith('pixel-memory-contributor-profile-v1:'))
+  }));
+  if(returningContributorAudit.screen!=='avatarBuilder'||returningContributorAudit.worldActive||returningContributorAudit.name!=='参与者测试'||returningContributorAudit.hair!=='3'||returningContributorAudit.outfit!=='butter'||returningContributorAudit.item!=='🎈'||!returningContributorAudit.remembered||!/记得你/.test(returningContributorAudit.noteText)||returningContributorAudit.profileKeys.length!==1) {
+    throw new Error('V15.11 returning contributor profile was not prefilled '+JSON.stringify(returningContributorAudit));
+  }
+  const ownerBeforeReturningConfirm=await page.evaluate(()=>[...state.players.values()].some(p=>p.name==='参与者测试'));
+  if(ownerBeforeReturningConfirm)throw new Error('V15.11 returning contributor became visible before confirming builder');
   await contributorPage.close();
-  console.log('V15_10_CONTRIBUTOR_ENTRY_AUDIT',{entry:contributorEntryAudit,visible:contributorVisibleAudit,errors:contributorErrors});
-  if(contributorErrors.length)throw new Error('V15.10 contributor page errors '+JSON.stringify(contributorErrors));
+  console.log('V15_11_RETURNING_CONTRIBUTOR_AUDIT',{entry:contributorEntryAudit,visible:contributorVisibleAudit,returning:returningContributorAudit,errors:contributorErrors});
+  if(contributorErrors.length)throw new Error('V15.11 contributor page errors '+JSON.stringify(contributorErrors));
 
     await page.evaluate(()=>addActivity('CI identity check'));
   await page.waitForTimeout(80);
@@ -967,7 +987,7 @@ const { chromium } = require('playwright');
     throw new Error('Browser errors:\n' + errors.join('\n'));
   }
 
-  console.log('SMOKE_OK V15.10 contributor ceremony -> instant spectators -> invisible viewers -> dual invite roles -> archive retention -> recovery -> curator -> warm atlas -> tiled camera -> revisions -> join');
+  console.log('SMOKE_OK V15.11 returning contributor prefill -> contributor ceremony -> instant spectators -> invisible viewers -> dual invite roles -> archive retention -> recovery -> curator -> warm atlas -> tiled camera -> revisions -> join');
   await browser.close();
 })().catch(async err => {
   console.error(err);
