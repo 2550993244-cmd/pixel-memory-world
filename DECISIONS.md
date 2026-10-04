@@ -508,7 +508,7 @@ The view-only link now behaves like opening an interactive keepsake, while avata
 
 ## D010 · Contributor entry flow
 
-**Status:** needs owner decision  
+**Status:** decided — A · Keep the full contributor avatar builder  
 **Blocks:** whether collaborator onboarding remains ceremonial, how quickly contributors can start leaving content, contributor identity expectations  
 **Does not block:** viewer instant entry, spectator privacy, room access controls, persistence or archive/recovery
 
@@ -546,8 +546,64 @@ The next question is whether contributors should keep that richer entrance.
 
 **Tradeoff:** visible temporary names and avatars can make a collaborative room feel anonymous or messy, especially when authored memories are being created immediately.
 
+### Decision
+
+Selected **A · Keep the full contributor avatar builder**.
+
+Implemented in V15.10:
+- contributor secret links stop at the complete avatar-builder screen
+- name, hair, outfit and held item are all chosen before entering
+- the UI explicitly states that this identity is visible to collaborators and will contextualize authored memories
+- only viewer links use the instant-entry path
+- contributor presence is broadcast only after the person presses the final enter button
+- CI verifies a contributor cannot skip directly into the world and that the chosen visible identity reaches the owner session
+
+The asymmetry is intentional: **viewer = open and explore immediately; contributor = deliberately arrive as a visible participant before leaving a trace.**
+
+
+---
+
+## D011 · Returning contributor identity
+
+**Status:** needs owner decision  
+**Blocks:** whether repeat contributors must rebuild their character each visit, local contributor-profile persistence, how much friction remains after the first visit  
+**Does not block:** the full contributor builder itself, viewer fast entry, authorship credentials, room permissions or recovery keys
+
+V15.10 keeps the full contributor entry ritual. On the same device, however, a returning contributor still starts from the default name / appearance each time even though the underlying actor identity is already persistent.
+
+The next question is how much of the **visible contributor profile** should be remembered locally.
+
+### A · Remember and prefill, but still show the full builder — recommended
+
+- save the last contributor name, hair, outfit and held item on that device
+- the next contributor visit still opens the complete builder
+- all previous choices are already selected and can be confirmed or changed
+- entering remains a deliberate act, but returning friends do not rebuild themselves from zero
+
+**Best fit:** preserves D010's ceremony while making repeat visits feel continuous.
+
+**Tradeoff:** someone sharing a device may see the previous contributor profile until they edit it.
+
+### B · Always reset to defaults
+
+- every contributor visit starts blank / default
+- no visible profile persistence
+
+**Best fit:** shared devices and maximum explicitness.
+
+**Tradeoff:** repeat contributors must redo the same setup every time even though their authorship identity is already recognized.
+
+### C · Auto-resume returning contributors
+
+- if a saved contributor profile and valid actor identity exist, skip the builder on repeat visits
+- first visit still uses the full builder
+
+**Best fit:** minimum friction for frequent collaborators.
+
+**Tradeoff:** weakens the D010 rule and makes “first visit” vs “return visit” behavior less predictable.
+
 ### Default recommendation
 
-Choose **A · Keep the full contributor avatar builder**.
+Choose **A · Remember and prefill, but still show the full builder**.
 
-The asymmetry is useful: **viewer = open and explore immediately; contributor = deliberately arrive as a visible participant before leaving a trace.**
+It preserves the meaning of contributor entry while making the site feel like it remembers you.
