@@ -32,19 +32,46 @@ const { chromium } = require('playwright');
   if (/Courier New/i.test(v14State.bodyFont)) throw new Error('V14 readable UI font did not override Courier New');
   console.log('V14_FLAGS', v14State.flags);
 
-  // V15 P1-P4 systems must be present as real runtime capabilities.
+  // V15.1 P1-P4 systems must be present as real runtime capabilities.
+  await page.waitForFunction(() => window.PixelMapRuntime && window.PixelCharacterRuntime);
+  await page.evaluate(async () => {
+    await window.PixelMapRuntime.ready;
+    await window.PixelCharacterRuntime.ready;
+  });
   const v15Diag = await page.evaluate(() => ({
     runtime: window.PixelV15 || null,
     sceneVersion: window.PixelSceneMap?.version || null,
     layers: Object.keys(window.PixelSceneMap?.outdoor?.layers || {}),
+    mapRuntime: {
+      version: window.PixelMapRuntime?.version,
+      source: window.PixelMapRuntime?.source,
+      collisionCount: window.PixelMapRuntime?.collisionEllipses?.().length || 0,
+      pathCount: window.PixelMapRuntime?.pathPoints?.().length || 0
+    },
+    characterRuntime: {
+      version: window.PixelCharacterRuntime?.version,
+      mode: window.PixelCharacterRuntime?.mode,
+      atlasReady: window.PixelCharacterRuntime?.atlasReady,
+      status: window.PixelCharacterRuntime?.manifest?.status,
+      actions: Object.keys(window.PixelCharacterRuntime?.manifest?.actions || {})
+    },
     hasSystemsCss: !!document.querySelector('link[href*="systems-v15.css"]'),
     hasSystemsJs: !!document.querySelector('script[src*="systems-v15.js"]'),
     hasEditorApi: !!window.PixelRoomEditor,
     hasActionApi: !!window.PixelCharacterActions
   }));
-  console.log('V15_DIAG', v15Diag);
-  if (v15Diag.runtime?.version !== '15.0') throw new Error('V15 runtime missing');
+  console.log('V15_1_DIAG', v15Diag);
+  if (v15Diag.runtime?.version !== '15.1') throw new Error('V15.1 runtime missing');
   if (v15Diag.sceneVersion !== '15.0') throw new Error('V15 layered scene map missing');
+  if (v15Diag.mapRuntime.source !== 'tiled-json' || v15Diag.mapRuntime.collisionCount < 3 || v15Diag.mapRuntime.pathCount < 6) {
+    throw new Error('V15.1 Tiled map runtime did not load canonical JSON');
+  }
+  if (v15Diag.characterRuntime.version !== '15.1' || v15Diag.characterRuntime.mode !== 'layered-spritesheet') {
+    throw new Error('V15.1 character manifest runtime missing');
+  }
+  for (const a of ['idle','walk','sit','wave','hug','celebrate']) {
+    if (!v15Diag.characterRuntime.actions.includes(a)) throw new Error('V15.1 character manifest action missing: ' + a);
+  }
   for (const layer of ['ground','path','objects','collision','foreground']) {
     if (!v15Diag.layers.includes(layer)) throw new Error('V15 map layer missing: ' + layer);
   }
@@ -301,6 +328,30 @@ const { chromium } = require('playwright');
   if (ownerAudit.online && !layoutAudit.remote) throw new Error('V15 owner layout did not persist to server');
   if (ownerAudit.online && unauthorizedStatus !== 403) throw new Error('V15 layout endpoint is not owner-protected');
 
+  const historyBeforeUndo = await page.evaluate(() => window.PixelRoomEditor?.historyLength || 0);
+  if (historyBeforeUndo < 1) throw new Error('V15.1 editor history was not recorded');
+  const movedX = layoutAudit.local.x;
+  await page.locator('[data-room-editor-undo]').click();
+  await page.waitForTimeout(220);
+  const undoAudit = await page.evaluate(() => ({
+    sofa: state.world.layout?.sofa || null,
+    future: window.PixelRoomEditor?.futureLength || 0
+  }));
+  console.log('V15_1_UNDO_AUDIT', undoAudit);
+  if (undoAudit.sofa && Math.abs(undoAudit.sofa.x - movedX) < .01) throw new Error('V15.1 undo did not change layout');
+  if (undoAudit.future < 1) throw new Error('V15.1 redo stack missing');
+  await page.locator('[data-room-editor-redo]').click();
+  await page.waitForTimeout(220);
+
+  if (ownerAudit.online) {
+    const revisionAudit = await page.evaluate(async () => {
+      const data = await PixelNet.getRevisions(state.roomCode);
+      return {count:(data.revisions||[]).length,first:data.revisions?.[0]||null};
+    });
+    console.log('V15_1_REVISION_AUDIT', revisionAudit);
+    if (revisionAudit.count < 1 || revisionAudit.first?.kind !== 'layout') throw new Error('V15.1 server revision history missing');
+  }
+
   await page.locator('[data-room-editor-done]').click();
   await page.waitForFunction(() => !document.body.classList.contains('pm-room-editing-v15'));
 
@@ -335,10 +386,11 @@ const { chromium } = require('playwright');
     wrapper: !!document.querySelector('.pm-camera-world-v15'),
     active: document.querySelector('#questStage')?.classList.contains('pm-camera-active'),
     transform: getComputedStyle(document.querySelector('.pm-camera-world-v15')).transform,
-    collisionCount: window.PixelSceneMap?.outdoor?.layers?.collision?.ellipses?.length || 0
+    collisionCount: window.PixelMapRuntime?.collisionEllipses?.().length || 0,
+    source: window.PixelMapRuntime?.source || ''
   }));
-  console.log('V15_CAMERA_AUDIT', cameraAudit);
-  if (!cameraAudit.wrapper || !cameraAudit.active || cameraAudit.collisionCount < 3) throw new Error('V15 camera/layered collision runtime missing');
+  console.log('V15_1_CAMERA_AUDIT', cameraAudit);
+  if (!cameraAudit.wrapper || !cameraAudit.active || cameraAudit.collisionCount < 3 || cameraAudit.source !== 'tiled-json') throw new Error('V15.1 camera/Tiled collision runtime missing');
   if (cameraAudit.transform === 'none') throw new Error('V15 camera did not transform the quest world');
   if (await page.locator('.quest-signpost,.pm-sign').count()) throw new Error('duplicate memory-road signs still visible');
   if (!(await page.locator('#questFishingSpot').count())) throw new Error('fishing spot missing');
@@ -355,7 +407,7 @@ const { chromium } = require('playwright');
     throw new Error('Browser errors:\n' + errors.join('\n'));
   }
 
-  console.log('SMOKE_OK V15 landing -> creator -> actions -> owner editor -> keepsake -> outside camera -> room -> join');
+  console.log('SMOKE_OK V15.1 tiled map -> character manifest -> editor history -> owner revisions -> keepsake -> outside camera -> join');
   await browser.close();
 })().catch(async err => {
   console.error(err);
