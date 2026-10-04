@@ -609,12 +609,12 @@ const { chromium } = require('playwright');
   await contributorPage.waitForSelector('#toast .toast-undo-v16',{timeout:3000});
   await contributorPage.locator('#toast .toast-undo-v16').click();
   await contributorPage.waitForFunction(id=>state.notes.some(n=>n.id===id&&n.text==='新名留言'),undoTargetId,{timeout:3000});
-  const undoAudit=await contributorPage.evaluate(id=>({
+  const deleteUndoAudit=await contributorPage.evaluate(id=>({
     restored:state.notes.some(n=>n.id===id&&n.text==='新名留言'),
     toast:document.querySelector('#toast')?.innerText||''
   }),undoTargetId);
-  if(!undoAudit.restored)throw new Error('V15.16 delete undo did not restore authored note '+JSON.stringify(undoAudit));
-  console.log('V15_16_RETURNING_CONTINUITY_AUDIT',{avatarContinuityAudit,privateTraceAudit,recoveryShortcutAudit,undoAudit});
+  if(!deleteUndoAudit.restored)throw new Error('V15.16 delete undo did not restore authored note '+JSON.stringify(deleteUndoAudit));
+  console.log('V15_16_RETURNING_CONTINUITY_AUDIT',{avatarContinuityAudit,privateTraceAudit,recoveryShortcutAudit,deleteUndoAudit});
   await contributorPage.evaluate(()=>broadcast('leave'));
   await page.waitForFunction(()=>![...state.players.values()].some(p=>p.name==='Lynn测试'),null,{timeout:5000});
   await contributorPage.close();
