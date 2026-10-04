@@ -120,24 +120,26 @@
     centerText(date,260,'500 21px sans-serif','#8a8e91');
 
     const title=(state.world.honoree||'今晚')+'的'+(state.world.occasion||'小小世界');
-    g.font='700 62px "Songti SC","STSong","PingFang SC","Microsoft YaHei",serif';
+    g.font='700 58px "Songti SC","STSong","PingFang SC","Microsoft YaHei",serif';
     g.fillStyle='#303235';g.textAlign='center';
-    wrapCentered(g,title,W/2,367,760,74,2);
+    const titleLines=wrapCentered(g,title,W/2,360,760,66,2);
+    const titleShift=(titleLines-1)*52;
+    const dividerY=430+titleShift;
 
     /* pressed divider */
     embossLine(g,cx=>{
-      cx.beginPath();cx.moveTo(W/2-46,438);cx.quadraticCurveTo(W/2,424,W/2+46,438);
+      cx.beginPath();cx.moveTo(W/2-46,dividerY);cx.quadraticCurveTo(W/2,dividerY-14,W/2+46,dividerY);
     });
 
     g.font='28px "Songti SC","STSong",serif';
     g.fillStyle='#64686b';g.textAlign='center';g.textBaseline='alphabetic';
     const quote='“'+(state.world.invite||'今晚，我们真的在同一个地方。')+'”';
-    wrapCentered(g,quote,W/2,500,730,43,3);
+    wrapCentered(g,quote,W/2,492+titleShift,730,43,3);
 
     const people=[...state.players.values()].slice(0,10);
     const count=Math.max(people.length,1),gap=58,start=W/2-((count-1)*gap)/2;
     people.forEach((p,i)=>{
-      const x=start+i*gap,y=625;
+      const x=start+i*gap,y=617+titleShift;
       g.beginPath();g.arc(x,y,22,0,Math.PI*2);g.fillStyle='#f1f0ed';g.fill();
       g.strokeStyle='rgba(82,87,92,.10)';g.lineWidth=2;g.stroke();
       g.beginPath();g.arc(x-1,y-1,21,0,Math.PI*2);g.strokeStyle='rgba(255,255,255,.94)';g.stroke();
@@ -146,7 +148,7 @@
     });
 
     const stats=[['来过',state.players.size],['留言',state.notes.length],['纪念物',state.mementos.length],['合影',state.photos.length]];
-    const sy=753;
+    const sy=745+titleShift;
     g.strokeStyle='rgba(82,87,92,.10)';g.lineWidth=1;
     g.beginPath();g.moveTo(190,sy-66);g.lineTo(890,sy-66);g.stroke();
     g.strokeStyle='rgba(255,255,255,.92)';
@@ -166,18 +168,19 @@
     const last=state.notes.length
       ? '“'+(state.notes[state.notes.length-1].text||'')+'” — '+(state.notes[state.notes.length-1].by||'')
       : '这里还在等第一句话。';
-    roundRect(g,185,842,710,138,18);
+    roundRect(g,185,834+titleShift,710,138,18);
     g.fillStyle='rgba(238,237,233,.58)';g.fill();
     g.strokeStyle='rgba(255,255,255,.82)';g.lineWidth=2;g.stroke();
     g.font='24px "Songti SC","STSong",serif';g.fillStyle='#696d70';g.textAlign='center';g.textBaseline='alphabetic';
-    wrapCentered(g,last,W/2,895,640,36,3);
+    wrapCentered(g,last,W/2,887+titleShift,640,36,3);
 
     g.strokeStyle='rgba(82,87,92,.08)';g.lineWidth=1;
-    g.beginPath();g.moveTo(185,1054);g.lineTo(895,1054);g.stroke();
+    const footerY=1046+titleShift;
+    g.beginPath();g.moveTo(185,footerY);g.lineTo(895,footerY);g.stroke();
 
-    centerText('ROOM · '+(state.roomCode||'------'),1112,'500 17px ui-monospace,monospace','#9a9da0');
-    centerText('小小世界 · Pixel Memory',1160,'500 18px sans-serif','#9a9da0');
-    centerText('把这一晚，留成可以再打开的一张纸。',1214,'400 19px "Songti SC","STSong",serif','#a0a3a6');
+    centerText('ROOM · '+(state.roomCode||'------'),footerY+58,'500 17px ui-monospace,monospace','#9a9da0');
+    centerText('小小世界 · Pixel Memory',footerY+106,'500 18px sans-serif','#9a9da0');
+    centerText('把这一晚，留成可以再打开的一张纸。',footerY+160,'400 19px "Songti SC","STSong",serif','#a0a3a6');
 
     g.restore();
 
@@ -225,6 +228,13 @@
       card.setAttribute('aria-label','这一晚的白色压纹纪念卡');
     }
   }
+
+  document.querySelectorAll('[data-close-keepsake]').forEach(el=>{
+    el.addEventListener('click',()=>{
+      const keep=byId('keepsakeOverlay');
+      if(keep) keep.setAttribute('aria-hidden','true');
+    });
+  });
 
   installKeepsakeExport();
   annotateInteractiveState();
