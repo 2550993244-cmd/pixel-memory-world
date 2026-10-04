@@ -1,0 +1,84 @@
+/* Pixel Memory World · V15.2 warm keepsake character atlas */
+body.pm-world .pm-atlas-stack,
+#avatarPreview .pm-atlas-stack{
+  --pm-atlas-x:0px;
+  --pm-atlas-y:0px;
+  position:absolute;
+  width:32px;
+  height:48px;
+  pointer-events:none;
+  image-rendering:pixelated;
+  image-rendering:crisp-edges;
+}
+body.pm-world .player .pm-atlas-stack,
+body.pm-world .quest-player .pm-atlas-stack{
+  left:50%;
+  bottom:-2px;
+  z-index:8;
+  transform:translateX(-50%) scale(1.12);
+  transform-origin:50% 100%;
+  filter:drop-shadow(1px 2px 0 rgba(79,59,49,.10));
+}
+body.pm-world .pm-atlas-layer,
+#avatarPreview .pm-atlas-layer{
+  position:absolute;
+  inset:0;
+  display:block;
+  width:32px;
+  height:48px;
+  background-repeat:no-repeat;
+  background-size:608px 192px;
+  background-position:var(--pm-atlas-x) var(--pm-atlas-y);
+  image-rendering:pixelated;
+  image-rendering:crisp-edges;
+}
+body.pm-world .pm-atlas-body{z-index:1}
+body.pm-world .pm-atlas-outfit{z-index:2}
+body.pm-world .pm-atlas-hair{z-index:3}
+body.pm-world .pm-atlas-ready .pm-sprite-core{display:none!important}
+body.pm-world .pm-atlas-ready .pm-sprite-shadow{
+  width:22px;
+  height:6px;
+  bottom:0;
+  opacity:.62;
+}
+body.pm-world .pm-atlas-ready .player-item{
+  right:-11px;
+  bottom:5px;
+  z-index:15;
+  font-size:13px;
+}
+body.pm-world .pm-atlas-ready[data-action="celebrate"] .player-item{
+  transform:translateY(-2px);
+}
+body.pm-world .pm-atlas-ready .host-crown{z-index:16}
+
+/* Avatar builder uses the exact same production atlas, only enlarged. */
+#avatarPreview.pm-atlas-ready .face,
+#avatarPreview.pm-atlas-ready .body,
+#avatarPreview.pm-atlas-ready .hair{opacity:0!important}
+#avatarPreview.pm-atlas-ready .pm-atlas-stack{
+  left:50%;
+  top:20px;
+  z-index:8;
+  transform:translateX(-50%) scale(2.45);
+  transform-origin:50% 0;
+}
+#avatarPreview.pm-atlas-ready .pm-atlas-body{z-index:1}
+#avatarPreview.pm-atlas-ready .pm-atlas-outfit{z-index:2}
+#avatarPreview.pm-atlas-ready .pm-atlas-hair{z-index:3}
+#avatarPreview.pm-atlas-ready .held{
+  right:0;
+  bottom:11px;
+  z-index:12;
+  font-size:24px;
+}
+#avatarPreview.pm-atlas-ready+.avatar-shadow{width:115px;opacity:.7}
+
+@media(max-width:700px){
+  body.pm-world .player .pm-atlas-stack,
+  body.pm-world .quest-player .pm-atlas-stack{transform:translateX(-50%) scale(1.04)}
+}
+@media(prefers-reduced-motion:reduce){
+  body.pm-world .pm-atlas-stack{transition:none!important}
+}
