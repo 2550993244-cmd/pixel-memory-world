@@ -8,13 +8,18 @@
   const queryServer = qs.get('server');
   const queryRoom = String(qs.get('room')||'').toUpperCase();
   const queryInvite = String(qs.get('invite')||'');
+  const queryInviteRole = qs.get('role')==='view'?'viewer':'contributor';
   const inviteStorageKey = code => `pixel-memory-invite-${String(code||'').toUpperCase()}`;
+  const viewInviteStorageKey = code => `pixel-memory-view-invite-${String(code||'').toUpperCase()}`;
+  const inviteRoleStorageKey = code => `pixel-memory-invite-role-${String(code||'').toUpperCase()}`;
   if(queryRoom&&queryInvite){
-    localStorage.setItem(inviteStorageKey(queryRoom),queryInvite);
-    window.PixelInviteEntry={room:queryRoom,fromSecretLink:true};
+    localStorage.setItem(queryInviteRole==='viewer'?viewInviteStorageKey(queryRoom):inviteStorageKey(queryRoom),queryInvite);
+    localStorage.setItem(inviteRoleStorageKey(queryRoom),queryInviteRole);
+    window.PixelInviteEntry={room:queryRoom,role:queryInviteRole,fromSecretLink:true};
     try{
       const clean=new URL(location.href);
       clean.searchParams.delete('invite');
+      clean.searchParams.delete('role');
       history.replaceState({},'',clean.pathname+(clean.search||'')+clean.hash);
     }catch(_){}
   }
@@ -128,12 +133,25 @@
   }
 
   const ownerStorageKey = code => `pixel-memory-owner-${String(code||'').toUpperCase()}`;
-  const getInviteToken = code => localStorage.getItem(inviteStorageKey(code)) || '';
-  const saveInviteToken = (code, token) => {
+  const getInviteRole = code => localStorage.getItem(inviteRoleStorageKey(code)) || 'contributor';
+  const saveInviteRole = (code, role) => {
     if(!code)return;
-    const key=inviteStorageKey(code);
+    if(role)localStorage.setItem(inviteRoleStorageKey(code),role);
+    else localStorage.removeItem(inviteRoleStorageKey(code));
+  };
+  const getContributorInviteToken = code => localStorage.getItem(inviteStorageKey(code)) || '';
+  const getViewerInviteToken = code => localStorage.getItem(viewInviteStorageKey(code)) || '';
+  const getInviteToken = code => getInviteRole(code)==='viewer' ? getViewerInviteToken(code) : getContributorInviteToken(code);
+  const saveInviteToken = (code, token, role='contributor') => {
+    if(!code)return;
+    const key=role==='viewer'?viewInviteStorageKey(code):inviteStorageKey(code);
     if(token)localStorage.setItem(key,String(token));
     else localStorage.removeItem(key);
+    if(token)saveInviteRole(code,role);
+  };
+  const clearInviteToken = (code, role='active') => {
+    if(role==='viewer'||role==='active'&&getInviteRole(code)==='viewer')localStorage.removeItem(viewInviteStorageKey(code));
+    if(role==='contributor'||role==='active'&&getInviteRole(code)!=='viewer')localStorage.removeItem(inviteStorageKey(code));
   };
   const inviteHeaders = code => {
     const token=getInviteToken(code);
@@ -180,8 +198,18 @@
     getOwnerToken,
     saveOwnerToken,
     getInviteToken,
+    getContributorInviteToken,
+    getViewerInviteToken,
+    getInviteRole,
+    saveInviteRole,
     saveInviteToken,
-    hasInviteToken(code){return !!getInviteToken(code);},
+    clearInviteToken,
+    hasInviteToken(code,role='active'){
+      if(role==='viewer')return !!getViewerInviteToken(code);
+      if(role==='contributor')return !!getContributorInviteToken(code);
+      return !!getInviteToken(code);
+    },
+    isViewOnly(code){return getInviteRole(code)==='viewer';},
     hasOwnerToken(code){ return !!getOwnerToken(code); },
     getActorCredential,
     setActorCredential,
@@ -189,13 +217,23 @@
     async createRoom(code, world, memory={}) {
       const room=await api('/api/rooms',{method:'POST',body:JSON.stringify({code,world,memory})});
       if(room?.ownerToken) saveOwnerToken(code,room.ownerToken);
-      if(room?.inviteToken) saveInviteToken(code,room.inviteToken);
+      if(room?.inviteToken) saveInviteToken(code,room.inviteToken,'contributor');
+      if(room?.viewInviteToken) saveInviteToken(code,room.viewInviteToken,'viewer');
+      saveInviteRole(code,'contributor');
       return room;
     },
-    async getRoom(code){ return api(`/api/rooms/${encodeURIComponent(code)}`,{headers:accessHeaders(code)}); },
-    async rotateInvite(code){
-      const data=await api(`/api/rooms/${encodeURIComponent(code)}/invite/rotate`,{method:'POST',headers:ownerHeaders(code),body:'{}'});
-      if(data?.inviteToken) saveInviteToken(code,data.inviteToken);
+    async getRoom(code){
+      const room=await api(`/api/rooms/${encodeURIComponent(code)}`,{headers:accessHeaders(code)});
+      if(room?.accessRole==='viewer')saveInviteRole(code,'viewer');
+      else if(room?.accessRole==='contributor')saveInviteRole(code,'contributor');
+      return room;
+    },
+    async rotateInvite(code,role='contributor'){
+      const safeRole=role==='viewer'?'viewer':'contributor';
+      const data=await api(`/api/rooms/${encodeURIComponent(code)}/invite/${safeRole}/rotate`,{method:'POST',headers:ownerHeaders(code),body:'{}'});
+      if(data?.inviteToken) saveInviteToken(code,data.inviteToken,'contributor');
+      if(data?.viewInviteToken) saveInviteToken(code,data.viewInviteToken,'viewer');
+      if(getOwnerToken(code))saveInviteRole(code,'contributor');
       return data;
     },
     async archiveRoom(code){
