@@ -22,7 +22,7 @@
   // P1 · camera runtime over the authored layered quest map
   // ---------------------------------------------------------------------------
   const camera={
-    stage:null,world:null,x:0,y:0,zoom:1,ready:false,
+    stage:null,world:null,x:0,y:0,zoom:1,worldW:0,worldH:0,ready:false,
     fixedSelectors:['#questPrompt','.quest-map-caption','.pm-camera-badge-v15']
   };
 
@@ -73,25 +73,62 @@
     const ed=$('#questEditor');
     return !!ed && !ed.classList.contains('hidden');
   }
+  function placementMode(){
+    return editorIsOpen() || !!camera.stage?.classList.contains('placing');
+  }
+  function sizeCameraWorld(){
+    if(!camera.stage||!camera.world)return;
+    const rect=camera.stage.getBoundingClientRect();
+    if(!rect.width||!rect.height)return;
+    const dims=window.PixelMapRuntime?.dimensions?.()||window.PixelSceneMap?.outdoor?.world||{width:1600,height:960};
+    const sourceW=Number(dims.width)||1600,sourceH=Number(dims.height)||960;
+    const cover=Math.max(rect.width/sourceW,rect.height/sourceH);
+    const scale=cover*1.22;
+    camera.worldW=Math.max(rect.width,sourceW*scale);
+    camera.worldH=Math.max(rect.height,sourceH*scale);
+    camera.world.style.width=camera.worldW.toFixed(2)+'px';
+    camera.world.style.height=camera.worldH.toFixed(2)+'px';
+  }
+  function cameraFitTarget(){
+    const rect=camera.stage.getBoundingClientRect();
+    const z=Math.min(rect.width/camera.worldW,rect.height/camera.worldH)*.96;
+    return {
+      zoom:z,
+      x:(rect.width-camera.worldW*z)/2,
+      y:(rect.height-camera.worldH*z)/2
+    };
+  }
+  function screenToWorldPercent(clientX,clientY){
+    if(!camera.stage||!camera.worldW||!camera.worldH)return null;
+    const r=camera.stage.getBoundingClientRect();
+    const wx=(clientX-r.left-camera.x)/camera.zoom;
+    const wy=(clientY-r.top-camera.y)/camera.zoom;
+    return {
+      x:Math.max(0,Math.min(100,wx/camera.worldW*100)),
+      y:Math.max(0,Math.min(100,wy/camera.worldH*100))
+    };
+  }
 
   function cameraFrame(){
     if(!camera.ready) ensureCameraWorld();
     if(camera.stage&&camera.world){
-      const placing=editorIsOpen();
+      if(!camera.worldW||!camera.worldH)sizeCameraWorld();
+      const placing=placementMode();
       const active=state.screen==='quest'&&!placing;
       const me=$('.quest-player.me',camera.world);
       if(placing){
-        camera.x=0;camera.y=0;camera.zoom=1;
+        const fit=cameraFitTarget();
+        camera.x=fit.x;camera.y=fit.y;camera.zoom=fit.zoom;
       }else if(active&&me){
         const rect=camera.stage.getBoundingClientRect();
         const px=parseFloat(me.style.left)||50;
         const py=parseFloat(me.style.top)||50;
-        const mapZoom=Number(window.PixelMapRuntime?.dimensions?.().viewportScale || window.PixelSceneMap?.outdoor?.world?.viewportScale)||1.22;
-        const targetZoom=window.innerWidth<700?Math.max(1.10,mapZoom-.10):mapZoom;
-        const rawX=rect.width/2-(px/100)*rect.width*targetZoom;
-        const rawY=rect.height/2-(py/100)*rect.height*targetZoom;
-        const minX=rect.width-rect.width*targetZoom;
-        const minY=rect.height-rect.height*targetZoom;
+        const minZoom=Math.max(rect.width/camera.worldW,rect.height/camera.worldH);
+        const targetZoom=Math.max(minZoom,window.innerWidth<700?.90:1);
+        const rawX=rect.width/2-(px/100)*camera.worldW*targetZoom;
+        const rawY=rect.height/2-(py/100)*camera.worldH*targetZoom;
+        const minX=rect.width-camera.worldW*targetZoom;
+        const minY=rect.height-camera.worldH*targetZoom;
         const tx=Math.max(minX,Math.min(0,rawX));
         const ty=Math.max(minY,Math.min(0,rawY));
         camera.x+=(tx-camera.x)*.12;
@@ -103,11 +140,20 @@
         camera.zoom+=(1-camera.zoom)*.16;
       }
       camera.world.style.transform=`translate3d(${camera.x.toFixed(2)}px,${camera.y.toFixed(2)}px,0) scale(${camera.zoom.toFixed(4)})`;
-      camera.stage.classList.toggle('pm-camera-active',state.screen==='quest'&&!editorIsOpen());
+      camera.stage.classList.toggle('pm-camera-active',state.screen==='quest'&&!placing);
+      camera.stage.classList.toggle('pm-camera-fit',state.screen==='quest'&&placing);
     }
     requestAnimationFrame(cameraFrame);
   }
   ensureCameraWorld();
+  sizeCameraWorld();
+  window.addEventListener('resize',()=>{camera.worldW=0;camera.worldH=0;sizeCameraWorld()});
+  window.PixelCameraRuntime={
+    version:V,
+    screenToWorldPercent,
+    resize:sizeCameraWorld,
+    get state(){return {x:camera.x,y:camera.y,zoom:camera.zoom,worldW:camera.worldW,worldH:camera.worldH,fit:placementMode()}}
+  };
   requestAnimationFrame(cameraFrame);
 
   function tiledPathD(points){
@@ -133,7 +179,7 @@
     if(fishing&&fishEl){fishEl.style.left=fishing.x+'%';fishEl.style.top=fishing.y+'%'}
     const door=rt.object?.('return-door');
     const doorEl=$('#questReturnDoor');
-    if(door&&doorEl){doorEl.style.left=door.x+'%';doorEl.style.top=door.y+'%'}
+    if(door&&doorEl){doorEl.style.left=door.x+'%';doorEl.style.top=door.y+'%';doorEl.style.bottom='auto'}
     const badge=$('.pm-camera-badge-v15 span');
     if(badge)badge.textContent=rt.source==='tiled-json'?'CAMERA · TILED MAP':'CAMERA · MAP FALLBACK';
   }
