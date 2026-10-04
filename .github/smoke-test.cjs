@@ -60,10 +60,13 @@ const { chromium } = require('playwright');
     hasSystemsCss: !!document.querySelector('link[href*="systems-v15.css"]'),
     hasSystemsJs: !!document.querySelector('script[src*="systems-v15.js"]'),
     hasEditorApi: !!window.PixelRoomEditor,
-    hasActionApi: !!window.PixelCharacterActions
+    hasActionApi: !!window.PixelCharacterActions,
+    retentionVersion: window.PixelRetention?.version || null,
+    recoveryVersion: window.PixelRecovery?.version || null
   }));
   console.log('V15_1_DIAG', v15Diag);
-  if (v15Diag.runtime?.version !== '15.4') throw new Error('V15.4 systems runtime missing');
+  if (v15Diag.runtime?.version !== '15.5') throw new Error('V15.5 systems runtime missing');
+  if (v15Diag.retentionVersion !== '15.5' || v15Diag.recoveryVersion !== '15.4') throw new Error('V15.5 retention/recovery runtime missing');
   if (v15Diag.sceneVersion !== '15.0') throw new Error('V15 layered scene map missing');
   if (v15Diag.mapRuntime.source !== 'tiled-json' || v15Diag.mapRuntime.collisionCount < 3 || v15Diag.mapRuntime.pathCount < 6) {
     throw new Error('V15.1 Tiled map runtime did not load canonical JSON');
@@ -352,6 +355,77 @@ const { chromium } = require('playwright');
   if(recoveryAudit.badOwner!==false) throw new Error('V15.4 recovery verification accepts a wrong owner token');
   if(!recoveryAudit.corruptRejected) throw new Error('V15.4 corrupt recovery key was accepted');
 
+  // V15.5 D005=A: archive -> guest blocked -> owner restore -> permanent purge incl. uploads.
+  const lifecycleCode=('R'+Math.random().toString(36).slice(2,7)).toUpperCase();
+  const lifecycleCreateRes=await fetch(`${base}/api/rooms`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({code:lifecycleCode,world:{occasion:'留存测试'},memory:{mementos:[],notes:[],photos:[],activity:[]}})
+  });
+  if(!lifecycleCreateRes.ok) throw new Error('V15.5 retention room create failed '+lifecycleCreateRes.status);
+  const lifecycleRoom=await lifecycleCreateRes.json();
+  const lifecycleOwner={'Content-Type':'application/json','X-Room-Owner':lifecycleRoom.ownerToken};
+  const uploadForm=new FormData();
+  uploadForm.append('file',new Blob(['archive-lifecycle-test'],{type:'text/plain'}),'retention-test.txt');
+  const uploadRes=await fetch(`${base}/api/uploads`,{
+    method:'POST',
+    headers:{'X-Room-Owner':lifecycleRoom.ownerToken,'X-Room-Code':lifecycleCode},
+    body:uploadForm
+  });
+  if(!uploadRes.ok) throw new Error('V15.5 room-scoped upload failed '+uploadRes.status);
+  const uploadInfo=await uploadRes.json();
+  const beforeArchiveUpload=await fetch(uploadInfo.url);
+  if(beforeArchiveUpload.status!==200) throw new Error('V15.5 lifecycle upload is not readable before deletion');
+
+  let lifecycleRes=await fetch(`${base}/api/rooms/${lifecycleCode}/archive`,{
+    method:'POST',headers:lifecycleOwner,body:'{}'
+  });
+  if(lifecycleRes.status!==200) throw new Error('V15.5 owner cannot archive room');
+  const archivedData=await lifecycleRes.json();
+  const retentionMs=Number(archivedData.meta?.purgeAfter)-Number(archivedData.meta?.archivedAt);
+  if(Math.abs(retentionMs-30*24*60*60*1000)>5000) throw new Error('V15.5 archive retention window is not 30 days');
+
+  const guestArchived=await fetch(`${base}/api/rooms/${lifecycleCode}`);
+  if(guestArchived.status!==410) throw new Error('V15.5 archived room still allows guest GET');
+  const ownerArchived=await fetch(`${base}/api/rooms/${lifecycleCode}`,{headers:{'X-Room-Owner':lifecycleRoom.ownerToken}});
+  if(ownerArchived.status!==200) throw new Error('V15.5 owner cannot inspect archived room');
+  const archivedOp=await fetch(`${base}/api/rooms/${lifecycleCode}/ops`,{
+    method:'POST',headers:lifecycleOwner,
+    body:JSON.stringify({scope:'world',op:{patch:{invite:'should not write'}}})
+  });
+  if(archivedOp.status!==423) throw new Error('V15.5 archived room still accepts mutations');
+
+  lifecycleRes=await fetch(`${base}/api/rooms/${lifecycleCode}/unarchive`,{
+    method:'POST',headers:lifecycleOwner,body:'{}'
+  });
+  if(lifecycleRes.status!==200) throw new Error('V15.5 owner cannot restore archived room');
+  const guestRestored=await fetch(`${base}/api/rooms/${lifecycleCode}`);
+  if(guestRestored.status!==200) throw new Error('V15.5 restored room is not joinable');
+
+  lifecycleRes=await fetch(`${base}/api/rooms/${lifecycleCode}/archive`,{
+    method:'POST',headers:lifecycleOwner,body:'{}'
+  });
+  if(lifecycleRes.status!==200) throw new Error('V15.5 room cannot be re-archived');
+
+  const badDelete=await fetch(`${base}/api/rooms/${lifecycleCode}/delete-permanently`,{
+    method:'POST',headers:lifecycleOwner,
+    body:JSON.stringify({confirmCode:'WRONG1',acknowledge:'DELETE_FOREVER'})
+  });
+  if(badDelete.status!==400) throw new Error('V15.5 permanent deletion does not require exact room-code confirmation');
+
+  const deleteRes=await fetch(`${base}/api/rooms/${lifecycleCode}/delete-permanently`,{
+    method:'POST',headers:lifecycleOwner,
+    body:JSON.stringify({confirmCode:lifecycleCode,acknowledge:'DELETE_FOREVER'})
+  });
+  if(deleteRes.status!==200) throw new Error('V15.5 permanent deletion failed');
+  const deleteInfo=await deleteRes.json();
+  if(deleteInfo.removedUploads<1) throw new Error('V15.5 permanent deletion did not clean room uploads');
+  const deletedRoom=await fetch(`${base}/api/rooms/${lifecycleCode}`);
+  if(deletedRoom.status!==404) throw new Error('V15.5 permanently deleted room still exists');
+  const deletedUpload=await fetch(uploadInfo.url);
+  if(deletedUpload.status!==404) throw new Error('V15.5 permanently deleted room upload still exists');
+  console.log('V15_5_RETENTION_AUDIT',{room:lifecycleCode,retentionMs,removedUploads:deleteInfo.removedUploads});
+
   // V15.3 D003=A: real server-side author/host curation permissions.
   const curatorCode=('T'+Math.random().toString(36).slice(2,7)).toUpperCase();
   const curatorCreate=await fetch(`${base}/api/rooms`,{
@@ -465,8 +539,11 @@ const { chromium } = require('playwright');
   await page.locator('#worldSettingsBtn').click();
   await page.waitForSelector('#roomDrawer:not(.hidden)', { timeout: 3000 });
   await page.waitForSelector('#openRecoveryCenterV15',{timeout:3000});
+  await page.waitForSelector('#openRetentionCenterV15',{timeout:3000});
   const recoveryEntry=await page.locator('#recoveryEntryV15').innerText();
+  const retentionEntry=await page.locator('#retentionEntryV15').innerText();
   if(!/换设备恢复/.test(recoveryEntry)) throw new Error('V15.4 recovery center entry missing from room settings');
+  if(!/30 天/.test(retentionEntry)) throw new Error('V15.5 retention center entry missing from room settings');
   await page.waitForSelector('#startRoomEditorV15', { timeout: 3000 });
   const storageCopy = await page.locator('.pm-storage-state-v15').innerText();
   if (!storageCopy) throw new Error('V15 persistence status missing');
@@ -642,7 +719,7 @@ const { chromium } = require('playwright');
     throw new Error('Browser errors:\n' + errors.join('\n'));
   }
 
-  console.log('SMOKE_OK V15.4 account-free recovery -> A-curator -> participant memory editor -> warm atlas -> tiled camera -> revisions -> join');
+  console.log('SMOKE_OK V15.5 archive retention -> account-free recovery -> A-curator -> participant memory editor -> warm atlas -> tiled camera -> revisions -> join');
   await browser.close();
 })().catch(async err => {
   console.error(err);
