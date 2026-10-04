@@ -125,11 +125,23 @@
       if(room?.ownerToken) saveOwnerToken(code,room.ownerToken);
       return room;
     },
-    async updateOwnerLayout(code, layout){
+    async updateOwnerLayout(code, layout, label='房间布置'){
       return api(`/api/rooms/${encodeURIComponent(code)}/layout`,{
         method:'PUT',
         headers:ownerHeaders(code),
-        body:JSON.stringify({layout})
+        body:JSON.stringify({layout,label})
+      });
+    },
+    async getRevisions(code){
+      return api(`/api/rooms/${encodeURIComponent(code)}/revisions`,{
+        headers:ownerHeaders(code)
+      });
+    },
+    async restoreRevision(code, revisionId){
+      return api(`/api/rooms/${encodeURIComponent(code)}/revisions/${encodeURIComponent(revisionId)}/restore`,{
+        method:'POST',
+        headers:ownerHeaders(code),
+        body:'{}'
       });
     },
     async updateRoom(code, patch){ return api(`/api/rooms/${encodeURIComponent(code)}`,{method:'PUT',body:JSON.stringify(patch)}); },
