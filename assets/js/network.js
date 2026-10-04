@@ -150,7 +150,7 @@
     const key=role==='viewer'?viewInviteStorageKey(code):inviteStorageKey(code);
     if(token)localStorage.setItem(key,String(token));
     else localStorage.removeItem(key);
-    if(token)saveInviteRole(code,role);
+    if(token&&!getOwnerToken(code))saveInviteRole(code,role);
   };
   const clearInviteToken = (code, role='active') => {
     if(role==='viewer'||role==='active'&&getInviteRole(code)==='viewer')localStorage.removeItem(viewInviteStorageKey(code));
