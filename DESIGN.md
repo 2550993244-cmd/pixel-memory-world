@@ -1,5 +1,5 @@
 ---
-version: 15.7
+version: 15.8
 name: Pixel Memory World
 description: A warm multiplayer pixel-memory space. The interface should feel like a keepsake box that became a tiny playable world: soft paper surfaces, restrained pastel accents, readable modern Chinese typography, pixel-art scenes, and motion that responds to people rather than decorating every surface.
 ---
@@ -174,6 +174,18 @@ The technical sprite contract is fixed and the production direction is now **War
 - The runtime must keep the current DOM sprite as a fallback until a real atlas is present.
 - Production atlas language: warm brown outlines, muted clothing, small facial features, restrained handmade irregularity, readable four-direction silhouettes, and expressive-but-not-cartoonish social poses.
 - Keep the DOM sprite only as a compatibility fallback; new character work should extend the warm layered atlas instead of creating a second visual system.
+
+## Invisible spectator presence
+
+View-only avatars exist for navigation, not social identity.
+
+- A viewer sees their own local avatar so walking still feels embodied.
+- Never render viewer avatars, names or movement on another person's device.
+- Normal participant counts exclude viewers.
+- Anonymous audience count may appear to contributors as “◉ N 人正在观看”; it must contain no names, avatars or per-viewer status.
+- Do not show anonymous audience count back to viewers.
+- Viewer presence privacy is server-enforced; CSS hiding alone is insufficient.
+- A viewer should still receive live contributor movement and newly synchronized content.
 
 ## View-only mode language
 
