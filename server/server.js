@@ -210,6 +210,13 @@ function applyQuestOp(r, op) {
     const item = r.quest.items.find(x => x.id === op.id);
     if (item) { item.x = Number(op.x); item.y = Number(op.y); }
   }
+  if (op.kind === 'update') {
+    const item = r.quest.items.find(x => x.id === op.id);
+    if (item) {
+      if (typeof op.title === 'string') item.title = op.title.slice(0,100);
+      if (typeof op.text === 'string') item.text = op.text.slice(0,800);
+    }
+  }
   if (op.kind === 'hide') {
     const item = r.quest.items.find(x => x.id === op.id);
     if (item) item.hidden = !!op.hidden;
@@ -241,6 +248,13 @@ function authorizeOp(req, r, scope, op) {
   }
   if (scope === 'memory' && op?.kind === 'memento:update') {
     const item=itemForOp(r,scope,op);
+    if (!item) return { ok:false, error:'item_not_found', status:404 };
+    const actor=verifyActor(req,r);
+    if (!actor.ok) return actor;
+    return item.authorId === actor.id ? {ok:true,role:'author',actorId:actor.id} : {ok:false,error:'not_author'};
+  }
+  if (scope === 'quest' && op?.kind === 'update') {
+    const item=r.quest.items.find(x=>x.id===op.id) || null;
     if (!item) return { ok:false, error:'item_not_found', status:404 };
     const actor=verifyActor(req,r);
     if (!actor.ok) return actor;
