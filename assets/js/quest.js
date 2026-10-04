@@ -316,7 +316,12 @@
     setTimeout(() => f.remove(), 700);
   }
 
-  const fishingSpot = { id:'fishing', type:'fishing', x:30, y:44, r:8, title:'湖边钓一会儿' };
+  const fishingSeed = window.PixelMapRuntime?.object?.('fishing') || {x:30,y:44};
+  const fishingSpot = { id:'fishing', type:'fishing', x:Number(fishingSeed.x)||30, y:Number(fishingSeed.y)||44, r:8, title:'湖边钓一会儿' };
+  window.addEventListener('pixel-map-ready',()=>{
+    const p=window.PixelMapRuntime?.object?.('fishing');
+    if(p){fishingSpot.x=Number(p.x)||fishingSpot.x;fishingSpot.y=Number(p.y)||fishingSpot.y}
+  });
 
   function updateQuestNear() {
     let best = null, dist = 999;
