@@ -12,6 +12,7 @@ function currentMemory(){return {mementos:state.mementos,notes:state.notes,photo
 function authorSnapshot(item){return String(item?.authorName||item?.by||'朋友')}
 function isAuthoredByMe(item){return !!item&&(item.isAuthor===true||(!!item.authorId&&item.authorId===state.player.actorId))}
 function publicPlayerSnapshot(){const {actorId,...player}=state.player;return player}
+function editedMarker(item){return item?.editedAt?'<small class="memory-edited-v15"> · 已编辑</small>':''}
 function isViewOnly(){return state.accessRole==='viewer'||window.PixelNet?.isViewOnly?.(state.roomCode)}
 function applyAccessMode(role=window.PixelNet?.getInviteRole?.(state.roomCode)||'contributor'){
   state.accessRole=role==='viewer'?'viewer':role==='owner'?'owner':'contributor';
@@ -67,10 +68,11 @@ function applyMemoryOp(op){
   const add=(arr,item)=>{if(!item?.id)return;const i=arr.findIndex(x=>x.id===item.id);if(i>=0)arr[i]={...arr[i],...item};else arr.push(item)};
   if(op.kind==='memento:add')add(state.mementos,op.item);
   if(op.kind==='memento:move'){const m=state.mementos.find(x=>x.id===op.id);if(m){m.x=Number(op.x);m.y=Number(op.y)}}
-  if(op.kind==='memento:update'){const m=state.mementos.find(x=>x.id===op.id);if(m){if(typeof op.title==='string')m.title=op.title;if(typeof op.meaning==='string')m.meaning=op.meaning;if(typeof op.type==='string')m.type=op.type}}
+  if(op.kind==='memento:update'){const m=state.mementos.find(x=>x.id===op.id);if(m){if(typeof op.title==='string')m.title=op.title;if(typeof op.meaning==='string')m.meaning=op.meaning;if(typeof op.type==='string')m.type=op.type;if(op.editedAt)m.editedAt=op.editedAt;else if(!window.PixelNet?.enabled)m.editedAt=Date.now()}}
   if(op.kind==='memento:hide'){const m=state.mementos.find(x=>x.id===op.id);if(m)m.hidden=!!op.hidden}
   if(op.kind==='memento:remove')state.mementos=state.mementos.filter(x=>x.id!==op.id);
   if(op.kind==='note:add')add(state.notes,op.item);
+  if(op.kind==='note:update'){const n=state.notes.find(x=>x.id===op.id);if(n&&typeof op.text==='string'){n.text=op.text;if(op.editedAt)n.editedAt=op.editedAt;else if(!window.PixelNet?.enabled)n.editedAt=Date.now()}}
   if(op.kind==='note:remove')state.notes=state.notes.filter(x=>x.id!==op.id);
   if(op.kind==='photo:add')add(state.photos,op.item);
   if(op.kind==='photo:remove')state.photos=state.photos.filter(x=>x.id!==op.id);
@@ -355,7 +357,7 @@ function openMementoEdit(m){
 function openMementoDetail(m){
   const can=canCurateMemento(m),author=isMementoAuthor(m);
   const actions=can?`<div class="memory-detail-actions">${author?'<button id="mEditOwn" class="button secondary small press">✎ 修改文字</button>':''}<button id="mMoveHere" class="button secondary small press">⌖ 挪到脚边</button><button id="mHideToggle" class="button secondary small press">${m.hidden?'◉ 重新显示':'◌ 暂时收起'}</button><button id="mRemove" class="button danger small press">⌫ 移除</button></div>`:'';
-  openModal('YOU FOUND SOMETHING',escapeHTML(m.title),`${m.photo?`<img class="memory-detail-photo" src="${m.photo}" alt="${escapeHTML(m.title)}">`:''}<p style="line-height:1.8;font-size:11px;color:#6f5f56">${escapeHTML(m.meaning)}</p><div class="memory-detail-meta">${escapeHTML(authorSnapshot(m))} 把它留在这里 · ${new Date(m.time).toLocaleDateString('zh-CN')}</div>${actions}`);
+  openModal('YOU FOUND SOMETHING',escapeHTML(m.title),`${m.photo?`<img class="memory-detail-photo" src="${m.photo}" alt="${escapeHTML(m.title)}">`:''}<p style="line-height:1.8;font-size:11px;color:#6f5f56">${escapeHTML(m.meaning)}</p><div class="memory-detail-meta">${escapeHTML(authorSnapshot(m))} 把它留在这里 · ${new Date(m.time).toLocaleDateString('zh-CN')}${editedMarker(m)}</div>${actions}`);
   setTimeout(()=>{
     $('#mEditOwn')&&($('#mEditOwn').onclick=()=>openMementoEdit(m));
     $('#mMoveHere')&&($('#mMoveHere').onclick=()=>runMementoAction(m,'move'));
@@ -366,19 +368,94 @@ function openMementoDetail(m){
 }
 function takePhoto(){if(isViewOnly())return toast('只看模式不能新增合影');const names=[...state.players.values()].map(p=>p.name);const item={id:uid(),authorId:state.player.actorId,authorName:state.player.name,by:state.player.name,names,time:Date.now()};memoryOp({kind:'photo:add',item});addActivity(`${state.player.name} 按下快门，${names.length} 个人被拍进了合影`);reaction(state.player.id,'📷');toast(`咔嚓！${names.length} 个人被拍进去了`)}
 
+function openNoteEdit(n,after){
+  if(!isAuthoredByMe(n))return toast('只有原作者可以修改这张留言');
+  openModal('EDIT YOUR NOTE','修改你留下的话',`<div class="modal-form"><label class="field"><span>留言</span><textarea id="editNoteTextV15" rows="4" maxlength="120">${escapeHTML(n.text||'')}</textarea></label><button id="saveNoteEditV15" class="button primary full press">保存修改 <span>→</span></button></div>`);
+  setTimeout(()=>$('#saveNoteEditV15').onclick=async()=>{
+    const text=$('#editNoteTextV15').value.trim();
+    if(!text)return toast('留言不能留空');
+    try{await commitMemoryOp({kind:'note:update',id:n.id,text});closeModal();toast('这张留言已经更新');after?.()}catch(_){toast('只有原作者可以修改这张留言')}
+  },0)
+}
+async function removeOwnNote(n,after){
+  if(!isAuthoredByMe(n))return toast('只有原作者可以删除这张留言');
+  if(!confirm('确定删除这张留言吗？'))return;
+  try{await commitMemoryOp({kind:'note:remove',id:n.id});toast('这张留言已经删除');after?.()}catch(_){toast('删除没有成功')}
+}
+async function removeOwnPhoto(p,after){
+  if(!isAuthoredByMe(p))return toast('只有按下快门的人可以删除这次合影记录');
+  if(!confirm('确定删除这次合影记录吗？'))return;
+  try{await commitMemoryOp({kind:'photo:remove',id:p.id});toast('这次合影记录已经删除');after?.()}catch(_){toast('删除没有成功')}
+}
+function questTraceStorageKey(){return `pixel-memory-v9-quest-${state.roomCode||'draft'}`}
+async function commitOwnQuestTraceOp(op){
+  if(window.PixelNet?.enabled)return PixelNet.applyOp(state.roomCode,'quest',op);
+  const key=questTraceStorageKey();
+  let data={items:[]};try{data=JSON.parse(localStorage.getItem(key)||'{"items":[]}')||data}catch(_){}
+  data.items=Array.isArray(data.items)?data.items:[];
+  const item=data.items.find(x=>x.id===op.id);
+  if(op.kind==='update'&&item){if(typeof op.title==='string')item.title=op.title;if(typeof op.text==='string')item.text=op.text;item.editedAt=Date.now()}
+  if(op.kind==='remove')data.items=data.items.filter(x=>x.id!==op.id);
+  localStorage.setItem(key,JSON.stringify(data));
+  return {ok:true}
+}
+function editOwnQuestTrace(item){
+  if(!isAuthoredByMe(item))return toast('只有原作者可以修改这段门外回忆');
+  openModal('EDIT OUTSIDE MEMORY','修改你藏下的回忆',`<div class="modal-form"><label class="field"><span>标题</span><input id="myQuestTitleV15" maxlength="40" value="${escapeHTML(item.title||'')}"></label><label class="field"><span>想说的话</span><textarea id="myQuestTextV15" rows="4" maxlength="280">${escapeHTML(item.text||'')}</textarea></label><button id="saveMyQuestV15" class="button primary full press">保存修改 <span>→</span></button></div>`);
+  setTimeout(()=>$('#saveMyQuestV15').onclick=async()=>{
+    const title=$('#myQuestTitleV15').value.trim()||item.title||'一段回忆';
+    const text=$('#myQuestTextV15').value.trim();
+    try{await commitOwnQuestTraceOp({kind:'update',id:item.id,title,text});closeModal();toast('门外回忆已经更新');openMyTracesDrawer()}catch(_){toast('只有原作者可以修改这段回忆')}
+  },0)
+}
+async function removeOwnQuestTrace(item){
+  if(!isAuthoredByMe(item))return toast('只有原作者可以删除这段门外回忆');
+  if(!confirm(`确定删除「${item.title}」吗？房主仍可从可恢复历史中找回。`))return;
+  try{await commitOwnQuestTraceOp({kind:'remove',id:item.id});toast('这段门外回忆已经删除');openMyTracesDrawer()}catch(_){toast('删除没有成功')}
+}
+async function openMyTracesDrawer(){
+  if(isViewOnly())return toast('只看模式没有作者内容');
+  showDrawer('我留下的','<div class="drawer-section"><div class="activity-row">正在把你以前留下的东西整理出来…</div></div>');
+  let memory=currentMemory(),outside=[];
+  if(window.PixelNet?.enabled){
+    try{const room=await PixelNet.getRoom(state.roomCode);memory=room.memory||memory;outside=room.quest?.items||[]}catch(_){}
+  }else{
+    try{outside=JSON.parse(localStorage.getItem(questTraceStorageKey())||'{"items":[]}')?.items||[]}catch(_){}
+  }
+  const notes=(memory.notes||[]).filter(isAuthoredByMe);
+  const mementos=(memory.mementos||[]).filter(isAuthoredByMe);
+  const photos=(memory.photos||[]).filter(isAuthoredByMe);
+  const quests=(outside||[]).filter(isAuthoredByMe);
+  const total=notes.length+mementos.length+photos.length+quests.length;
+  const empty='<div class="activity-row">还没有留下内容。以后写下的留言、纪念物、合影和门外回忆会在这里汇合。</div>';
+  const noteRows=notes.slice().reverse().map(n=>`<div class="activity-row" style="display:block"><b>${escapeHTML(authorSnapshot(n))}${editedMarker(n)}</b><p style="margin:6px 0;line-height:1.55">${escapeHTML(n.text)}</p><div class="memory-detail-actions"><button class="button secondary small press" data-my-note-edit="${escapeHTML(n.id)}">✎ 修改</button><button class="button danger small press" data-my-note-delete="${escapeHTML(n.id)}">⌫ 删除</button></div></div>`).join('');
+  const mementoRows=mementos.slice().reverse().map(m=>`<div class="activity-row"><span>${m.type||'✦'} ${escapeHTML(m.title||'纪念物')}${editedMarker(m)}<small> · ${escapeHTML(authorSnapshot(m))}</small></span><button class="mini-manage press" data-my-memento="${escapeHTML(m.id)}">管理</button></div>`).join('');
+  const photoRows=photos.slice().reverse().map(p=>`<div class="activity-row"><span>📷 ${(p.names||[]).map(escapeHTML).join('、')}<small> · ${escapeHTML(authorSnapshot(p))}</small></span><button class="mini-manage press" data-my-photo-delete="${escapeHTML(p.id)}">删除</button></div>`).join('');
+  const questRows=quests.slice().reverse().map(q=>`<div class="activity-row" style="display:block"><b>✦ ${escapeHTML(q.title||'门外回忆')}${editedMarker(q)}</b><p style="margin:6px 0;line-height:1.55">${escapeHTML(q.text||'')}</p><small>${escapeHTML(authorSnapshot(q))} · Outside</small><div class="memory-detail-actions"><button class="button secondary small press" data-my-quest-edit="${escapeHTML(q.id)}">✎ 修改</button><button class="button danger small press" data-my-quest-delete="${escapeHTML(q.id)}">⌫ 删除</button></div></div>`).join('');
+  showDrawer('我留下的',`<div class="drawer-section"><h4>PRIVATE · 只有你能看到这条身份连续线</h4><div class="person-row"><span>跨名字留下的内容</span><b>${total}</b></div><small style="display:block;margin-top:6px;color:#8c7d73;line-height:1.5">这里会把你过去用不同名字留下的内容汇合，但不会向其他人公开这些名字属于同一个人。</small></div>${total?`<div class="drawer-section"><h4>留言 · ${notes.length}</h4><div class="activity-list">${noteRows||empty}</div></div><div class="drawer-section"><h4>纪念物 · ${mementos.length}</h4><div class="activity-list">${mementoRows||empty}</div></div><div class="drawer-section"><h4>合影 · ${photos.length}</h4><div class="activity-list">${photoRows||empty}</div></div><div class="drawer-section"><h4>Outside · ${quests.length}</h4><div class="activity-list">${questRows||empty}</div></div>`:empty}`);
+  setTimeout(()=>{
+    $('[data-my-note-edit]').forEach(b=>b.onclick=()=>{const n=notes.find(x=>x.id===b.dataset.myNoteEdit);if(n)openNoteEdit(n,openMyTracesDrawer)});
+    $('[data-my-note-delete]').forEach(b=>b.onclick=()=>{const n=notes.find(x=>x.id===b.dataset.myNoteDelete);if(n)removeOwnNote(n,openMyTracesDrawer)});
+    $('[data-my-memento]').forEach(b=>b.onclick=()=>{const m=mementos.find(x=>x.id===b.dataset.myMemento);if(m)openMementoDetail(m)});
+    $('[data-my-photo-delete]').forEach(b=>b.onclick=()=>{const p=photos.find(x=>x.id===b.dataset.myPhotoDelete);if(p)removeOwnPhoto(p,openMyTracesDrawer)});
+    $('[data-my-quest-edit]').forEach(b=>b.onclick=()=>{const q=quests.find(x=>x.id===b.dataset.myQuestEdit);if(q)editOwnQuestTrace(q)});
+    $('[data-my-quest-delete]').forEach(b=>b.onclick=()=>{const q=quests.find(x=>x.id===b.dataset.myQuestDelete);if(q)removeOwnQuestTrace(q)});
+  },0)
+}
+
 // drawer
 function showDrawer(title,html){$('#drawerTitle').textContent=title;$('#drawerBody').innerHTML=html;$('#roomDrawer').classList.remove('hidden');$('#roomDrawer').setAttribute('aria-hidden','false')}function closeDrawer(){$('#roomDrawer').classList.add('hidden');$('#roomDrawer').setAttribute('aria-hidden','true')}$('#closeRoomDrawer').onclick=closeDrawer;
 $('#onlinePill').onclick=openPeopleDrawer;function openPeopleDrawer(){showDrawer('今晚在这里',`<div class="drawer-section"><h4>ONLINE NOW</h4><div class="people-list">${[...state.players.values()].map(p=>`<div class="person-row"><span>${p.host?'✦ ':''}${escapeHTML(p.name)}</span><span>${p.item}</span></div>`).join('')}</div></div><div class="drawer-section"><h4>刚刚发生</h4><div class="activity-list">${state.activity.slice().reverse().slice(0,12).map(a=>`<div class="activity-row"><span>${escapeHTML(a.text)}</span><small>${a.time}</small></div>`).join('')||'<div class="activity-row">还没有什么发生。</div>'}</div></div>`)}
-function openNotesDrawer(){showDrawer('留言墙',`<div class="drawer-section"><h4>${state.notes.length} 张纸条</h4><div class="activity-list">${state.notes.slice().reverse().map(n=>`<div class="activity-row" style="display:block"><b>${escapeHTML(authorSnapshot(n))}</b><p style="margin:6px 0 0;line-height:1.55">${escapeHTML(n.text)}</p></div>`).join('')||'<div class="activity-row">墙还是空的。</div>'}</div></div><button class="button primary full press" id="drawerAddNote">再留一句</button>`);setTimeout(()=>$('#drawerAddNote').onclick=openNoteModal,0)}
-function openPhotosDrawer(){showDrawer('今晚的合影',`<div class="drawer-section"><h4>${state.photos.length} 次快门</h4><div class="activity-list">${state.photos.slice().reverse().map(p=>`<div class="activity-row" style="display:block"><b>📷 ${p.names.map(escapeHTML).join('、')}</b><p style="margin:5px 0 0">${escapeHTML(authorSnapshot(p))} 按下快门 · ${new Date(p.time).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})}</p></div>`).join('')||'<div class="activity-row">还没人按下快门。</div>'}</div></div>`)}
+function openNotesDrawer(){showDrawer('留言墙',`<div class="drawer-section"><h4>${state.notes.length} 张纸条</h4><div class="activity-list">${state.notes.slice().reverse().map(n=>`<div class="activity-row" style="display:block"><b>${escapeHTML(authorSnapshot(n))}${editedMarker(n)}</b><p style="margin:6px 0 0;line-height:1.55">${escapeHTML(n.text)}</p>${isAuthoredByMe(n)?`<div class="memory-detail-actions"><button class="button secondary small press" data-note-edit="${escapeHTML(n.id)}">✎ 修改</button><button class="button danger small press" data-note-delete="${escapeHTML(n.id)}">⌫ 删除</button></div>`:''}</div>`).join('')||'<div class="activity-row">墙还是空的。</div>'}</div></div><button class="button primary full press" id="drawerAddNote">再留一句</button>`);setTimeout(()=>{$('#drawerAddNote').onclick=openNoteModal;$('[data-note-edit]').forEach(b=>b.onclick=()=>{const n=state.notes.find(x=>x.id===b.dataset.noteEdit);if(n)openNoteEdit(n,openNotesDrawer)});$('[data-note-delete]').forEach(b=>b.onclick=()=>{const n=state.notes.find(x=>x.id===b.dataset.noteDelete);if(n)removeOwnNote(n,openNotesDrawer)})},0)}
+function openPhotosDrawer(){showDrawer('今晚的合影',`<div class="drawer-section"><h4>${state.photos.length} 次快门</h4><div class="activity-list">${state.photos.slice().reverse().map(p=>`<div class="activity-row" style="display:block"><b>📷 ${(p.names||[]).map(escapeHTML).join('、')}</b><p style="margin:5px 0 0">${escapeHTML(authorSnapshot(p))} 按下快门 · ${new Date(p.time).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})}</p>${isAuthoredByMe(p)?`<div class="memory-detail-actions"><button class="button danger small press" data-photo-delete="${escapeHTML(p.id)}">⌫ 删除这次记录</button></div>`:''}</div>`).join('')||'<div class="activity-row">还没人按下快门。</div>'}</div></div>`);setTimeout(()=>$('[data-photo-delete]').forEach(b=>b.onclick=()=>{const p=state.photos.find(x=>x.id===b.dataset.photoDelete);if(p)removeOwnPhoto(p,openPhotosDrawer)}),0)}
 function openMementosDrawer(){
-  showDrawer('散落的纪念物',`<div class="drawer-section"><h4>${state.mementos.length} 件东西</h4><div class="activity-list">${state.mementos.slice().reverse().map(m=>`<div class="activity-row memento-drawer-row ${m.hidden?'is-hidden':''}" data-drawer-mid="${m.id}"><span>${m.type} ${escapeHTML(m.title)}<small>${m.hidden?' · 已收起':''}</small></span><span><small>${escapeHTML(authorSnapshot(m))}</small>${canCurateMemento(m)?`<button class="mini-manage press" data-manage-memento="${m.id}">${m.hidden?'显示':'管理'}</button>`:''}</span></div>`).join('')||'<div class="activity-row">地上还空空的。</div>'}</div></div>`);
+  showDrawer('散落的纪念物',`<div class="drawer-section"><h4>${state.mementos.length} 件东西</h4><div class="activity-list">${state.mementos.slice().reverse().map(m=>`<div class="activity-row memento-drawer-row ${m.hidden?'is-hidden':''}" data-drawer-mid="${m.id}"><span>${m.type} ${escapeHTML(m.title)}${editedMarker(m)}<small>${m.hidden?' · 已收起':''}</small></span><span><small>${escapeHTML(authorSnapshot(m))}</small>${canCurateMemento(m)?`<button class="mini-manage press" data-manage-memento="${m.id}">${m.hidden?'显示':'管理'}</button>`:''}</span></div>`).join('')||'<div class="activity-row">地上还空空的。</div>'}</div></div>`);
   setTimeout(()=>$$('[data-manage-memento]').forEach(btn=>btn.onclick=()=>{
     const m=state.mementos.find(x=>x.id===btn.dataset.manageMemento);
     if(m)openMementoDetail(m)
   }),0)
 }
-$('#worldSettingsBtn').onclick=()=>{showDrawer('房间设置',`<div class="drawer-section"><h4>ROOM LOOK</h4><div class="settings-grid"><button id="changeBackdrop">▣ 上传背景照片<br><small>把熟悉的地方放进大厅</small></button><button id="clearBackdrop">⌫ 恢复像素场景<br><small>回到默认布置</small></button></div></div><div class="drawer-section"><h4>SOUND</h4><button id="settingsMusic" class="button secondary full press">♫ 打开音乐控制</button></div><div class="drawer-section"><h4>THIS ROOM</h4><div class="person-row"><span>门牌号</span><b>${state.roomCode}</b></div><div class="person-row"><span>纪念物</span><b>${state.mementos.length}</b></div><div class="person-row"><span>留言</span><b>${state.notes.length}</b></div><div class="person-row"><span>合影</span><b>${state.photos.length}</b></div><button id="openKeepsakeSettings" class="button warm full press" style="margin-top:8px">✦ 打开纪念卡</button></div>`);setTimeout(()=>{const change=$('#changeBackdrop'),clear=$('#clearBackdrop'),music=$('#settingsMusic'),keep=$('#openKeepsakeSettings');if(change)change.onclick=()=>$('#backdropUploadInput').click();if(clear)clear.onclick=()=>{state.world.backdrop='';saveRoom();applyBackdrop();toast('已经恢复成像素场景')};if(music)music.onclick=openMusicDrawer;if(keep)keep.onclick=openKeepsake;window.PixelInvite?.injectSettings?.();window.PixelRecovery?.injectSettings?.();window.PixelRetention?.injectSettings?.();window.PixelRoomEditor?.injectSettings?.()},0)};
+$('#worldSettingsBtn').onclick=()=>{showDrawer('房间设置',`<div class="drawer-section"><h4>ROOM LOOK</h4><div class="settings-grid"><button id="changeBackdrop">▣ 上传背景照片<br><small>把熟悉的地方放进大厅</small></button><button id="clearBackdrop">⌫ 恢复像素场景<br><small>回到默认布置</small></button></div></div><div class="drawer-section"><h4>SOUND</h4><button id="settingsMusic" class="button secondary full press">♫ 打开音乐控制</button></div><div class="drawer-section"><h4>THIS ROOM</h4><div class="person-row"><span>门牌号</span><b>${state.roomCode}</b></div><div class="person-row"><span>纪念物</span><b>${state.mementos.length}</b></div><div class="person-row"><span>留言</span><b>${state.notes.length}</b></div><div class="person-row"><span>合影</span><b>${state.photos.length}</b></div><button id="openKeepsakeSettings" class="button warm full press" style="margin-top:8px">✦ 打开纪念卡</button><button id="openMyTracesV15" class="button secondary full press" style="margin-top:8px">⌁ 我留下的</button></div>`);setTimeout(()=>{const change=$('#changeBackdrop'),clear=$('#clearBackdrop'),music=$('#settingsMusic'),keep=$('#openKeepsakeSettings'),mine=$('#openMyTracesV15');if(change)change.onclick=()=>$('#backdropUploadInput').click();if(clear)clear.onclick=()=>{state.world.backdrop='';saveRoom();applyBackdrop();toast('已经恢复成像素场景')};if(music)music.onclick=openMusicDrawer;if(keep)keep.onclick=openKeepsake;if(mine)mine.onclick=openMyTracesDrawer;window.PixelInvite?.injectSettings?.();window.PixelRecovery?.injectSettings?.();window.PixelRetention?.injectSettings?.();window.PixelRoomEditor?.injectSettings?.()},0)};
 $('#backdropUploadInput').onchange=async e=>{const f=e.target.files[0];if(!f)return;if(f.size>4*1024*1024)return toast('背景图建议控制在 4MB 以内');if(window.PixelNet?.enabled){toast('正在同步背景照片…');try{const up=await PixelNet.uploadBlob(f,f.name,state.roomCode);state.world.backdrop=up.url;saveRoom();applyBackdrop();toast('背景已经同步给房间里的所有人');return}catch(_){toast('云端上传失败，先保存在这台设备')}}const rd=new FileReader();rd.onload=()=>{state.world.backdrop=rd.result;saveRoom();applyBackdrop();toast('这张照片已经成为本机房间背景')};rd.readAsDataURL(f)};function applyBackdrop(){const b=$('#customBackdrop'),stage=$('#worldStage');if(state.world.backdrop){b.style.backgroundImage=`url('${state.world.backdrop}')`;b.classList.add('on');stage.classList.add('has-backdrop')}else{b.style.backgroundImage='';b.classList.remove('on');stage.classList.remove('has-backdrop')}}
 
 // music: synth loops + custom audio
