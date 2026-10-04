@@ -88,7 +88,7 @@ Do not choose this solely for implementation convenience. The right provider dep
 
 ## D003 · Participant memory authority
 
-**Status:** needs owner decision  
+**Status:** decided — A · Host as curator  
 **Blocks:** dragging / rotating / deleting participant mementos in the room editor; server-side author permissions  
 **Does not block:** furniture editing, Tiled map, character atlas, room revisions, storage adapters
 
@@ -134,8 +134,70 @@ Any participant can rearrange shared memories.
 
 **Tradeoff:** easiest to disrupt accidentally and hardest to make feel like a durable keepsake.
 
+### Decision
+
+Selected **A · Host as curator**.
+
+Implemented in V15.3:
+- every new contributor receives a persistent local actor identity plus a private actor credential
+- the server, not the browser UI, verifies author / owner mutations
+- authors can edit, move, hide and remove their own memories
+- hosts can move, hide and remove participant memories but **cannot rewrite another person's title/text**
+- attribution is immutable during host curation
+- host memento / Outside curation creates recoverable server revisions
+- raw WebSocket memory writes no longer bypass REST authorization
+
+
+---
+
+## D004 · Cross-device identity and recovery
+
+**Status:** needs owner decision  
+**Blocks:** ownership recovery on a new phone/computer, portable author identity, long-term room deletion/recovery, whether an auth provider is required  
+**Does not block:** current room codes, same-device ownership, host curation, multiplayer, Tiled maps, character art, storage adapters
+
+V15.3 deliberately keeps identity **device-local**. A private actor credential and room-owner token live only in that browser. This gives a low-friction experience, but clearing browser storage or changing devices loses privileged identity unless a recovery mechanism is added.
+
+The product now needs to choose how much account infrastructure it wants.
+
+### A · No mandatory account + optional recovery key — recommended
+
+Keep the current invitation flow account-free.
+
+- guests enter with a room code and never need to register
+- creators can optionally export a recovery key / QR for room ownership
+- contributors can optionally export their personal identity key if they want authorship portability
+- importing the key on another device restores the same privileges
+- no email/password database is required for ordinary use
+
+**Best fit:** a lightweight keepsake link that friends can open immediately.
+
+**Tradeoff:** users who never save a recovery key can still lose privileged access after clearing storage.
+
+### B · Optional sign-in
+
+Keep guests account-free, but let creators / contributors attach identity to an account.
+
+- room joining still needs no login
+- sign-in can restore ownership and authored memories across devices
+- supports future room library / dashboard
+- likely requires passkey, magic-link or social-auth infrastructure
+
+**Best fit:** if Pixel Memory is becoming a recurring personal product rather than a one-off shared keepsake.
+
+**Tradeoff:** significantly more privacy, auth, email and account-lifecycle complexity.
+
+### C · Mandatory accounts
+
+Every participant signs in before contributing.
+
+- strongest identity and cross-device guarantees
+- easiest future moderation / room history / personal library model
+
+**Tradeoff:** highest friction and weakest fit with spontaneous birthday / anniversary invitations.
+
 ### Default recommendation
 
-Choose **A · Host as curator**.
+Choose **A · No mandatory account + optional recovery key**.
 
-It matches the current product structure: one person creates the world, invites others in, and ultimately preserves a composed keepsake. Author attribution should remain immutable even when the host changes placement.
+It preserves the strongest part of the current product — opening a link and immediately entering a shared memory space — while still giving careful creators a way to protect long-term ownership.
