@@ -19,7 +19,7 @@ const { chromium } = require('playwright');
     v14Ready: document.body.classList.contains('v14-ready')
   }));
   console.log('V14_DIAG', v14Diag, errors);
-  if (v14Diag.pixelV14?.version !== '14.2') throw new Error('V14 bootstrap missing | ' + errors.join(' | '));
+  if (v14Diag.pixelV14?.version !== '14.3') throw new Error('V14 bootstrap missing | ' + errors.join(' | '));
   const v14State = await page.evaluate(() => ({
     ready: document.body.classList.contains('v14-ready'),
     ambient: !!document.querySelector('.v14-ambient-canvas'),
@@ -194,19 +194,26 @@ const { chromium } = require('playwright');
     const card=getComputedStyle(document.querySelector('.keepsake-card'));
     const people=getComputedStyle(document.querySelector('.keepsake-people'));
     const stats=getComputedStyle(document.querySelector('.keepsake-stats'));
+    const bgColor=card.backgroundColor.match(/\d+/g)?.map(Number)||[];
     return {
       radius:parseFloat(card.borderRadius),
       align:card.textAlign,
       bg:card.backgroundImage,
+      bgColor,
       peopleJustify:people.justifyContent,
       statsLeft:parseFloat(stats.borderLeftWidth),
-      statsRight:parseFloat(stats.borderRightWidth)
+      statsRight:parseFloat(stats.borderRightWidth),
+      completion:window.PixelV143||null,
+      completionCss:!!document.querySelector('link[href*="completion-v14-3.css"]'),
+      completionScript:!!document.querySelector('script[src*="completion-v14-3.js"]')
     };
   });
-  console.log('V14_2_KEEPSAKE_AUDIT',keepsakeAudit);
-  if(keepsakeAudit.radius<24||keepsakeAudit.align!=='center'||keepsakeAudit.peopleJustify!=='center') throw new Error('keepsake luxury layout missing');
-  if(!/gradient/i.test(keepsakeAudit.bg)) throw new Error('keepsake gold-pattern background missing');
+  console.log('V14_3_KEEPSAKE_AUDIT',keepsakeAudit);
+  if(keepsakeAudit.radius<24||keepsakeAudit.align!=='center'||keepsakeAudit.peopleJustify!=='center') throw new Error('keepsake centered paper layout missing');
+  if(!/gradient/i.test(keepsakeAudit.bg)) throw new Error('keepsake paper texture missing');
   if(keepsakeAudit.statsLeft>0||keepsakeAudit.statsRight>0) throw new Error('keepsake stats reverted to boxed cells');
+  if(!keepsakeAudit.completionCss||!keepsakeAudit.completionScript||keepsakeAudit.completion?.version!=='14.3') throw new Error('V14.3 completion layer missing');
+  if(keepsakeAudit.bgColor.length>=3 && keepsakeAudit.bgColor.slice(0,3).some(v=>v<238)) throw new Error('keepsake is no longer warm-white paper');
   await page.locator('[data-close-keepsake]').last().click();
   await page.waitForFunction(() => document.querySelector('#keepsakeOverlay')?.classList.contains('hidden'));
 
