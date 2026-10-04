@@ -32,6 +32,26 @@ const { chromium } = require('playwright');
   if (/Courier New/i.test(v14State.bodyFont)) throw new Error('V14 readable UI font did not override Courier New');
   console.log('V14_FLAGS', v14State.flags);
 
+  // V15 P1-P4 systems must be present as real runtime capabilities.
+  const v15Diag = await page.evaluate(() => ({
+    runtime: window.PixelV15 || null,
+    sceneVersion: window.PixelSceneMap?.version || null,
+    layers: Object.keys(window.PixelSceneMap?.outdoor?.layers || {}),
+    hasSystemsCss: !!document.querySelector('link[href*="systems-v15.css"]'),
+    hasSystemsJs: !!document.querySelector('script[src*="systems-v15.js"]'),
+    hasEditorApi: !!window.PixelRoomEditor,
+    hasActionApi: !!window.PixelCharacterActions
+  }));
+  console.log('V15_DIAG', v15Diag);
+  if (v15Diag.runtime?.version !== '15.0') throw new Error('V15 runtime missing');
+  if (v15Diag.sceneVersion !== '15.0') throw new Error('V15 layered scene map missing');
+  for (const layer of ['ground','path','objects','collision','foreground']) {
+    if (!v15Diag.layers.includes(layer)) throw new Error('V15 map layer missing: ' + layer);
+  }
+  if (!v15Diag.hasSystemsCss || !v15Diag.hasSystemsJs || !v15Diag.hasEditorApi || !v15Diag.hasActionApi) {
+    throw new Error('V15 systems assets/APIs incomplete');
+  }
+
 
   // V14.1 layout regression guard: the editorial story panel must stay inside
   // the viewport and typography/order markers must not shrink back to microtext.
@@ -176,6 +196,29 @@ const { chromium } = require('playwright');
   await active('world');
   await page.waitForSelector('#playersLayer .player', { timeout: 5000 });
 
+  // V15 P2: action state is a stable runtime vocabulary and Q triggers wave.
+  await page.locator('#worldStage').press('q');
+  await page.waitForTimeout(180);
+  const actionAudit = await page.evaluate(() => ({
+    action: state.player.action,
+    domAction: document.querySelector('#playersLayer .player.me')?.dataset.action || '',
+    actions: window.PixelCharacterActions?.actions || []
+  }));
+  console.log('V15_ACTION_AUDIT', actionAudit);
+  if (actionAudit.action !== 'wave' || actionAudit.domAction !== 'wave') throw new Error('V15 wave action did not render');
+  for (const a of ['idle','walk','sit','wave','hug','celebrate']) {
+    if (!actionAudit.actions.includes(a)) throw new Error('V15 action vocabulary incomplete: ' + a);
+  }
+
+  // V15 P4: the creator device receives a private owner token.
+  const ownerAudit = await page.evaluate(() => ({
+    room: state.roomCode,
+    online: !!window.PixelNet?.enabled,
+    owner: !!window.PixelNet?.hasOwnerToken?.(state.roomCode)
+  }));
+  console.log('V15_OWNER_AUDIT', ownerAudit);
+  if (ownerAudit.online && !ownerAudit.owner) throw new Error('V15 creator did not retain owner token');
+
   // V13.1 music drawer should be compact, readable and clickable.
   await page.locator('#globalSoundBtn').click();
   await page.waitForFunction(() => document.querySelector('#roomDrawer')?.classList.contains('drawer-music'));
@@ -217,7 +260,49 @@ const { chromium } = require('playwright');
   await page.locator('[data-close-keepsake]').last().click();
   await page.waitForFunction(() => document.querySelector('#keepsakeOverlay')?.classList.contains('hidden'));
 
-  // Room controls: dock + settings should still be clickable after the visual rewrite.
+  // Room controls + V15 P3 owner editor.
+  await page.locator('#worldSettingsBtn').click();
+  await page.waitForSelector('#roomDrawer:not(.hidden)', { timeout: 3000 });
+  await page.waitForSelector('#startRoomEditorV15', { timeout: 3000 });
+  const storageCopy = await page.locator('.pm-storage-state-v15').innerText();
+  if (!storageCopy) throw new Error('V15 persistence status missing');
+
+  await page.locator('#startRoomEditorV15').click();
+  await page.waitForFunction(() => document.body.classList.contains('pm-room-editing-v15'));
+  await page.waitForSelector('.pm-room-editor-toolbar-v15');
+
+  const sofaBox = await page.locator('.room-sofa').boundingBox();
+  if (!sofaBox) throw new Error('V15 editable sofa missing');
+  await page.mouse.move(sofaBox.x + sofaBox.width/2, sofaBox.y + sofaBox.height/2);
+  await page.mouse.down();
+  await page.mouse.move(sofaBox.x + sofaBox.width/2 + 42, sofaBox.y + sofaBox.height/2 - 18, {steps:5});
+  await page.mouse.up();
+  await page.waitForTimeout(280);
+
+  const layoutAudit = await page.evaluate(async () => {
+    const local = state.world.layout?.sofa || null;
+    let remote = null;
+    if (window.PixelNet?.enabled) {
+      const room = await PixelNet.getRoom(state.roomCode);
+      remote = room.world?.layout?.sofa || null;
+    }
+    const unauthorized = window.PixelNet?.enabled
+      ? await fetch(`${PixelNet.baseUrl}/api/rooms/${state.roomCode}/layout`,{
+          method:'PUT',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({layout:{sofa:{x:1,y:1}}})
+        }).then(r=>r.status)
+      : 0;
+    return {local,remote,unauthorized};
+  });
+  console.log('V15_LAYOUT_AUDIT', layoutAudit);
+  if (!layoutAudit.local) throw new Error('V15 room editor did not update local layout');
+  if (ownerAudit.online && !layoutAudit.remote) throw new Error('V15 owner layout did not persist to server');
+  if (ownerAudit.online && layoutAudit.unauthorized !== 403) throw new Error('V15 layout endpoint is not owner-protected');
+
+  await page.locator('[data-room-editor-done]').click();
+  await page.waitForFunction(() => !document.body.classList.contains('pm-room-editing-v15'));
+
   await page.locator('#worldSettingsBtn').click();
   await page.waitForSelector('#roomDrawer:not(.hidden)', { timeout: 3000 });
   await page.locator('#closeRoomDrawer').click();
@@ -244,6 +329,16 @@ const { chromium } = require('playwright');
   })), errors);
   await active('quest');
   await page.waitForSelector('#questPlayerLayer .quest-player', { timeout: 5000 });
+  await page.waitForTimeout(260);
+  const cameraAudit = await page.evaluate(() => ({
+    wrapper: !!document.querySelector('.pm-camera-world-v15'),
+    active: document.querySelector('#questStage')?.classList.contains('pm-camera-active'),
+    transform: getComputedStyle(document.querySelector('.pm-camera-world-v15')).transform,
+    collisionCount: window.PixelSceneMap?.outdoor?.layers?.collision?.ellipses?.length || 0
+  }));
+  console.log('V15_CAMERA_AUDIT', cameraAudit);
+  if (!cameraAudit.wrapper || !cameraAudit.active || cameraAudit.collisionCount < 3) throw new Error('V15 camera/layered collision runtime missing');
+  if (cameraAudit.transform === 'none') throw new Error('V15 camera did not transform the quest world');
   if (await page.locator('.quest-signpost,.pm-sign').count()) throw new Error('duplicate memory-road signs still visible');
   if (!(await page.locator('#questFishingSpot').count())) throw new Error('fishing spot missing');
   await page.locator('#returnRoomBtn').click();
@@ -259,7 +354,7 @@ const { chromium } = require('playwright');
     throw new Error('Browser errors:\n' + errors.join('\n'));
   }
 
-  console.log('SMOKE_OK landing -> creator -> avatar -> room -> outside -> room -> join');
+  console.log('SMOKE_OK V15 landing -> creator -> actions -> owner editor -> keepsake -> outside camera -> room -> join');
   await browser.close();
 })().catch(async err => {
   console.error(err);
