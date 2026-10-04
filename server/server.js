@@ -2,26 +2,20 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { createRoomStore } = require('./storage-adapter');
+const { createBlobStore } = require('./blob-adapter');
 
 const PORT = Number(process.env.PORT || 8787);
 const ROOT = path.join(__dirname, '..');
 const DATA_DIR = process.env.PIXEL_DATA_DIR || path.join(__dirname, 'data');
 const UPLOAD_DIR = process.env.PIXEL_UPLOAD_DIR || path.join(__dirname, 'uploads');
-const DB_FILE = path.join(DATA_DIR, 'rooms.json');
 fs.mkdirSync(DATA_DIR, { recursive: true });
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+const roomStore = createRoomStore({ dataDir: DATA_DIR });
+const blobStore = createBlobStore({ uploadDir: UPLOAD_DIR });
 
-let rooms = {};
-try { rooms = JSON.parse(fs.readFileSync(DB_FILE, 'utf8')); } catch (_) {}
-let saveTimer = null;
-function saveDB() {
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    const next = DB_FILE + '.tmp';
-    fs.writeFileSync(next, JSON.stringify(rooms, null, 2));
-    fs.renameSync(next, DB_FILE);
-  }, 80);
-}
+let rooms = roomStore.load();
+function saveDB() { roomStore.saveSoon(rooms); }
 function validCode(c) { return /^[A-Z0-9]{6}$/.test(String(c || '')); }
 function randomCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -186,7 +180,7 @@ const server = http.createServer(async (req, res) => {
   const u = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = u.pathname;
   try {
-    if (pathname === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, version: 'v15.1', rooms: Object.keys(rooms).length, connections: connectionCount(), durableDataDir: !!process.env.PIXEL_DATA_DIR, durableUploadDir: !!process.env.PIXEL_UPLOAD_DIR, time: Date.now() });
+    if (pathname === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, version: 'v15.1', rooms: Object.keys(rooms).length, connections: connectionCount(), roomStore: roomStore.info().kind, blobStore: blobStore.info().kind, durableDataDir: !!process.env.PIXEL_DATA_DIR, durableUploadDir: !!process.env.PIXEL_UPLOAD_DIR, time: Date.now() });
     if (pathname === '/api/rooms' && req.method === 'POST') {
       const body = JSON.parse((await readBody(req)).toString('utf8') || '{}');
       const code = String(body.code || randomCode()).toUpperCase();
@@ -285,15 +279,13 @@ const server = http.createServer(async (req, res) => {
       const body = await readBody(req, 18 * 1024 * 1024);
       const part = parseMultipart(body, req.headers['content-type']);
       if (!part) return json(res, 400, { error: 'missing_file' });
-      const ext = (path.extname(part.filename) || '.bin').replace(/[^.a-zA-Z0-9]/g, '');
-      const name = `${Date.now()}-${crypto.randomBytes(5).toString('hex')}${ext}`;
-      fs.writeFileSync(path.join(UPLOAD_DIR, name), part.data);
+      const saved = blobStore.save(part.data, part.filename);
       const proto = (req.headers['x-forwarded-proto'] || 'http').split(',')[0];
       const host = (req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0];
-      return json(res, 200, { ok: true, url: `${proto}://${host}/uploads/${name}`, name: part.filename, size: part.data.length });
+      return json(res, 200, { ok: true, url: `${proto}://${host}/uploads/${saved.key}`, name: saved.name, size: saved.size });
     }
     if (pathname.startsWith('/uploads/')) {
-      const file = safeJoin(UPLOAD_DIR, pathname.replace('/uploads', ''));
+      const file = blobStore.pathFor(pathname.replace('/uploads/', ''));
       if (!file || !fs.existsSync(file)) return json(res, 404, { error: 'not_found' });
       const st = fs.statSync(file);
       res.writeHead(200, { 'Content-Type': mimes[path.extname(file).toLowerCase()] || 'application/octet-stream', 'Content-Length': st.size, 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'public, max-age=86400' });
