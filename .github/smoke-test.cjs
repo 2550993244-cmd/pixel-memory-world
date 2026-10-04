@@ -63,7 +63,7 @@ const { chromium } = require('playwright');
     hasActionApi: !!window.PixelCharacterActions
   }));
   console.log('V15_1_DIAG', v15Diag);
-  if (v15Diag.runtime?.version !== '15.3') throw new Error('V15.3 systems runtime missing');
+  if (v15Diag.runtime?.version !== '15.4') throw new Error('V15.4 systems runtime missing');
   if (v15Diag.sceneVersion !== '15.0') throw new Error('V15 layered scene map missing');
   if (v15Diag.mapRuntime.source !== 'tiled-json' || v15Diag.mapRuntime.collisionCount < 3 || v15Diag.mapRuntime.pathCount < 6) {
     throw new Error('V15.1 Tiled map runtime did not load canonical JSON');
@@ -296,6 +296,62 @@ const { chromium } = require('playwright');
   if(!identityAudit.actor||identityAudit.actor===identityAudit.session||identityAudit.actor!==identityAudit.stored||!identityAudit.hasToken) throw new Error('V15.3 persistent actor credential missing');
   if(identityAudit.activityAuthor!==identityAudit.actor) throw new Error('V15.2 authored memory is not tagged with actor identity');
 
+  // V15.4 D004=A: export -> clear local credentials -> server-verified import.
+  const recoveryAudit=await page.evaluate(async()=>{
+    const room=state.roomCode;
+    const key=await PixelRecovery.createBundle('owner');
+    const parsed=await PixelRecovery.parseKey(key);
+    const before={
+      owner:PixelNet.getOwnerToken(room),
+      actor:PixelNet.getActorCredential()
+    };
+    PixelNet.saveOwnerToken(room,'');
+    PixelNet.setActorCredential('','');
+    state.player.actorId='';
+    state.player.host=false;
+    const cleared={
+      owner:PixelNet.hasOwnerToken(room),
+      actor:PixelNet.getActorCredential()
+    };
+    const restored=await PixelRecovery.importKey(key);
+    const after={
+      owner:PixelNet.getOwnerToken(room),
+      actor:PixelNet.getActorCredential(),
+      stateActor:state.player.actorId,
+      host:state.player.host
+    };
+    const badOwner=await PixelNet.verifyRecovery(room,{
+      ownerToken:'not-the-real-owner-token',
+      actorId:after.actor.id,
+      actorToken:after.actor.token
+    });
+    let corruptRejected=false;
+    try{
+      const bad=key.slice(0,-1)+(key.endsWith('A')?'B':'A');
+      await PixelRecovery.importKey(bad);
+    }catch(_){corruptRejected=true}
+    return {
+      keyPrefix:key.slice(0,5),
+      kind:parsed.kind,
+      roomCode:parsed.roomCode,
+      cleared,
+      restoredOwner:restored.verified.owner,
+      restoredActor:restored.verified.actor,
+      ownerSame:before.owner===after.owner,
+      actorSame:before.actor.id===after.actor.id&&before.actor.token===after.actor.token,
+      stateActorSame:after.stateActor===after.actor.id,
+      host:after.host,
+      badOwner:badOwner.owner,
+      corruptRejected
+    };
+  });
+  console.log('V15_4_RECOVERY_AUDIT',recoveryAudit);
+  if(recoveryAudit.keyPrefix!=='PMR1.'||recoveryAudit.kind!=='owner'||recoveryAudit.roomCode!==ownerAudit.room) throw new Error('V15.4 owner recovery bundle malformed');
+  if(recoveryAudit.cleared.owner||recoveryAudit.cleared.actor.id||recoveryAudit.cleared.actor.token) throw new Error('V15.4 credential clearing test failed');
+  if(!recoveryAudit.restoredOwner||!recoveryAudit.ownerSame||!recoveryAudit.actorSame||!recoveryAudit.stateActorSame||!recoveryAudit.host) throw new Error('V15.4 recovery import did not restore privileges');
+  if(recoveryAudit.badOwner!==false) throw new Error('V15.4 recovery verification accepts a wrong owner token');
+  if(!recoveryAudit.corruptRejected) throw new Error('V15.4 corrupt recovery key was accepted');
+
   // V15.3 D003=A: real server-side author/host curation permissions.
   const curatorCode=('T'+Math.random().toString(36).slice(2,7)).toUpperCase();
   const curatorCreate=await fetch(`${base}/api/rooms`,{
@@ -408,6 +464,9 @@ const { chromium } = require('playwright');
   // Room controls + V15 P3 owner editor.
   await page.locator('#worldSettingsBtn').click();
   await page.waitForSelector('#roomDrawer:not(.hidden)', { timeout: 3000 });
+  await page.waitForSelector('#openRecoveryCenterV15',{timeout:3000});
+  const recoveryEntry=await page.locator('#recoveryEntryV15').innerText();
+  if(!/换设备恢复/.test(recoveryEntry)) throw new Error('V15.4 recovery center entry missing from room settings');
   await page.waitForSelector('#startRoomEditorV15', { timeout: 3000 });
   const storageCopy = await page.locator('.pm-storage-state-v15').innerText();
   if (!storageCopy) throw new Error('V15 persistence status missing');
@@ -583,7 +642,7 @@ const { chromium } = require('playwright');
     throw new Error('Browser errors:\n' + errors.join('\n'));
   }
 
-  console.log('SMOKE_OK V15.3 A-curator -> author credentials -> participant memory editor -> warm atlas -> tiled camera -> revisions -> join');
+  console.log('SMOKE_OK V15.4 account-free recovery -> A-curator -> participant memory editor -> warm atlas -> tiled camera -> revisions -> join');
   await browser.close();
 })().catch(async err => {
   console.error(err);
