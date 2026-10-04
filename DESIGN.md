@@ -1,5 +1,5 @@
 ---
-version: 15.12
+version: 15.13
 name: Pixel Memory World
 description: A warm multiplayer pixel-memory space. The interface should feel like a keepsake box that became a tiny playable world: soft paper surfaces, restrained pastel accents, readable modern Chinese typography, pixel-art scenes, and motion that responds to people rather than decorating every surface.
 ---
@@ -174,6 +174,16 @@ The technical sprite contract is fixed and the production direction is now **War
 - The runtime must keep the current DOM sprite as a fallback until a real atlas is present.
 - Production atlas language: warm brown outlines, muted clothing, small facial features, restrained handmade irregularity, readable four-direction silhouettes, and expressive-but-not-cartoonish social poses.
 - Keep the DOM sprite only as a compatibility fallback; new character work should extend the warm layered atlas instead of creating a second visual system.
+
+## Historical author-name snapshots
+
+A memory's displayed author name is part of the moment in which the memory was created.
+
+- Persist immutable authorName alongside hidden authorId on newly authored content.
+- Render authorName first; fall back to legacy by for old rooms.
+- Contributor renames on later visits must not retroactively rewrite old content.
+- Editing memory text, moving objects or host curation must never mutate the author-name snapshot.
+- Keep actor identity and display-name history conceptually separate: one secures continuity, the other preserves presentation at creation time.
 
 ## Live contributor appearance editing
 
