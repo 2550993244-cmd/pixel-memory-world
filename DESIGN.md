@@ -1,5 +1,5 @@
 ---
-version: 15.0
+version: 15.1
 name: Pixel Memory World
 description: A warm multiplayer pixel-memory space. The interface should feel like a keepsake box that became a tiny playable world: soft paper surfaces, restrained pastel accents, readable modern Chinese typography, pixel-art scenes, and motion that responds to people rather than decorating every surface.
 ---
@@ -150,6 +150,17 @@ The saved keepsake is a ceremonial paper object, not an analytics dashboard or a
 - One softly recessed paper panel is acceptable for the final quote; do not put every field in a box.
 - The exported PNG must match the on-screen keepsake language, including paper texture and embossed ornament.
 - On mobile, the card may scroll inside its shell and actions must remain reachable without covering content.
+
+## V15.1 asset boundary
+
+The technical sprite contract is now fixed enough to build against, but the final character artwork is intentionally not fixed.
+
+- Logical character frame: 32 × 48.
+- Directions: down / left / right / up.
+- Actions: idle / walk / sit / wave / hug / celebrate.
+- Layers: body, hair, outfit, held item.
+- The runtime must keep the current DOM sprite as a fallback until a real atlas is present.
+- Do not generate a final production atlas until the character-art direction is explicitly chosen; changing silhouette, proportions or rendering language after atlas production would multiply work across every action and DIY variant.
 
 ## V15 system interaction contract
 
