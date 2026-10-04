@@ -1,5 +1,5 @@
 ---
-version: 15.8
+version: 15.9
 name: Pixel Memory World
 description: A warm multiplayer pixel-memory space. The interface should feel like a keepsake box that became a tiny playable world: soft paper surfaces, restrained pastel accents, readable modern Chinese typography, pixel-art scenes, and motion that responds to people rather than decorating every surface.
 ---
@@ -174,6 +174,17 @@ The technical sprite contract is fixed and the production direction is now **War
 - The runtime must keep the current DOM sprite as a fallback until a real atlas is present.
 - Production atlas language: warm brown outlines, muted clothing, small facial features, restrained handmade irregularity, readable four-direction silhouettes, and expressive-but-not-cartoonish social poses.
 - Keep the DOM sprite only as a compatibility fallback; new character work should extend the warm layered atlas instead of creating a second visual system.
+
+## Instant spectator entry
+
+The viewer path should feel like opening a finished keepsake, not registering for a live event.
+
+- A valid view-only secret link should enter the world without asking for a name or blocking on avatar setup.
+- Generate a warm local avatar automatically so navigation remains embodied.
+- Viewer identity label should be local and non-social; do not imply that a typed name would be shared.
+- “我的小人” may expose optional local customization after entry.
+- Viewer avatar preferences belong in a separate local profile and must never overwrite contributor identity settings.
+- Refreshing a room with valid locally stored viewer access should stay on the fast path.
 
 ## Invisible spectator presence
 
