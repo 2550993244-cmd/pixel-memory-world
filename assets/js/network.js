@@ -96,6 +96,14 @@
     }
   }
 
+  const ownerStorageKey = code => `pixel-memory-owner-${String(code||'').toUpperCase()}`;
+  const getOwnerToken = code => localStorage.getItem(ownerStorageKey(code)) || '';
+  const saveOwnerToken = (code, token) => { if (code && token) localStorage.setItem(ownerStorageKey(code), token); };
+  const ownerHeaders = code => {
+    const token=getOwnerToken(code);
+    return token ? {'X-Room-Owner':token} : {};
+  };
+
   window.PixelNet = {
     get baseUrl(){ return baseUrl; },
     get enabled(){ return !!baseUrl; },
@@ -103,8 +111,26 @@
     clearServer(){ baseUrl=''; localStorage.removeItem('pixel-memory-server-url'); },
     onStatus(fn){ listeners.add(fn); return () => listeners.delete(fn); },
     createChannel(name, roomCode, playerId){ return new RealtimeChannel(name, roomCode, playerId); },
-    async createRoom(code, world, memory={}) { return api('/api/rooms',{method:'POST',body:JSON.stringify({code,world,memory})}); },
+    getOwnerToken,
+    hasOwnerToken(code){ return !!getOwnerToken(code); },
+    async createRoom(code, world, memory={}) {
+      const room=await api('/api/rooms',{method:'POST',body:JSON.stringify({code,world,memory})});
+      if(room?.ownerToken) saveOwnerToken(code,room.ownerToken);
+      return room;
+    },
     async getRoom(code){ return api(`/api/rooms/${encodeURIComponent(code)}`); },
+    async claimRoom(code){
+      const room=await api(`/api/rooms/${encodeURIComponent(code)}/claim`,{method:'POST',body:'{}'});
+      if(room?.ownerToken) saveOwnerToken(code,room.ownerToken);
+      return room;
+    },
+    async updateOwnerLayout(code, layout){
+      return api(`/api/rooms/${encodeURIComponent(code)}/layout`,{
+        method:'PUT',
+        headers:ownerHeaders(code),
+        body:JSON.stringify({layout})
+      });
+    },
     async updateRoom(code, patch){ return api(`/api/rooms/${encodeURIComponent(code)}`,{method:'PUT',body:JSON.stringify(patch)}); },
     async applyOp(code, scope, op){ return api(`/api/rooms/${encodeURIComponent(code)}/ops`,{method:'POST',body:JSON.stringify({scope,op})}); },
     async uploadBlob(blob, filename='voice.webm') {
