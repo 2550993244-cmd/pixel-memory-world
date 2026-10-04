@@ -66,8 +66,8 @@ const { chromium } = require('playwright');
     inviteVersion: window.PixelInvite?.version || null
   }));
   console.log('V15_1_DIAG', v15Diag);
-  if (v15Diag.runtime?.version !== '15.7') throw new Error('V15.7 systems runtime missing');
-  if (v15Diag.retentionVersion !== '15.5' || v15Diag.recoveryVersion !== '15.7' || v15Diag.inviteVersion !== '15.7') throw new Error('V15.7 invite/retention/recovery runtime missing');
+  if (v15Diag.runtime?.version !== '15.8') throw new Error('V15.8 systems runtime missing');
+  if (v15Diag.retentionVersion !== '15.5' || v15Diag.recoveryVersion !== '15.7' || v15Diag.inviteVersion !== '15.8') throw new Error('V15.8 invite/retention/recovery runtime missing');
   if (v15Diag.sceneVersion !== '15.0') throw new Error('V15 layered scene map missing');
   if (v15Diag.mapRuntime.source !== 'tiled-json' || v15Diag.mapRuntime.collisionCount < 3 || v15Diag.mapRuntime.pathCount < 6) {
     throw new Error('V15.1 Tiled map runtime did not load canonical JSON');
@@ -286,6 +286,72 @@ const { chromium } = require('playwright');
   }));
   console.log('V15_OWNER_AUDIT', ownerAudit);
   if (ownerAudit.online && !ownerAudit.owner) throw new Error('V15 creator did not retain owner token');
+
+  // V15.8 D008=A: viewer is a local-only avatar; owner sees anonymous audience count, not identity/presence.
+  const ownerPresenceBefore=await page.evaluate(()=>({
+    players:state.players.size,
+    onlineText:document.querySelector('#onlineCount')?.textContent||'',
+    viewerCount:state.net.viewerCount||0
+  }));
+  const viewerUrl=await page.evaluate(()=>PixelInvite.shareUrl(state.roomCode,'viewer'));
+  const viewerErrors=[];
+  const viewerPage=await browser.newPage({viewport:{width:1100,height:800}});
+  viewerPage.on('pageerror',e=>viewerErrors.push('PAGEERROR: '+(e.stack||e.message)));
+  viewerPage.on('console',m=>{if(m.type()==='error')viewerErrors.push('CONSOLE: '+m.text())});
+  await viewerPage.goto(viewerUrl,{waitUntil:'networkidle'});
+  await viewerPage.waitForFunction(()=>document.querySelector('#avatarBuilder')?.classList.contains('active'),null,{timeout:5000});
+  await viewerPage.locator('#playerNameInput').fill('隐形观众测试');
+  await viewerPage.locator('#enterWorldBtn').click();
+  await viewerPage.waitForFunction(()=>document.querySelector('#world')?.classList.contains('active'),null,{timeout:5000});
+  await page.waitForFunction(()=>state.net.viewerCount===1,null,{timeout:5000});
+  await page.waitForTimeout(250);
+  let spectatorAudit=await page.evaluate(()=>({
+    players:state.players.size,
+    onlineText:document.querySelector('#onlineCount')?.textContent||'',
+    viewerCount:state.net.viewerCount,
+    viewerPill:document.querySelector('#viewerPillV15')?.classList.contains('hidden')===false,
+    leakedName:[...state.players.values()].some(p=>p.name==='隐形观众测试')
+  }));
+  if(spectatorAudit.players!==ownerPresenceBefore.players||spectatorAudit.onlineText!==ownerPresenceBefore.onlineText||spectatorAudit.viewerCount!==1||!spectatorAudit.viewerPill||spectatorAudit.leakedName) {
+    throw new Error('V15.8 viewer leaked into participant presence '+JSON.stringify(spectatorAudit));
+  }
+
+  // Server must ignore a forged viewer presence event even if someone bypasses the UI helper.
+  await viewerPage.evaluate(()=>{
+    state.channel?.postMessage({type:'hello',sender:state.player.id,player:{...state.player,name:'FORGED_VIEWER_LEAK'}});
+    window.__ciViewerExtra=PixelNet.createChannel('ci-viewer-second-channel',state.roomCode,state.player.id);
+  });
+  await page.waitForTimeout(450);
+  spectatorAudit=await page.evaluate(()=>({
+    players:state.players.size,
+    viewerCount:state.net.viewerCount,
+    forged:[...state.players.values()].some(p=>p.name==='FORGED_VIEWER_LEAK')
+  }));
+  if(spectatorAudit.players!==ownerPresenceBefore.players||spectatorAudit.viewerCount!==1||spectatorAudit.forged) {
+    throw new Error('V15.8 server-side invisible spectator guard failed '+JSON.stringify(spectatorAudit));
+  }
+  const viewerLocalAudit=await viewerPage.evaluate(()=>({
+    role:state.accessRole,
+    viewOnly:isViewOnly(),
+    selfVisible:!!document.querySelector('#playersLayer .player.me'),
+    participantCount:Number(document.querySelector('#onlineCount')?.textContent||0),
+    viewerPillHidden:document.querySelector('#viewerPillV15')?.classList.contains('hidden')!==false
+  }));
+  if(viewerLocalAudit.role!=='viewer'||!viewerLocalAudit.viewOnly||!viewerLocalAudit.selfVisible||!viewerLocalAudit.viewerPillHidden) {
+    throw new Error('V15.8 viewer local exploration UI failed '+JSON.stringify(viewerLocalAudit));
+  }
+  await viewerPage.evaluate(()=>window.__ciViewerExtra?.close?.());
+  await viewerPage.close();
+  await page.waitForFunction(()=>state.net.viewerCount===0,null,{timeout:5000});
+  const spectatorClosed=await page.evaluate(()=>({
+    viewerCount:state.net.viewerCount,
+    pillHidden:document.querySelector('#viewerPillV15')?.classList.contains('hidden')!==false,
+    players:state.players.size
+  }));
+  console.log('V15_8_INVISIBLE_SPECTATOR_AUDIT',{open:spectatorAudit,viewerLocalAudit,closed:spectatorClosed,errors:viewerErrors});
+  if(spectatorClosed.viewerCount!==0||!spectatorClosed.pillHidden||spectatorClosed.players!==ownerPresenceBefore.players||viewerErrors.length) {
+    throw new Error('V15.8 spectator cleanup failed '+JSON.stringify({spectatorClosed,viewerErrors}));
+  }
 
   await page.evaluate(()=>addActivity('CI identity check'));
   await page.waitForTimeout(80);
@@ -822,7 +888,7 @@ const { chromium } = require('playwright');
     throw new Error('Browser errors:\n' + errors.join('\n'));
   }
 
-  console.log('SMOKE_OK V15.7 dual invite roles -> archive retention -> recovery -> curator -> warm atlas -> tiled camera -> revisions -> join');
+  console.log('SMOKE_OK V15.8 invisible spectators -> dual invite roles -> archive retention -> recovery -> curator -> warm atlas -> tiled camera -> revisions -> join');
   await browser.close();
 })().catch(async err => {
   console.error(err);
