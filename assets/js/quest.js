@@ -546,7 +546,7 @@
       setTimeout(()=>{
         $('#questHideMemory')&&($('#questHideMemory').onclick=async()=>{
           const ok=await questOp({kind:'hide',id:item.id,hidden:!item.hidden});
-          if(ok){closeModal();renderQuestItems();toast(item.hidden?'已经重新放回地图':'已经先从地图收起来')}
+          if(ok){closeModal();renderQuestItems();toast(item.hidden?'已经先从地图收起来':'已经重新放回地图')}
         });
         $('#questRemoveMemory')&&($('#questRemoveMemory').onclick=async()=>{
           if(!confirm(`确定移除「${item.title}」吗？房主操作会保留可恢复历史。`))return;
