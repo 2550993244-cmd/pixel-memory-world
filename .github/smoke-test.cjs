@@ -66,8 +66,8 @@ const { chromium } = require('playwright');
     inviteVersion: window.PixelInvite?.version || null
   }));
   console.log('V15_1_DIAG', v15Diag);
-  if (v15Diag.runtime?.version !== '15.13') throw new Error('V15.13 systems runtime missing');
-  if (v15Diag.retentionVersion !== '15.5' || v15Diag.recoveryVersion !== '15.7' || v15Diag.inviteVersion !== '15.13') throw new Error('V15.13 invite/retention/recovery runtime missing');
+  if (v15Diag.runtime?.version !== '15.14') throw new Error('V15.14 systems runtime missing');
+  if (v15Diag.retentionVersion !== '15.5' || v15Diag.recoveryVersion !== '15.7' || v15Diag.inviteVersion !== '15.13') throw new Error('V15.14 invite/retention/recovery runtime missing');
   if (v15Diag.sceneVersion !== '15.0') throw new Error('V15 layered scene map missing');
   if (v15Diag.mapRuntime.source !== 'tiled-json' || v15Diag.mapRuntime.collisionCount < 3 || v15Diag.mapRuntime.pathCount < 6) {
     throw new Error('V15.1 Tiled map runtime did not load canonical JSON');
@@ -472,8 +472,8 @@ const { chromium } = require('playwright');
   await contributorPage.locator('#saveNoteBtn').click();
   await page.waitForFunction(()=>state.notes.some(n=>n.text==='旧名留言'),null,{timeout:5000});
   const oldNameNote=await page.evaluate(()=>state.notes.find(n=>n.text==='旧名留言'));
-  if(oldNameNote?.authorName!=='参与者测试'||oldNameNote?.by!=='参与者测试'||!oldNameNote?.authorId) {
-    throw new Error('V15.13 first author snapshot missing '+JSON.stringify(oldNameNote));
+  if(oldNameNote?.authorName!=='参与者测试'||oldNameNote?.by!=='参与者测试'||Object.prototype.hasOwnProperty.call(oldNameNote||{},'authorId')||oldNameNote?.isAuthor===true) {
+    throw new Error('V15.14 public room leaked author linkage on first snapshot '+JSON.stringify(oldNameNote));
   }
 
   await contributorPage.evaluate(()=>broadcast('leave'));
@@ -512,26 +512,33 @@ const { chromium } = require('playwright');
     const oldNote=state.notes.find(n=>n.text==='旧名留言');
     const newNote=state.notes.find(n=>n.text==='新名留言');
     openNotesDrawer();
-    return {
-      oldNote:oldNote?{authorId:oldNote.authorId,authorName:oldNote.authorName,by:oldNote.by}:null,
-      newNote:newNote?{authorId:newNote.authorId,authorName:newNote.authorName,by:newNote.by}:null,
-      drawerText:document.querySelector('#drawerBody')?.innerText||''
-    };
+    const view=n=>n?{authorName:n.authorName,by:n.by,hasAuthorId:Object.prototype.hasOwnProperty.call(n,'authorId'),isAuthor:n.isAuthor===true}:null;
+    return {oldNote:view(oldNote),newNote:view(newNote),drawerText:document.querySelector('#drawerBody')?.innerText||''};
+  });
+  const selfOwnershipAudit=await contributorPage.evaluate(async()=>{
+    const room=await PixelNet.getRoom(state.roomCode);
+    const oldNote=room.memory.notes.find(n=>n.text==='旧名留言');
+    const newNote=room.memory.notes.find(n=>n.text==='新名留言');
+    const view=n=>n?{authorName:n.authorName,by:n.by,hasAuthorId:Object.prototype.hasOwnProperty.call(n,'authorId'),isAuthor:n.isAuthor===true}:null;
+    return {oldNote:view(oldNote),newNote:view(newNote)};
   });
   if(!historicalNameAudit.oldNote||!historicalNameAudit.newNote||
-     historicalNameAudit.oldNote.authorId!==historicalNameAudit.newNote.authorId||
+     historicalNameAudit.oldNote.hasAuthorId||historicalNameAudit.newNote.hasAuthorId||
+     historicalNameAudit.oldNote.isAuthor||historicalNameAudit.newNote.isAuthor||
      historicalNameAudit.oldNote.authorName!=='参与者测试'||
      historicalNameAudit.newNote.authorName!=='Lynn测试'||
      historicalNameAudit.oldNote.by!=='参与者测试'||
      historicalNameAudit.newNote.by!=='Lynn测试'||
      !historicalNameAudit.drawerText.includes('参与者测试')||
-     !historicalNameAudit.drawerText.includes('Lynn测试')) {
-    throw new Error('V15.13 historical author-name snapshots failed '+JSON.stringify(historicalNameAudit));
+     !historicalNameAudit.drawerText.includes('Lynn测试')||
+     !selfOwnershipAudit.oldNote?.isAuthor||!selfOwnershipAudit.newNote?.isAuthor||
+     selfOwnershipAudit.oldNote?.hasAuthorId||selfOwnershipAudit.newNote?.hasAuthorId) {
+    throw new Error('V15.14 private alias linkage failed '+JSON.stringify({historicalNameAudit,selfOwnershipAudit}));
   }
   await contributorPage.evaluate(()=>broadcast('leave'));
   await page.waitForFunction(()=>![...state.players.values()].some(p=>p.name==='Lynn测试'),null,{timeout:5000});
   await contributorPage.close();
-  console.log('V15_13_HISTORICAL_AUTHOR_AUDIT',{entry:contributorEntryAudit,live:liveAppearanceAudit,returning:returningContributorAudit,historical:historicalNameAudit,errors:contributorErrors});
+  console.log('V15_14_ALIAS_PRIVACY_AUDIT',{entry:contributorEntryAudit,live:liveAppearanceAudit,returning:returningContributorAudit,historical:historicalNameAudit,self:selfOwnershipAudit,errors:contributorErrors});
   if(contributorErrors.length)throw new Error('V15.13 contributor page errors '+JSON.stringify(contributorErrors));
 
     await page.evaluate(()=>addActivity('CI identity check'));
@@ -651,8 +658,11 @@ const { chromium } = require('playwright');
   if(inviteRes.status!==200) throw new Error('V15.13 duplicate authored add request failed unexpectedly');
   const immutableRoom=await fetch(`${base}/api/rooms/${inviteCode}`,{headers:{'X-Room-Invite':inviteRoom.inviteToken}}).then(r=>r.json());
   const immutableNote=immutableRoom.memory.notes.find(n=>n.id==='contrib-note');
-  if(immutableNote?.authorName!=='contributor'||immutableNote?.by!=='contributor'||immutableNote?.authorId!=='contributor-a') {
-    throw new Error('V15.13 server allowed historical author snapshot rewrite '+JSON.stringify(immutableNote));
+  const selfImmutableRoom=await fetch(`${base}/api/rooms/${inviteCode}`,{headers:contributorActor}).then(r=>r.json());
+  const selfImmutableNote=selfImmutableRoom.memory.notes.find(n=>n.id==='contrib-note');
+  if(immutableNote?.authorName!=='contributor'||immutableNote?.by!=='contributor'||Object.prototype.hasOwnProperty.call(immutableNote||{},'authorId')||immutableNote?.isAuthor===true||
+     selfImmutableNote?.authorName!=='contributor'||!selfImmutableNote?.isAuthor||Object.prototype.hasOwnProperty.call(selfImmutableNote||{},'authorId')) {
+    throw new Error('V15.14 historical author privacy/immutability failed '+JSON.stringify({public:immutableNote,self:selfImmutableNote}));
   }
 
   const viewerUpload=new FormData();
@@ -779,7 +789,10 @@ const { chromium } = require('playwright');
   let authRes=await opRequest('memory',{kind:'memento:add',item:{id:'guest-memory',authorId:'spoofed',type:'📷',title:'原始标题',meaning:'原始内容',by:'访客A',x:22,y:66,time:Date.now()}},guestA);
   if(authRes.status!==200) throw new Error('V15.3 author could not add memento');
   let authRoom=await fetch(`${base}/api/rooms/${curatorCode}`,{headers:{'X-Room-Invite':curatorRoom.inviteToken}}).then(r=>r.json());
-  if(authRoom.memory.mementos[0]?.authorId!=='guest-author-a') throw new Error('V15.3 server did not stamp canonical authorId');
+  const publicGuestMemory=authRoom.memory.mementos.find(m=>m.id==='guest-memory');
+  const authorRoom=await fetch(`${base}/api/rooms/${curatorCode}`,{headers:guestA}).then(r=>r.json());
+  const selfGuestMemory=authorRoom.memory.mementos.find(m=>m.id==='guest-memory');
+  if(!publicGuestMemory||Object.prototype.hasOwnProperty.call(publicGuestMemory,'authorId')||publicGuestMemory.isAuthor===true||!selfGuestMemory?.isAuthor||Object.prototype.hasOwnProperty.call(selfGuestMemory||{},'authorId')) throw new Error('V15.14 author identity leaked or private ownership missing');
 
   authRes=await opRequest('memory',{kind:'memento:move',id:'guest-memory',x:44,y:55},guestB);
   if(authRes.status!==403) throw new Error('V15.3 stranger can move another author memento');
@@ -800,7 +813,7 @@ const { chromium } = require('playwright');
   const restored=await fetch(`${base}/api/rooms/${curatorCode}/revisions/${memoryRev.id}/restore`,{
     method:'POST',headers:{'Content-Type':'application/json','X-Room-Owner':curatorRoom.ownerToken},body:'{}'
   }).then(r=>r.json());
-  if(!restored.mementos?.some(m=>m.id==='guest-memory'&&m.authorId==='guest-author-a')) throw new Error('V15.3 curation restore lost author attribution');
+  if(!restored.mementos?.some(m=>m.id==='guest-memory'&&m.authorName==='访客A'&&!Object.prototype.hasOwnProperty.call(m,'authorId'))) throw new Error('V15.14 curation restore lost public attribution or leaked authorId');
 
   authRes=await opRequest('quest',{kind:'add',item:{id:'guest-quest',authorId:'spoofed',order:1,title:'门外标题',text:'门外内容',by:'访客A',x:30,y:70,time:Date.now()}},guestA);
   if(authRes.status!==200) throw new Error('V15.3 author could not add Outside memory');
@@ -944,7 +957,7 @@ const { chromium } = require('playwright');
   console.log('V15_3_CURATOR_UI',curatorUiAudit);
   if(!curatorUiAudit.local||!curatorUiAudit.remote||Math.abs(curatorUiAudit.local.x-guestBefore)<.5) throw new Error('V15.3 host did not move participant memento');
   if(Math.abs(curatorUiAudit.local.x-curatorUiAudit.remote.x)>.01) throw new Error('V15.3 participant memento move did not persist');
-  if(curatorUiAudit.remote.authorId!=='live-guest-author') throw new Error('V15.3 host curation changed participant attribution');
+  if(Object.prototype.hasOwnProperty.call(curatorUiAudit.remote,'authorId')||curatorUiAudit.remote.authorName!=='访客') throw new Error('V15.14 curator UI leaked stable author identity or lost display attribution');
   if(curatorUiAudit.manageDisabled) throw new Error('V15.3 selected participant memento cannot be managed');
 
   const layoutAudit = await page.evaluate(async () => {
@@ -1080,7 +1093,7 @@ const { chromium } = require('playwright');
     throw new Error('Browser errors:\n' + errors.join('\n'));
   }
 
-  console.log('SMOKE_OK V15.13 historical author snapshots -> live contributor appearance -> returning prefill -> contributor ceremony -> instant spectators -> invisible viewers -> dual invite roles -> archive retention -> recovery -> curator -> warm atlas -> tiled camera -> revisions -> join');
+  console.log('SMOKE_OK V15.14 private alias linkage -> historical author snapshots -> live contributor appearance -> returning prefill -> contributor ceremony -> instant spectators -> invisible viewers -> dual invite roles -> archive retention -> recovery -> curator -> warm atlas -> tiled camera -> revisions -> join');
   await browser.close();
 })().catch(async err => {
   console.error(err);
