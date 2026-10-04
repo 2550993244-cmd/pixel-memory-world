@@ -116,16 +116,21 @@
   function applyQuestOp(op) {
     if (!op?.kind) return;
     if (op.kind === 'add' && op.item && !questState.items.some(x => x.id === op.item.id)) questState.items.push(op.item);
-    if (op.kind === 'move') { const item = questState.items.find(x => x.id === op.id); if (item) { item.x = op.x; item.y = op.y; } }
+    if (op.kind === 'move') { const item = questState.items.find(x => x.id === op.id); if (item) { item.x = Number(op.x); item.y = Number(op.y); } }
+    if (op.kind === 'hide') { const item = questState.items.find(x => x.id === op.id); if (item) item.hidden=!!op.hidden; }
+    if (op.kind === 'remove') questState.items = questState.items.filter(x=>x.id!==op.id);
     if (op.kind === 'clear') { questState.items = []; questState.found.clear(); }
     if (op.kind === 'set' && Array.isArray(op.items)) questState.items = op.items;
     saveQuest();
   }
 
-  function questOp(op) {
+  async function questOp(op) {
+    if(window.PixelNet?.enabled){
+      try{await PixelNet.applyOp(state.roomCode,'quest',op);applyQuestOp(op);return true}catch(e){toast('这个回忆现在不能被修改');return false}
+    }
     applyQuestOp(op);
     questBroadcast('quest-op', { op });
-    PixelNet?.applyOp?.(state.roomCode,'quest',op).catch(()=>{});
+    return true;
   }
 
   function loadQuest() {
@@ -200,7 +205,7 @@
     const layer = $('#questAssetLayer');
     if (!layer) return;
     layer.innerHTML = '';
-    const ordered = questState.items.slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+    const ordered = questState.items.filter(item=>!item.hidden).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
     const next = ordered.find(item => !questState.found.has(item.id));
     ordered.forEach((item, idx) => {
       const found = questState.found.has(item.id);
@@ -701,13 +706,14 @@
     const r=questStage.getBoundingClientRect();
     return {x:(e.clientX-r.left)/r.width*100,y:(e.clientY-r.top)/r.height*100};
   }
-  let dragItem=null;
+  let dragItem=null,dragOrigin=null;
   questStage?.addEventListener('pointerdown', e => {
     if (!questState.editorOpen || questState.placing) return;
     const node=e.target.closest('.quest-memory');
     if(!node)return;
     dragItem=questState.items.find(x=>x.id===node.dataset.id)||null;
     if(!dragItem)return;
+    dragOrigin={x:dragItem.x,y:dragItem.y};
     e.preventDefault();
     questStage.setPointerCapture?.(e.pointerId);
     node.style.cursor='grabbing';
@@ -721,7 +727,7 @@
     dragItem.x=x;dragItem.y=y;
     renderQuestItems();
   });
-  const endDrag=()=>{if(!dragItem)return;saveQuest();questBroadcast('quest-op',{op:{kind:'move',id:dragItem.id,x:dragItem.x,y:dragItem.y}});toast(`「${dragItem.title}」换了一个藏宝位置。`);dragItem=null};
+  const endDrag=async()=>{if(!dragItem)return;const item=dragItem,origin=dragOrigin;dragItem=null;dragOrigin=null;const ok=await questOp({kind:'move',id:item.id,x:item.x,y:item.y});if(ok)toast(`「${item.title}」换了一个藏宝位置。`);else if(origin){item.x=origin.x;item.y=origin.y;renderQuestItems()}};
   questStage?.addEventListener('pointerup',endDrag);
   questStage?.addEventListener('pointercancel',endDrag);
 
