@@ -141,7 +141,10 @@
   };
   const getContributorInviteToken = code => localStorage.getItem(inviteStorageKey(code)) || '';
   const getViewerInviteToken = code => localStorage.getItem(viewInviteStorageKey(code)) || '';
-  const getInviteToken = code => getInviteRole(code)==='viewer' ? getViewerInviteToken(code) : getContributorInviteToken(code);
+  const getInviteToken = code => {
+    if(getOwnerToken(code)&&getContributorInviteToken(code))return getContributorInviteToken(code);
+    return getInviteRole(code)==='viewer' ? getViewerInviteToken(code) : getContributorInviteToken(code);
+  };
   const saveInviteToken = (code, token, role='contributor') => {
     if(!code)return;
     const key=role==='viewer'?viewInviteStorageKey(code):inviteStorageKey(code);
