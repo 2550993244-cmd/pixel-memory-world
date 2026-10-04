@@ -19,7 +19,7 @@ const { chromium } = require('playwright');
     v14Ready: document.body.classList.contains('v14-ready')
   }));
   console.log('V14_DIAG', v14Diag, errors);
-  if (v14Diag.pixelV14?.version !== '14.1') throw new Error('V14 bootstrap missing | ' + errors.join(' | '));
+  if (v14Diag.pixelV14?.version !== '14.2') throw new Error('V14 bootstrap missing | ' + errors.join(' | '));
   const v14State = await page.evaluate(() => ({
     ready: document.body.classList.contains('v14-ready'),
     ambient: !!document.querySelector('.v14-ambient-canvas'),
@@ -62,6 +62,31 @@ const { chromium } = require('playwright');
     throw new Error('landing typography regressed to undersized text');
   }
 
+
+  const collageAudit = await page.evaluate(() => {
+    const visible = el => {
+      const r=el.getBoundingClientRect(),cs=getComputedStyle(el);
+      return r.width>12 && r.height>8 && cs.visibility!=='hidden' && cs.display!=='none' && parseFloat(cs.opacity||'1')>.5;
+    };
+    const ticket=document.querySelector('.memory-ticket b');
+    const flower=document.querySelector('.flower-tile');
+    const tr=ticket.getBoundingClientRect(),fr=flower.getBoundingClientRect();
+    const overlap=Math.max(0,Math.min(tr.right,fr.right)-Math.max(tr.left,fr.left))*Math.max(0,Math.min(tr.bottom,fr.bottom)-Math.max(tr.top,fr.top));
+    return {
+      letter:visible(document.querySelector('.memory-paper p')),
+      letterSign:visible(document.querySelector('.memory-paper small')),
+      ticket:visible(ticket),
+      ticketMeta:visible(document.querySelector('.memory-ticket small')),
+      flowerTitle:visible(document.querySelector('.flower-note b')),
+      ticketFlowerOverlap:overlap
+    };
+  });
+  console.log('V14_2_COLLAGE_AUDIT',collageAudit);
+  if(!collageAudit.letter||!collageAudit.letterSign||!collageAudit.ticket||!collageAudit.ticketMeta||!collageAudit.flowerTitle) {
+    throw new Error('memory collage copy is clipped or hidden');
+  }
+  if(collageAudit.ticketFlowerOverlap>6) throw new Error('flower souvenir still covers ticket title');
+
   // V13 control language must still be loaded underneath V14.
   const v13Styles = await page.evaluate(() => {
     const primary = getComputedStyle(document.querySelector('#createWorldBtn'));
@@ -100,6 +125,19 @@ const { chromium } = require('playwright');
   console.log('V14_1_CREATOR_TYPE', creatorType);
   if (creatorType.meta < 9.5 || creatorType.field < 11.5 || creatorType.marker < 11 || creatorType.markerBox < 31 || creatorType.choiceHelp < 10.5) {
     throw new Error('creator typography/order markers are still too small');
+  }
+
+
+  const previewMetaGeometry = await page.evaluate(() => {
+    const card=document.querySelector('#creator .creator-preview-meta>span');
+    const n=card.querySelector('i').getBoundingClientRect();
+    const b=card.querySelector('b').getBoundingClientRect();
+    const s=card.querySelector('small').getBoundingClientRect();
+    return {numberRight:n.right,labelLeft:b.left,detailLeft:s.left};
+  });
+  console.log('V14_2_META_GEOMETRY',previewMetaGeometry);
+  if(previewMetaGeometry.numberRight > previewMetaGeometry.labelLeft-4 || previewMetaGeometry.numberRight > previewMetaGeometry.detailLeft-4) {
+    throw new Error('creator preview number overlaps its text');
   }
 
   // Creator choices must remain clickable.
@@ -148,6 +186,29 @@ const { chromium } = require('playwright');
   await page.waitForFunction(() => document.querySelector('#roomDrawer')?.classList.contains('drawer-music'));
   await page.locator('#closeRoomDrawer').click();
   await page.waitForFunction(() => document.querySelector('#roomDrawer')?.classList.contains('hidden'));
+
+
+  await page.evaluate(() => openKeepsake());
+  await page.waitForSelector('#keepsakeOverlay:not(.hidden)');
+  const keepsakeAudit = await page.evaluate(() => {
+    const card=getComputedStyle(document.querySelector('.keepsake-card'));
+    const people=getComputedStyle(document.querySelector('.keepsake-people'));
+    const stats=getComputedStyle(document.querySelector('.keepsake-stats'));
+    return {
+      radius:parseFloat(card.borderRadius),
+      align:card.textAlign,
+      bg:card.backgroundImage,
+      peopleJustify:people.justifyContent,
+      statsLeft:parseFloat(stats.borderLeftWidth),
+      statsRight:parseFloat(stats.borderRightWidth)
+    };
+  });
+  console.log('V14_2_KEEPSAKE_AUDIT',keepsakeAudit);
+  if(keepsakeAudit.radius<24||keepsakeAudit.align!=='center'||keepsakeAudit.peopleJustify!=='center') throw new Error('keepsake luxury layout missing');
+  if(!/gradient/i.test(keepsakeAudit.bg)) throw new Error('keepsake gold-pattern background missing');
+  if(keepsakeAudit.statsLeft>0||keepsakeAudit.statsRight>0) throw new Error('keepsake stats reverted to boxed cells');
+  await page.locator('[data-close-keepsake]').last().click();
+  await page.waitForFunction(() => document.querySelector('#keepsakeOverlay')?.classList.contains('hidden'));
 
   // Room controls: dock + settings should still be clickable after the visual rewrite.
   await page.locator('#worldSettingsBtn').click();
