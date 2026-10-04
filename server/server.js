@@ -6,6 +6,7 @@ const { createRoomStore } = require('./storage-adapter');
 const { createBlobStore } = require('./blob-adapter');
 
 const PORT = Number(process.env.PORT || 8787);
+const ARCHIVE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 const ROOT = path.join(__dirname, '..');
 const DATA_DIR = process.env.PIXEL_DATA_DIR || path.join(__dirname, 'data');
 const UPLOAD_DIR = process.env.PIXEL_UPLOAD_DIR || path.join(__dirname, 'uploads');
@@ -41,6 +42,9 @@ function normalizeRoom(r) {
   r.meta.createdAt ||= r.createdAt || Date.now();
   r.meta.updatedAt ||= r.updatedAt || r.meta.createdAt;
   r.meta.lastVisitedAt ||= r.meta.updatedAt;
+  if (!('archivedAt' in r.meta)) r.meta.archivedAt = null;
+  if (!('purgeAfter' in r.meta)) r.meta.purgeAfter = null;
+  r.meta.uploads ||= [];
   return r;
 }
 function roomToken() { return crypto.randomBytes(24).toString('base64url'); }
@@ -109,6 +113,52 @@ function touchRoom(r) {
   r.meta.revision = (r.meta.revision || 0) + 1;
   saveDB();
 }
+function isArchived(r) { normalizeRoom(r); return !!r.meta.archivedAt; }
+function collectRoomUploadKeys(r) {
+  const keys=new Set(r?.meta?.uploads || []);
+  const visit=v=>{
+    if (typeof v === 'string') {
+      const m=/\/uploads\/([^?#"'\s]+)/.exec(v);
+      if (m?.[1]) keys.add(decodeURIComponent(m[1]));
+      return;
+    }
+    if (Array.isArray(v)) return v.forEach(visit);
+    if (v && typeof v === 'object') Object.values(v).forEach(visit);
+  };
+  visit(r?.world); visit(r?.memory); visit(r?.quest); visit(r?.music);
+  return [...keys];
+}
+function closeRoomConnections(room, reason='room-archived') {
+  for (const [key,set] of channels) {
+    if (!key.startsWith(room+'::')) continue;
+    for (const socket of [...set]) {
+      try { wsSend(socket,{type:reason,sender:'server',room}); } catch(_){}
+      try { socket.end(); } catch(_){}
+    }
+    channels.delete(key);
+  }
+}
+function purgeRoom(code, reason='permanent-delete') {
+  const r=rooms[code];
+  if (!r) return {removed:false,blobs:0};
+  normalizeRoom(r);
+  const keys=collectRoomUploadKeys(r);
+  closeRoomConnections(code,'room-deleted');
+  delete rooms[code];
+  const blobs=blobStore.removeMany?.(keys) || 0;
+  roomStore.saveNow(rooms);
+  return {removed:true,blobs,reason};
+}
+function sweepExpiredArchives() {
+  const now=Date.now(); let removed=0;
+  for (const [code,r] of Object.entries(rooms)) {
+    normalizeRoom(r);
+    if (r.meta.archivedAt && r.meta.purgeAfter && Number(r.meta.purgeAfter) <= now) {
+      purgeRoom(code,'retention-expired'); removed++;
+    }
+  }
+  return removed;
+}
 Object.values(rooms).forEach(normalizeRoom);
 
 function json(res, status, obj) {
@@ -117,7 +167,7 @@ function json(res, status, obj) {
     'Content-Type': 'application/json; charset=utf-8',
     'Content-Length': b.length,
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, X-Room-Owner, X-Actor-Id, X-Actor-Token',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Room-Owner, X-Actor-Id, X-Actor-Token, X-Room-Code',
     'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS'
   });
   res.end(b);
@@ -288,13 +338,14 @@ function connectionCount() { let n = 0; for (const s of channels.values()) n += 
 
 const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') {
-    res.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type, X-Room-Owner, X-Actor-Id, X-Actor-Token', 'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS' });
+    res.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type, X-Room-Owner, X-Actor-Id, X-Actor-Token, X-Room-Code', 'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS' });
     return res.end();
   }
   const u = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = u.pathname;
   try {
-    if (pathname === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, version: 'v15.4', rooms: Object.keys(rooms).length, connections: connectionCount(), roomStore: roomStore.info().kind, blobStore: blobStore.info().kind, durableDataDir: !!process.env.PIXEL_DATA_DIR, durableUploadDir: !!process.env.PIXEL_UPLOAD_DIR, time: Date.now() });
+    sweepExpiredArchives();
+    if (pathname === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, version: 'v15.5', rooms: Object.keys(rooms).length, archivedRooms: Object.values(rooms).filter(r=>isArchived(r)).length, retentionDays:30, connections: connectionCount(), roomStore: roomStore.info().kind, blobStore: blobStore.info().kind, durableDataDir: !!process.env.PIXEL_DATA_DIR, durableUploadDir: !!process.env.PIXEL_UPLOAD_DIR, time: Date.now() });
     if (pathname === '/api/rooms' && req.method === 'POST') {
       const body = JSON.parse((await readBody(req)).toString('utf8') || '{}');
       const code = String(body.code || randomCode()).toUpperCase();
@@ -347,6 +398,46 @@ const server = http.createServer(async (req, res) => {
         canImportActor: actorStatus === 'valid' || actorStatus === 'unknown' || actorStatus === 'missing'
       });
     }
+    const archivem = /^\/api\/rooms\/([A-Z0-9]{6})\/archive$/.exec(pathname);
+    if (archivem && req.method === 'POST') {
+      const r = rooms[archivem[1]];
+      if (!r) return json(res, 404, { error:'room_not_found' });
+      if (!isOwner(req,r)) return json(res, 403, { error:'owner_required' });
+      normalizeRoom(r);
+      if (!r.meta.archivedAt) {
+        r.meta.archivedAt = Date.now();
+        r.meta.purgeAfter = r.meta.archivedAt + ARCHIVE_RETENTION_MS;
+        touchRoom(r);
+        closeRoomConnections(archivem[1],'room-archived');
+      }
+      return json(res, 200, { ok:true, archived:true, meta:r.meta, recoveryDays:30 });
+    }
+
+    const unarchivem = /^\/api\/rooms\/([A-Z0-9]{6})\/unarchive$/.exec(pathname);
+    if (unarchivem && req.method === 'POST') {
+      const r = rooms[unarchivem[1]];
+      if (!r) return json(res, 404, { error:'room_not_found' });
+      if (!isOwner(req,r)) return json(res, 403, { error:'owner_required' });
+      normalizeRoom(r);
+      r.meta.archivedAt = null;
+      r.meta.purgeAfter = null;
+      touchRoom(r);
+      return json(res, 200, { ok:true, archived:false, room:publicRoom(r) });
+    }
+
+    const deletem = /^\/api\/rooms\/([A-Z0-9]{6})\/delete-permanently$/.exec(pathname);
+    if (deletem && req.method === 'POST') {
+      const r = rooms[deletem[1]];
+      if (!r) return json(res, 404, { error:'room_not_found' });
+      if (!isOwner(req,r)) return json(res, 403, { error:'owner_required' });
+      const b = JSON.parse((await readBody(req)).toString('utf8') || '{}');
+      if (String(b.confirmCode||'').toUpperCase() !== deletem[1] || b.acknowledge !== 'DELETE_FOREVER') {
+        return json(res, 400, { error:'delete_confirmation_required' });
+      }
+      const result=purgeRoom(deletem[1],'owner-permanent-delete');
+      return json(res, 200, { ok:true, deleted:true, removedUploads:result.blobs });
+    }
+
     const revisionsm = /^\/api\/rooms\/([A-Z0-9]{6})\/revisions$/.exec(pathname);
     if (revisionsm && req.method === 'GET') {
       const r = rooms[revisionsm[1]];
@@ -362,6 +453,7 @@ const server = http.createServer(async (req, res) => {
       if (!r) return json(res, 404, { error: 'room_not_found' });
       if (!isOwner(req, r)) return json(res, 403, { error: 'owner_required' });
       normalizeRoom(r);
+      if (isArchived(r)) return json(res, 423, { error:'room_archived', purgeAfter:r.meta.purgeAfter });
       const rev = r.revisions.find(x => x.id === restorem[2]);
       if (!rev) return json(res, 404, { error: 'revision_not_found' });
       if (!['layout','mementos','quest'].includes(rev.kind)) return json(res, 400, { error: 'unsupported_revision_kind' });
@@ -388,6 +480,7 @@ const server = http.createServer(async (req, res) => {
       const r = rooms[layoutm[1]];
       if (!r) return json(res, 404, { error: 'room_not_found' });
       if (!isOwner(req, r)) return json(res, 403, { error: 'owner_required' });
+      if (isArchived(r)) return json(res, 423, { error:'room_archived', purgeAfter:r.meta.purgeAfter });
       const b = JSON.parse((await readBody(req)).toString('utf8') || '{}');
       const layout = b.layout && typeof b.layout === 'object' ? b.layout : {};
       const before = JSON.parse(JSON.stringify(r.world.layout || {}));
@@ -400,6 +493,7 @@ const server = http.createServer(async (req, res) => {
     if (opm && req.method === 'POST') {
       const r = rooms[opm[1]];
       if (!r) return json(res, 404, { error: 'room_not_found' });
+      if (isArchived(r)) return json(res, 423, { error:'room_archived', purgeAfter:r.meta.purgeAfter });
       const b = JSON.parse((await readBody(req)).toString('utf8') || '{}');
       const scope=b.scope;
       const op=b.op;
@@ -431,6 +525,7 @@ const server = http.createServer(async (req, res) => {
       const r = rooms[rm[1]];
       if (!r) return json(res, 404, { error: 'room_not_found' });
       normalizeRoom(r);
+      if (isArchived(r) && !isOwner(req,r)) return json(res, 410, { error:'room_archived', purgeAfter:r.meta.purgeAfter, recoveryDays:30 });
       r.meta.lastVisitedAt = Date.now();
       saveDB();
       return json(res, 200, publicRoom(r));
@@ -438,6 +533,7 @@ const server = http.createServer(async (req, res) => {
     if (rm && req.method === 'PUT') {
       const r = rooms[rm[1]];
       if (!r) return json(res, 404, { error: 'room_not_found' });
+      if (isArchived(r)) return json(res, 423, { error:'room_archived', purgeAfter:r.meta.purgeAfter });
       const b = JSON.parse((await readBody(req)).toString('utf8') || '{}');
       if (b.memory || b.quest) return json(res, 400, { error:'snapshot_write_disabled', hint:'use_authorized_ops' });
       if (b.world) {
@@ -453,7 +549,18 @@ const server = http.createServer(async (req, res) => {
       const body = await readBody(req, 18 * 1024 * 1024);
       const part = parseMultipart(body, req.headers['content-type']);
       if (!part) return json(res, 400, { error: 'missing_file' });
+      const roomCode=String(req.headers['x-room-code']||'').toUpperCase();
+      let uploadRoom=null;
+      if (roomCode) {
+        uploadRoom=rooms[roomCode];
+        if (!uploadRoom) return json(res,404,{error:'room_not_found'});
+        normalizeRoom(uploadRoom);
+        if (isArchived(uploadRoom)) return json(res,423,{error:'room_archived'});
+        const auth=isOwner(req,uploadRoom)?{ok:true}:verifyActor(req,uploadRoom,{allowRegister:true});
+        if(!auth.ok) return json(res,403,{error:auth.error||'forbidden'});
+      }
       const saved = blobStore.save(part.data, part.filename);
+      if(uploadRoom){uploadRoom.meta.uploads.push(saved.key);touchRoom(uploadRoom)}
       const proto = (req.headers['x-forwarded-proto'] || 'http').split(',')[0];
       const host = (req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0];
       return json(res, 200, { ok: true, url: `${proto}://${host}/uploads/${saved.key}`, name: saved.name, size: saved.size });
@@ -526,6 +633,14 @@ server.on('upgrade', (req, socket) => {
   const channel = u.searchParams.get('channel') || 'room';
   const player = u.searchParams.get('player') || 'anon';
   if (!validCode(room)) return socket.destroy();
+  const roomState=rooms[room];
+  if (roomState) {
+    normalizeRoom(roomState);
+    if (isArchived(roomState)) {
+      socket.write('HTTP/1.1 410 Gone\r\nConnection: close\r\n\r\n');
+      return socket.end();
+    }
+  }
   const key = req.headers['sec-websocket-key'];
   if (!key) return socket.destroy();
   const accept = crypto.createHash('sha1').update(key + GUID).digest('base64');
@@ -569,4 +684,4 @@ server.on('upgrade', (req, socket) => {
   socket.on('close', close); socket.on('end', close); socket.on('error', close);
 });
 
-server.listen(PORT, () => console.log(`Pixel Memory V15.4 server: http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`Pixel Memory V15.5 server: http://localhost:${PORT}`));
