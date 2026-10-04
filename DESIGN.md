@@ -1,5 +1,5 @@
 ---
-version: 15.1
+version: 15.2
 name: Pixel Memory World
 description: A warm multiplayer pixel-memory space. The interface should feel like a keepsake box that became a tiny playable world: soft paper surfaces, restrained pastel accents, readable modern Chinese typography, pixel-art scenes, and motion that responds to people rather than decorating every surface.
 ---
@@ -153,14 +153,15 @@ The saved keepsake is a ceremonial paper object, not an analytics dashboard or a
 
 ## V15.1 asset boundary
 
-The technical sprite contract is now fixed enough to build against, but the final character artwork is intentionally not fixed.
+The technical sprite contract is fixed and the production direction is now **Warm Keepsake Pixel (A)**.
 
 - Logical character frame: 32 × 48.
 - Directions: down / left / right / up.
 - Actions: idle / walk / sit / wave / hug / celebrate.
 - Layers: body, hair, outfit, held item.
 - The runtime must keep the current DOM sprite as a fallback until a real atlas is present.
-- Do not generate a final production atlas until the character-art direction is explicitly chosen; changing silhouette, proportions or rendering language after atlas production would multiply work across every action and DIY variant.
+- Production atlas language: warm brown outlines, muted clothing, small facial features, restrained handmade irregularity, readable four-direction silhouettes, and expressive-but-not-cartoonish social poses.
+- Keep the DOM sprite only as a compatibility fallback; new character work should extend the warm layered atlas instead of creating a second visual system.
 
 ## V15 system interaction contract
 
