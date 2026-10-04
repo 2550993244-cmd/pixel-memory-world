@@ -177,6 +177,7 @@ function closeRoomRoleConnections(room, role, reason) {
     }
     if (!set.size) channels.delete(key);
   }
+  if(role==='viewer')sendViewerCount(room);
 }
 function purgeRoom(code, reason='permanent-delete') {
   const r=rooms[code];
@@ -375,6 +376,26 @@ function broadcastRoomScope(room, scope, payload) {
 const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 function chset(key) { if (!channels.has(key)) channels.set(key, new Set()); return channels.get(key); }
 function connectionCount() { let n = 0; for (const s of channels.values()) n += s.size; return n; }
+function viewerCount(room) {
+  const ids=new Set();
+  for (const [key,set] of channels) {
+    if (!key.startsWith(room+'::')) continue;
+    for (const socket of set) if (!socket.destroyed && socket._meta?.role==='viewer') ids.add(socket._meta.player||'anon');
+  }
+  return ids.size;
+}
+function sendViewerCount(room) {
+  const count=viewerCount(room);
+  const payload={type:'viewer-count',sender:'server',count};
+  for (const [key,set] of channels) {
+    if (!key.startsWith(room+'::')) continue;
+    for (const socket of set) {
+      if (socket.destroyed || socket._meta?.role==='viewer') continue;
+      wsSend(socket,payload);
+    }
+  }
+  return count;
+}
 
 const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') {
@@ -385,7 +406,7 @@ const server = http.createServer(async (req, res) => {
   const pathname = u.pathname;
   try {
     sweepExpiredArchives();
-    if (pathname === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, version: 'v15.7', rooms: Object.keys(rooms).length, archivedRooms: Object.values(rooms).filter(r=>isArchived(r)).length, retentionDays:30, connections: connectionCount(), roomStore: roomStore.info().kind, blobStore: blobStore.info().kind, durableDataDir: !!process.env.PIXEL_DATA_DIR, durableUploadDir: !!process.env.PIXEL_UPLOAD_DIR, time: Date.now() });
+    if (pathname === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, version: 'v15.8', rooms: Object.keys(rooms).length, archivedRooms: Object.values(rooms).filter(r=>isArchived(r)).length, retentionDays:30, connections: connectionCount(), roomStore: roomStore.info().kind, blobStore: blobStore.info().kind, durableDataDir: !!process.env.PIXEL_DATA_DIR, durableUploadDir: !!process.env.PIXEL_UPLOAD_DIR, time: Date.now() });
     if (pathname === '/api/rooms' && req.method === 'POST') {
       const body = JSON.parse((await readBody(req)).toString('utf8') || '{}');
       const code = String(body.code || randomCode()).toUpperCase();
@@ -733,6 +754,8 @@ server.on('upgrade', (req, socket) => {
   const ck = `${room}::${channel}`;
   chset(ck).add(socket);
   socket._meta = { room, channel, player, ck, role:wsRole };
+  if (wsRole==='viewer') sendViewerCount(room);
+  else wsSend(socket,{type:'viewer-count',sender:'server',count:viewerCount(room)});
 
   const r = rooms[room];
   if (r) {
@@ -749,7 +772,7 @@ server.on('upgrade', (req, socket) => {
     try { m = JSON.parse(text); } catch (_) { return; }
     const rr = rooms[room];
     if (m.type === 'ping') return wsSend(socket, { type: 'pong', sender: 'server', t: m.t, serverTime: Date.now() });
-    if (socket._meta?.role === 'viewer' && !new Set(['hello','state','move','leave','quest-hello','quest-player','quest-leave']).has(m.type)) return;
+    if (socket._meta?.role === 'viewer') return;
     if (rr) {
       normalizeRoom(rr);
       // V15.3: memory persistence is REST-authorized; websocket messages are transient only.
@@ -766,11 +789,17 @@ server.on('upgrade', (req, socket) => {
     if (m.type === 'memory-op' || m.type === 'quest-op' || m.type === 'memory' || m.type === 'quest-update') return;
     wsBroadcast(ck, m, socket);
   }));
-  const close = () => { const s = channels.get(ck); s?.delete(socket); if (s && !s.size) channels.delete(ck); };
+  const close = () => {
+    if(socket._pmClosed)return;
+    socket._pmClosed=true;
+    const wasViewer=socket._meta?.role==='viewer';
+    const set=channels.get(ck); set?.delete(socket); if (set && !set.size) channels.delete(ck);
+    if(wasViewer)sendViewerCount(room);
+  };
   socket.on('close', close); socket.on('end', close); socket.on('error', close);
 });
 
 const retentionSweep=setInterval(()=>{try{sweepExpiredArchives()}catch(e){console.error('retention sweep',e)}},60*60*1000);
 retentionSweep.unref?.();
 
-server.listen(PORT, () => console.log(`Pixel Memory V15.7 server: http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`Pixel Memory V15.8 server: http://localhost:${PORT}`));
