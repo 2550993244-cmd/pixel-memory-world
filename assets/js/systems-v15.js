@@ -77,9 +77,12 @@
   function cameraFrame(){
     if(!camera.ready) ensureCameraWorld();
     if(camera.stage&&camera.world){
-      const active=state.screen==='quest'&&!editorIsOpen();
+      const placing=editorIsOpen();
+      const active=state.screen==='quest'&&!placing;
       const me=$('.quest-player.me',camera.world);
-      if(active&&me){
+      if(placing){
+        camera.x=0;camera.y=0;camera.zoom=1;
+      }else if(active&&me){
         const rect=camera.stage.getBoundingClientRect();
         const px=parseFloat(me.style.left)||50;
         const py=parseFloat(me.style.top)||50;
