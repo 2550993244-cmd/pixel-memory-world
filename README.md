@@ -4,7 +4,7 @@
 
 生日、纪念日、毕业、告别，或者任何值得留下来的日子，都可以被做成一间多人在线的小屋。大家用自己的像素小人进入同一个房间，在里面走动、聊天、放照片和纪念物、播放音乐、一起庆祝，再从门外进入一张回忆寻宝地图。
 
-**当前版本：V14.3 · white embossed keepsake & completion pass**
+**当前版本：V15.0 · world systems foundation**
 
 ---
 
@@ -41,6 +41,13 @@
 - 修复 V12.4 中 Outside 因历史存储声明被注释而无法进入的问题
 - 木桥改为弧形 SVG 桥面，不再是一条平直矩形
 - 删除地图里两个重复的“回忆路”路牌，让小路和地形自己承担引导
+
+### V15.0 P1–P4 系统基础完成
+- **P1 地图系统**：`scene-map.js` 升级为 Ground / Path / Objects / Collision / Foreground 五层契约；Outside 碰撞直接读取地图层；加入跟随主角的摄像机画布，地图不再始终以完整一屏静态展示
+- **P2 人物系统**：在原有四方向 idle / walk 基础上加入统一动作状态机：`idle / walk / sit / wave / hug / celebrate`；Q 键可招手，沙发、拥抱和庆祝会触发对应动作，动作状态可沿现有多人状态同步
+- **P3 世界编辑器**：房主可从“房间设置”进入编辑模式，拖动留言墙、照片墙、蛋糕桌、礼物角、唱片机、沙发和绿植；支持键盘微调、恢复默认和自动保存；纪念物上传与 Outside 路线编辑继续沿用已有工具
+- **P4 长期保存基础**：房间创建时生成仅保存在房主设备的 owner token；家具布局写入使用房主专用接口并由服务端校验；旧房间可首次认领；服务器 JSON 改为原子写入，并支持 `PIXEL_DATA_DIR` / `PIXEL_UPLOAD_DIR` 指向持久磁盘
+- 旧版房间数据保持兼容：没有 `layout` / `meta` / owner token 的房间会在读取时自动补默认值，不需要迁移脚本
 
 ### V14.3 白色压纹纪念卡与完成度收口
 - 纪念卡从 V14.2 的香槟金礼盒方向改为暖白色高级纸张：细纤维纸纹、低对比浅灰盲压花纹、无明显硬边框
@@ -156,7 +163,9 @@ pixel-memory-world/
 │   │   ├── landing.css         # 首页视觉
 │   │   ├── world.css           # 室内 / Outside / 像素钓鱼
 │   │   ├── controls-v13.css    # V13 控件与交互视觉
-│   │   ├── experience-v14.css  # V14 排版与体验层\n│   │   └── completion-v14-3.css # V14.3 白色压纹卡与响应式收口
+│   │   ├── experience-v14.css   # V14 排版与体验层
+│   │   ├── completion-v14-3.css # V14.3 白色压纹卡与响应式收口
+│   │   └── systems-v15.css      # V15 地图 / 人物动作 / 房间编辑器
 │   └── js/
 │       ├── app.js              # 房间、人物、聊天、音乐、纪念物
 │       ├── network.js          # REST / WebSocket 联网
@@ -165,7 +174,9 @@ pixel-memory-world/
 │       ├── scene-map.js        # 室外网格场景数据
 │       ├── world.js            # 场景渲染、人物方向与深度
 │       ├── ui-v13.js           # V13 指针 / 按压微交互
-│       ├── experience-v14.js    # V14 Lenis / GSAP / 光场 / Spotlight / Pixel dissolve\n│       └── completion-v14-3.js # V14.3 导出一致性与交互收口
+│       ├── experience-v14.js    # V14 Lenis / GSAP / 光场 / Spotlight / Pixel dissolve
+│       ├── completion-v14-3.js  # V14.3 导出一致性与交互收口
+│       └── systems-v15.js       # V15 P1–P4 系统运行层
 ├── server/
 │   ├── server.js
 │   ├── package.json
@@ -239,7 +250,7 @@ V14 正常返回：
 ~~~json
 {
   "ok": true,
-  "version": "v14.3"
+  "version": "v15.0"
 }
 ~~~
 
@@ -296,30 +307,29 @@ Tiled 编辑器
 
 ## 接下来
 
-### P1 · 地图系统
-- Ground / Path / Objects / Collision / Foreground 分层
-- 把 Memory Quest 正式迁移到 Tilemap
-- 加摄像机跟随
-- 地图尺寸不再受一个屏幕限制
-- 路线和宝藏真正依附地图坐标
+V15 已经把原先 P1–P4 从“待办列表”推进到可运行的第一版。下一阶段不再重复搭骨架，而是把这四套系统继续做深：
 
-### P2 · 人物系统
-- 正式 spritesheet
-- idle / walk / sit / wave / hug / celebrate
-- DIY 外观映射到统一角色素材
+### P1.1 · 真正的大地图 / Tiled
+- 把当前分层契约迁移到 Tiled / JSON tilemap 文件
+- 扩展到超出单屏范围的真实世界坐标，而不是只靠摄像机放大现有画布
+- 路线、宝藏、碰撞和前景全部使用同一套 tile/world 坐标
 
-### P3 · 世界编辑器
-- 房主拖动家具
-- 上传照片生成像素物件
-- 自定义地标与路线
-- 保存自己的世界布局
+### P2.1 · 正式 spritesheet 素材
+- 用统一 spritesheet 替换当前 DOM 像素角色骨架
+- 给 idle / walk / sit / wave / hug / celebrate 补完整帧
+- DIY 发型、衣服和手持物继续作为分层素材组合
 
-### P4 · 长期保存
-- 数据库
-- 对象存储
-- 用户身份
-- 房主权限
-- 房间长期回访
+### P3.1 · 更完整的世界编辑器
+- 家具旋转 / 层级 / 删除 / 吸附
+- 照片直接生成可摆放像素物件
+- 自定义地标、路径节点与房间模板
+- 编辑历史与撤销
+
+### P4.1 · 正式生产存储
+- 将当前持久盘 JSON 适配层切换到数据库
+- 上传文件切换到对象存储
+- 用户身份 / 房间恢复 / 房间删除
+- 多实例 WebSocket 广播与数据保留策略
 
 ---
 
