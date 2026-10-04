@@ -183,3 +183,69 @@ body.pm-world .pm-room-editor-toolbar-v15 [data-room-editor-redo]{
 body.pm-world .quest-stage.pm-camera-fit .pm-camera-badge-v15 span:after{content:" · EDIT FIT"}
 body.pm-world .quest-stage.pm-camera-active .pm-camera-world-v15{cursor:default}
 body.pm-world .quest-stage.pm-camera-fit .pm-camera-world-v15{cursor:crosshair}
+
+
+/* V15.3 · host-curated participant memories */
+body.pm-room-editing-v15 #mementoLayer .memento[data-curatable-memento]{
+  pointer-events:auto!important;
+  cursor:grab!important;
+  outline:2px dashed rgba(170,126,91,.72);
+  outline-offset:5px;
+  filter:drop-shadow(0 0 9px rgba(170,126,91,.28));
+  touch-action:none;
+}
+body.pm-room-editing-v15 #mementoLayer .memento[data-curatable-memento]:focus,
+body.pm-room-editing-v15 #mementoLayer .memento[data-curatable-memento]:hover,
+body.pm-room-editing-v15 #mementoLayer .memento.pm-curator-selected-v15{
+  outline-style:solid;
+  outline-color:#ae7d5f;
+  filter:drop-shadow(0 0 13px rgba(174,125,95,.42));
+}
+body.pm-room-editing-v15 #mementoLayer .memento.pm-dragging-v15{
+  cursor:grabbing!important;
+  z-index:300!important;
+}
+body.pm-world .memory-detail-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px;
+  margin-top:14px;
+  padding-top:12px;
+  border-top:1px solid rgba(105,88,75,.14);
+}
+body.pm-world .memory-detail-actions .button{
+  width:auto;
+  min-height:34px;
+  margin:0;
+}
+body.pm-world .button.danger{
+  background:#fff5f3;
+  border-color:rgba(173,91,91,.32);
+  color:#9c5656;
+}
+body.pm-world .memento-drawer-row.is-hidden{
+  opacity:.62;
+  background:#eeeae5;
+}
+body.pm-world .memento-drawer-row>span:last-child{
+  display:flex;
+  align-items:center;
+  gap:7px;
+}
+body.pm-world .mini-manage{
+  border:1px solid rgba(105,88,75,.18);
+  border-radius:999px;
+  padding:4px 7px;
+  background:#fffaf4;
+  color:#6b5f57;
+  font-size:8px;
+}
+body.pm-world .quest-memory.locked.edit-mode,
+body.pm-world .quest-stage.edit-mode .quest-memory.locked{
+  opacity:.58;
+  cursor:not-allowed;
+}
+body.pm-world .quest-stage.edit-mode .quest-memory.curatable{
+  outline:2px dashed rgba(170,126,91,.58);
+  outline-offset:4px;
+}
