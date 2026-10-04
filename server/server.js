@@ -346,6 +346,9 @@ const server = http.createServer(async (req, res) => {
         r.quest.items = JSON.parse(JSON.stringify(rev.data || []));
       }
       touchRoom(r);
+      if (rev.kind === 'layout') broadcastRoomScope(restorem[1],'memory',{type:'world-patch',sender:'server',patch:{layout:r.world.layout}});
+      if (rev.kind === 'mementos') broadcastRoomScope(restorem[1],'memory',{type:'room-snapshot',sender:'server',memory:r.memory,world:r.world,music:r.music});
+      if (rev.kind === 'quest') broadcastRoomScope(restorem[1],'quest',{type:'quest-update',sender:'server',items:r.quest.items});
       return json(res, 200, { ok: true, kind:rev.kind, layout:r.world.layout, mementos:r.memory.mementos, quest:r.quest.items, restoredRevision: rev.id, meta: r.meta });
     }
     const layoutm = /^\/api\/rooms\/([A-Z0-9]{6})\/layout$/.exec(pathname);
