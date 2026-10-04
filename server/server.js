@@ -178,6 +178,14 @@ function applyMemoryOp(r, op) {
     const item = r.memory.mementos.find(x => x.id === op.id);
     if (item) { item.x = Number(op.x); item.y = Number(op.y); }
   }
+  if (op.kind === 'memento:update') {
+    const item = r.memory.mementos.find(x => x.id === op.id);
+    if (item) {
+      if (typeof op.title === 'string') item.title = op.title.slice(0,80);
+      if (typeof op.meaning === 'string') item.meaning = op.meaning.slice(0,500);
+      if (typeof op.type === 'string') item.type = op.type.slice(0,8);
+    }
+  }
   if (op.kind === 'memento:hide') {
     const item = r.memory.mementos.find(x => x.id === op.id);
     if (item) item.hidden = !!op.hidden;
@@ -230,6 +238,13 @@ function authorizeOp(req, r, scope, op) {
     if (!actor.ok) return actor;
     if (op.item && typeof op.item === 'object') op.item.authorId = actor.id;
     return { ok:true, role:'author', actorId:actor.id };
+  }
+  if (scope === 'memory' && op?.kind === 'memento:update') {
+    const item=itemForOp(r,scope,op);
+    if (!item) return { ok:false, error:'item_not_found', status:404 };
+    const actor=verifyActor(req,r);
+    if (!actor.ok) return actor;
+    return item.authorId === actor.id ? {ok:true,role:'author',actorId:actor.id} : {ok:false,error:'not_author'};
   }
   const privilegedMemory = scope === 'memory' && new Set(['memento:move','memento:hide','memento:remove','note:remove','photo:remove']).has(op?.kind);
   const privilegedQuest = scope === 'quest' && new Set(['move','hide','remove']).has(op?.kind);
