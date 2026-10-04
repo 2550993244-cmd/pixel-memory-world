@@ -87,12 +87,12 @@ https://pixel-memory-world.onrender.com
 https://你的-render-域名/api/health
 ~~~
 
-V15.4 正常应返回类似：
+V15.5 正常应返回类似：
 
 ~~~json
 {
   "ok": true,
-  "version": "v15.4"
+  "version": "v15.5"
 }
 ~~~
 
@@ -310,3 +310,15 @@ USERNAME.github.io
 域名生效后建议开启 **Enforce HTTPS**。
 
 如果只是想让默认的 `USERNAME.github.io` 本身变得好看，也可以修改 GitHub 用户名，但这会同时影响 GitHub 账号地址和仓库 remote，通常不建议仅为了网站网址这么做。
+
+
+### V15.5 房间归档与删除
+
+- 默认归档恢复期：**30 天**
+- 归档房间：普通 GET 返回 `410 room_archived`
+- 归档期间写入：返回 `423 room_archived`
+- 到期清理：服务端每小时执行一次，同时请求入口也会检查过期归档
+- 永久删除：需要房主 token + 完整房间码确认 + `DELETE_FOREVER` acknowledge
+- 永久删除会调用 blob adapter 清理与房间关联的上传资源
+
+如果后续把 file blob adapter 换成 S3 / R2，新的 adapter 必须实现与当前 `removeMany(keys)` 等价的删除语义，否则永久删除不能算完整实现。
