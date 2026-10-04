@@ -11,7 +11,15 @@ const { chromium } = require('playwright');
   await page.goto(base, { waitUntil: 'networkidle' });
 
   // V14 progressive visual system must load without breaking the base app.
-  await page.waitForFunction(() => window.PixelV14?.version === '14.0');
+  await page.waitForTimeout(900);
+  const v14Diag = await page.evaluate(() => ({
+    pixelV14: window.PixelV14 || null,
+    experienceScript: document.querySelector('script[src*="experience-v14.js"]')?.src || null,
+    readyState: document.readyState,
+    v14Ready: document.body.classList.contains('v14-ready')
+  }));
+  console.log('V14_DIAG', v14Diag, errors);
+  if (v14Diag.pixelV14?.version !== '14.0') throw new Error('V14 bootstrap missing | ' + errors.join(' | '));
   const v14State = await page.evaluate(() => ({
     ready: document.body.classList.contains('v14-ready'),
     ambient: !!document.querySelector('.v14-ambient-canvas'),
