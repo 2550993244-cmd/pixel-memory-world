@@ -137,7 +137,7 @@ function updateNear(){let best=null,d=999;for(const o of fixedObjects){const nd=
 function interactNear(){if(!state.near)return toast('再靠近一点点。');if(state.near.type==='memento')return openMementoDetail(state.near);const id=state.near.id;if(id==='notes')openNotesDrawer();if(id==='photos')openPhotosDrawer();if(id==='gifts')openMementosDrawer();if(id==='music')openMusicDrawer();if(id==='cake')openCelebrationPrep();if(id==='sofa'){reaction(state.player.id,'☕');bubble(state.player.id,'坐一会儿。')}}
 
 // dock
-$('[data-dock]').forEach(b=>b.onclick=()=>{const a=b.dataset.dock;if(isViewOnly()&&a!=='music')return toast('只看模式可以探索和查看，但不能参与创作');if(a==='talk')toggleTalk();if(a==='hug')doHug();if(a==='note')openNoteModal();if(a==='memento')openMementoModal();if(a==='photo')takePhoto();if(a==='celebrate')pressCelebrate();if(a==='music')openMusicDrawer()});
+$$('[data-dock]').forEach(b=>b.onclick=()=>{const a=b.dataset.dock;if(isViewOnly()&&a!=='music')return toast('只看模式可以探索和查看，但不能参与创作');if(a==='talk')toggleTalk();if(a==='hug')doHug();if(a==='note')openNoteModal();if(a==='memento')openMementoModal();if(a==='photo')takePhoto();if(a==='celebrate')pressCelebrate();if(a==='music')openMusicDrawer()});
 function toggleTalk(){$('#talkPopover').classList.toggle('hidden')}
 $$('[data-say]').forEach(b=>b.onclick=()=>sendChat(b.dataset.say));$('#sendChatBtn').onclick=()=>{const t=$('#chatInput').value.trim();if(t){sendChat(t);$('#chatInput').value=''}};$('#chatInput').addEventListener('keydown',e=>{if(e.key==='Enter')$('#sendChatBtn').click()});
 function sendChat(t){if(isViewOnly())return toast('只看模式不能发送聊天');bubble(state.player.id,t);broadcast('chat',{text:t})}function bubble(id,t){const p=state.players.get(id);if(!p)return;const e=document.createElement('div');e.className='chat-bubble';e.style.left=`${p.x}%`;e.style.top=`${p.y-4}%`;e.textContent=t;$('#bubbleLayer').appendChild(e);setTimeout(()=>e.remove(),3200)}
@@ -206,7 +206,7 @@ function openNotesDrawer(){showDrawer('留言墙',`<div class="drawer-section"><
 function openPhotosDrawer(){showDrawer('今晚的合影',`<div class="drawer-section"><h4>${state.photos.length} 次快门</h4><div class="activity-list">${state.photos.slice().reverse().map(p=>`<div class="activity-row" style="display:block"><b>📷 ${p.names.map(escapeHTML).join('、')}</b><p style="margin:5px 0 0">${new Date(p.time).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})}</p></div>`).join('')||'<div class="activity-row">还没人按下快门。</div>'}</div></div>`)}
 function openMementosDrawer(){
   showDrawer('散落的纪念物',`<div class="drawer-section"><h4>${state.mementos.length} 件东西</h4><div class="activity-list">${state.mementos.slice().reverse().map(m=>`<div class="activity-row memento-drawer-row ${m.hidden?'is-hidden':''}" data-drawer-mid="${m.id}"><span>${m.type} ${escapeHTML(m.title)}<small>${m.hidden?' · 已收起':''}</small></span><span><small>${escapeHTML(m.by)}</small>${canCurateMemento(m)?`<button class="mini-manage press" data-manage-memento="${m.id}">${m.hidden?'显示':'管理'}</button>`:''}</span></div>`).join('')||'<div class="activity-row">地上还空空的。</div>'}</div></div>`);
-  setTimeout(()=>$('[data-manage-memento]').forEach(btn=>btn.onclick=()=>{
+  setTimeout(()=>$$('[data-manage-memento]').forEach(btn=>btn.onclick=()=>{
     const m=state.mementos.find(x=>x.id===btn.dataset.manageMemento);
     if(m)openMementoDetail(m)
   }),0)
