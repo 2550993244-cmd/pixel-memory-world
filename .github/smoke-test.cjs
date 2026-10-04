@@ -160,7 +160,19 @@ const { chromium } = require('playwright');
   if (v13Styles.primaryRadius === '0px' || v13Styles.iconRadius === '0px') throw new Error('V13 rounded control styling missing');
 
   async function active(id) {
-    await page.waitForFunction(id => document.getElementById(id)?.classList.contains('active'), id);
+    try{
+      await page.waitForFunction(id => document.getElementById(id)?.classList.contains('active'), id,{timeout:5000});
+    }catch(e){
+      const diag=await page.evaluate(id=>({
+        requested:id,
+        stateScreen:window.state?.screen||null,
+        active:[...document.querySelectorAll('.screen.active')].map(x=>x.id),
+        createOnclick:typeof document.querySelector('#createWorldBtn')?.onclick,
+        targetExists:!!document.getElementById(id),
+        bodyClasses:document.body.className
+      }),id);
+      throw new Error('active('+id+') failed '+JSON.stringify(diag)+' | '+errors.join(' | '));
+    }
   }
 
   // Landing core buttons.
