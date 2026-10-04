@@ -66,8 +66,8 @@ const { chromium } = require('playwright');
     inviteVersion: window.PixelInvite?.version || null
   }));
   console.log('V15_1_DIAG', v15Diag);
-  if (v15Diag.runtime?.version !== '15.15') throw new Error('V15.15 systems runtime missing');
-  if (v15Diag.retentionVersion !== '15.5' || v15Diag.recoveryVersion !== '15.7' || v15Diag.inviteVersion !== '15.13') throw new Error('V15.15 invite/retention/recovery runtime missing');
+  if (v15Diag.runtime?.version !== '15.16') throw new Error('V15.16 systems runtime missing');
+  if (v15Diag.retentionVersion !== '15.5' || v15Diag.recoveryVersion !== '15.7' || v15Diag.inviteVersion !== '15.13') throw new Error('V15.16 invite/retention/recovery runtime missing');
   if (v15Diag.sceneVersion !== '15.0') throw new Error('V15 layered scene map missing');
   if (v15Diag.mapRuntime.source !== 'tiled-json' || v15Diag.mapRuntime.collisionCount < 3 || v15Diag.mapRuntime.pathCount < 6) {
     throw new Error('V15.1 Tiled map runtime did not load canonical JSON');
@@ -537,29 +537,84 @@ const { chromium } = require('playwright');
   }
 
   // V15.15 D015/D016/D018=A: private continuity drawer + author edit/delete controls + light edited marker.
-  const privateTraceAudit=await contributorPage.evaluate(async()=>{
+  await contributorPage.evaluate(async()=>{
     const old=state.notes.find(n=>n.text==='旧名留言');
     if(!old)throw new Error('old note missing before V15.15 continuity audit');
     await commitMemoryOp({kind:'note:update',id:old.id,text:'旧名留言（修订）'});
     await new Promise(r=>setTimeout(r,120));
-    await openMyTracesDrawer();
-    return {
-      drawerText:document.querySelector('#drawerBody')?.innerText||'',
-      noteEditButtons:document.querySelectorAll('[data-my-note-edit]').length,
-      noteDeleteButtons:document.querySelectorAll('[data-my-note-delete]').length,
-      title:document.querySelector('#drawerTitle')?.textContent||''
-    };
   });
+
+  // V15.16 D020-D024=A: author-centric entry points, undo, recovery shortcut, filters and private timeline.
+  await contributorPage.evaluate(()=>openContributorAvatarCustomizer());
+  await contributorPage.waitForSelector('#openMyTracesFromAvatarV16',{timeout:3000});
+  const avatarContinuityAudit=await contributorPage.evaluate(()=>({
+    traces:document.querySelector('#openMyTracesFromAvatarV16')?.innerText||'',
+    recovery:document.querySelector('#openIdentityRecoveryFromAvatarV16')?.innerText||''
+  }));
+  if(!/我留下的/.test(avatarContinuityAudit.traces)||!/换设备继续/.test(avatarContinuityAudit.recovery)){
+    throw new Error('V15.16 contributor avatar continuity shortcuts missing '+JSON.stringify(avatarContinuityAudit));
+  }
+  await contributorPage.locator('#openMyTracesFromAvatarV16').click();
+  await contributorPage.waitForSelector('#myTraceRecoveryV16',{timeout:3000});
+
+  const privateTraceAudit=await contributorPage.evaluate(()=>({
+    drawerText:document.querySelector('#drawerBody')?.innerText||'',
+    noteEditButtons:document.querySelectorAll('[data-my-note-edit]').length,
+    noteDeleteButtons:document.querySelectorAll('[data-my-note-delete]').length,
+    title:document.querySelector('#drawerTitle')?.textContent||'',
+    typeFilters:document.querySelectorAll('[data-trace-type-v16]').length,
+    years:[...document.querySelectorAll('.trace-year-label-v16 b')].map(x=>x.textContent),
+    names:[...document.querySelectorAll('#myTraceNameFilterV16 option')].map(x=>x.textContent),
+    cards:document.querySelectorAll('.trace-card-v16').length
+  }));
   if(privateTraceAudit.title!=='我留下的'||
-     !privateTraceAudit.drawerText.includes('PRIVATE')||
+     !privateTraceAudit.drawerText.includes('PRIVATE TIMELINE')||
      !privateTraceAudit.drawerText.includes('参与者测试')||
      !privateTraceAudit.drawerText.includes('Lynn测试')||
      !privateTraceAudit.drawerText.includes('旧名留言（修订）')||
      !privateTraceAudit.drawerText.includes('新名留言')||
      !privateTraceAudit.drawerText.includes('已编辑')||
-     privateTraceAudit.noteEditButtons<2||privateTraceAudit.noteDeleteButtons<2){
-    throw new Error('V15.15 private my-traces / edited UI failed '+JSON.stringify(privateTraceAudit));
+     privateTraceAudit.noteEditButtons<2||privateTraceAudit.noteDeleteButtons<2||
+     privateTraceAudit.typeFilters!==5||privateTraceAudit.cards<2||
+     !privateTraceAudit.years.includes(String(new Date().getFullYear()))||
+     !privateTraceAudit.names.includes('参与者测试')||!privateTraceAudit.names.includes('Lynn测试')){
+    throw new Error('V15.16 private timeline / filters failed '+JSON.stringify(privateTraceAudit));
   }
+
+  await contributorPage.locator('[data-trace-type-v16="note"]').click();
+  await contributorPage.waitForFunction(()=>document.querySelectorAll('.trace-card-v16').length>=2);
+  await contributorPage.selectOption('#myTraceNameFilterV16',{label:'参与者测试'});
+  await contributorPage.waitForFunction(()=>document.querySelectorAll('.trace-card-v16').length===1);
+  const filteredTraceAudit=await contributorPage.evaluate(()=>document.querySelector('#drawerBody')?.innerText||'');
+  if(!filteredTraceAudit.includes('旧名留言（修订）')||filteredTraceAudit.includes('新名留言')) throw new Error('V15.16 historical-name filtering failed '+filteredTraceAudit);
+
+  await contributorPage.locator('#myTraceRecoveryV16').click();
+  await contributorPage.waitForSelector('#copyIdentityRecovery',{timeout:3000});
+  const recoveryShortcutAudit=await contributorPage.evaluate(()=>({
+    title:document.querySelector('#modalTitle')?.textContent||'',
+    hasIdentity:!!document.querySelector('#copyIdentityRecovery'),
+    hasImport:!!document.querySelector('#importRecoveryText')
+  }));
+  if(!recoveryShortcutAudit.hasIdentity||!recoveryShortcutAudit.hasImport||!/换设备/.test(recoveryShortcutAudit.title)) throw new Error('V15.16 author recovery shortcut failed '+JSON.stringify(recoveryShortcutAudit));
+  await contributorPage.evaluate(()=>closeModal());
+
+  const undoTargetId=await contributorPage.evaluate(()=>state.notes.find(n=>n.text==='新名留言')?.id||'');
+  if(!undoTargetId)throw new Error('V15.16 undo target note missing');
+  await contributorPage.evaluate(async(id)=>{
+    const n=state.notes.find(x=>x.id===id);
+    const oldConfirm=window.confirm;window.confirm=()=>true;
+    try{await removeOwnNote(n,openMyTracesDrawer)}finally{window.confirm=oldConfirm}
+  },undoTargetId);
+  await contributorPage.waitForFunction(id=>!state.notes.some(n=>n.id===id),undoTargetId,{timeout:3000});
+  await contributorPage.waitForSelector('#toast .toast-undo-v16',{timeout:3000});
+  await contributorPage.locator('#toast .toast-undo-v16').click();
+  await contributorPage.waitForFunction(id=>state.notes.some(n=>n.id===id&&n.text==='新名留言'),undoTargetId,{timeout:3000});
+  const undoAudit=await contributorPage.evaluate(id=>({
+    restored:state.notes.some(n=>n.id===id&&n.text==='新名留言'),
+    toast:document.querySelector('#toast')?.innerText||''
+  }),undoTargetId);
+  if(!undoAudit.restored)throw new Error('V15.16 delete undo did not restore authored note '+JSON.stringify(undoAudit));
+  console.log('V15_16_RETURNING_CONTINUITY_AUDIT',{avatarContinuityAudit,privateTraceAudit,recoveryShortcutAudit,undoAudit});
   await contributorPage.evaluate(()=>broadcast('leave'));
   await page.waitForFunction(()=>![...state.players.values()].some(p=>p.name==='Lynn测试'),null,{timeout:5000});
   await contributorPage.close();
@@ -1153,7 +1208,7 @@ const { chromium } = require('playwright');
     throw new Error('Browser errors:\n' + errors.join('\n'));
   }
 
-  console.log('SMOKE_OK V15.15 private my-traces -> author edit/delete -> name-only history -> edited markers -> no name-based recovery -> private alias linkage -> historical author snapshots -> live contributor appearance -> returning prefill -> contributor ceremony -> instant spectators -> invisible viewers -> dual invite roles -> archive retention -> recovery -> curator -> warm atlas -> tiled camera -> revisions -> join');
+  console.log('SMOKE_OK V15.16 returning contributor timeline -> author delete undo -> recovery shortcut -> type/name/year organization -> private my-traces -> author edit/delete -> name-only history -> edited markers -> no name-based recovery -> private alias linkage -> historical author snapshots -> live contributor appearance -> returning prefill -> contributor ceremony -> instant spectators -> invisible viewers -> dual invite roles -> archive retention -> recovery -> curator -> warm atlas -> tiled camera -> revisions -> join');
   await browser.close();
 })().catch(async err => {
   console.error(err);
