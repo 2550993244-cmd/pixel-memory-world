@@ -5,8 +5,8 @@
 
   function clearLocalRoom(code){
     try{
-      localStorage.removeItem('pixel-memory-room-'+code);
-      localStorage.removeItem('pixel-memory-memory-'+code);
+      localStorage.removeItem('pixel-memory-v7-'+code);
+      localStorage.removeItem('pixel-memory-v7-memory-'+code);
       localStorage.removeItem('pixel-memory-archived-'+code);
       PixelNet.saveOwnerToken?.(code,'');
     }catch(_){}
@@ -47,6 +47,7 @@
     clearLocalRoom(code);
     closeModal();
     leaveToLanding();
+    try{if(state.roomCode===code){state.roomCode='';state.mementos=[];state.notes=[];state.photos=[];state.activity=[]}}catch(_){}
     toast('这个世界已经永久删除');
     return result;
   }
