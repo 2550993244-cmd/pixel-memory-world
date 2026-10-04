@@ -161,7 +161,7 @@
     setTimeout(() => questBroadcast('quest-player', { player: questPlayerSnapshot() }), 180);
   }
 
-  function questPlayerSnapshot() { return { id: state.player.id, name: state.player.name, hair: state.player.hair, outfit: state.player.outfit, item: state.player.item, qx: questState.x, qy: questState.y }; }
+  function questPlayerSnapshot() { return { id: state.player.id, name: state.player.name, hair: state.player.hair, outfit: state.player.outfit, item: state.player.item, action: state.player.action || 'idle', qx: questState.x, qy: questState.y }; }
 
   function questBroadcast(type, extra = {}) {
     questState.channel?.postMessage({ type, sender: state.player.id, ...extra });
@@ -188,6 +188,7 @@
       el.style.left = `${id===state.player.id?questState.x:p.qx}%`;
       el.style.top = `${id===state.player.id?questState.y:p.qy}%`;
       el.style.setProperty('--shirt', colors[p.outfit] || colors.coral);
+      el.dataset.action = p.action || 'idle';
       el.innerHTML = `<span class="quest-player-name">${escapeHTML(p.name)}</span><span class="player-item">${p.item||'✦'}</span>`;
       layer.appendChild(el);
     }
