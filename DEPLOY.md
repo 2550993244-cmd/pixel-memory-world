@@ -87,12 +87,12 @@ https://pixel-memory-world.onrender.com
 https://你的-render-域名/api/health
 ~~~
 
-V15.6 正常应返回类似：
+V15.7 正常应返回类似：
 
 ~~~json
 {
   "ok": true,
-  "version": "v15.6"
+  "version": "v15.7"
 }
 ~~~
 
@@ -334,6 +334,33 @@ X-Room-Invite: <invite-token>
 
 访问受保护房间。WebSocket 使用同一个 token 作为 `invite` 查询参数。普通请求缺少或提供错误 token 时，不应通过 GET 响应确认短门牌号对应的房间是否存在。
 
-邀请 token 在服务器只保存 SHA-256 hash；原始 token 只在创建 / 轮换响应中返回一次并保存在获得授权的浏览器。房主可通过 `POST /api/rooms/:code/invite/rotate` 更换 token，旧 token 随即失效。
+邀请 token 在服务器只保存 SHA-256 hash；原始 token 只在创建 / 轮换响应中返回一次并保存在获得授权的浏览器。房主可通过 `POST /api/rooms/:code/invite/contributor/rotate` / `POST /api/rooms/:code/invite/viewer/rotate` 更换 token，旧 token 随即失效。
 
 生产代理 / 日志配置应避免记录完整 WebSocket query string 或分享 URL 中的 `invite` 参数。
+
+
+### V15.7 双邀请角色
+
+房间现在可以同时验证两种 `X-Room-Invite`：
+
+- contributor token：读 + 写；
+- viewer token：只读 / 探索。
+
+创建房间的响应会一次性返回 `inviteToken` 与 `viewInviteToken`。服务器只保存两者的 SHA-256 hash。
+
+轮换接口：
+
+~~~text
+POST /api/rooms/:code/invite/contributor/rotate
+POST /api/rooms/:code/invite/viewer/rotate
+~~~
+
+都要求 `X-Room-Owner`。两种 token 独立轮换，服务端只断开对应角色的 WebSocket 会话。
+
+Viewer 对 `POST /ops`、`PUT /api/rooms/:code` 与房间作用域上传应收到：
+
+~~~json
+{"error":"view_only"}
+~~~
+
+Viewer WebSocket 只接受 presence / movement 类消息。生产多实例广播实现也必须保留这个角色过滤，不能只在单机 Node 进程里实现。
