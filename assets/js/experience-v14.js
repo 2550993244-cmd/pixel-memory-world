@@ -257,6 +257,106 @@
     ambient:!!$('.v14-ambient-canvas')
   };
 
+  /* Optional motion libraries are lazy-loaded so third-party CDNs can never
+     block the landing page or the Create → Avatar → Room → Outside flow. */
+  function v14LoadScript(src,ready){
+    return new Promise(function(resolve){
+      if(ready())return resolve(true);
+      var script=document.createElement('script');
+      var done=false;
+      var finish=function(ok){
+        if(done)return;
+        done=true;
+        clearTimeout(timer);
+        resolve(ok);
+      };
+      script.src=src;
+      script.async=true;
+      script.crossOrigin='anonymous';
+      script.onload=function(){finish(ready())};
+      script.onerror=function(){finish(false)};
+      document.head.appendChild(script);
+      var timer=setTimeout(function(){finish(false)},4200);
+    });
+  }
+
+  function v14UpgradeWithLibraries(){
+    if(reduce)return;
+
+    if(!lenis && window.Lenis){
+      try{
+        lenis=new window.Lenis({
+          autoRaf:false,
+          smoothWheel:!coarse,
+          syncTouch:false,
+          lerp:.085,
+          anchors:true,
+          allowNestedScroll:true
+        });
+        window.PixelLenis=lenis;
+      }catch(_){lenis=null}
+    }
+
+    if(lenis && window.gsap && !lenis._v14TickerBound){
+      if(fallbackRaf){cancelAnimationFrame(fallbackRaf);fallbackRaf=0}
+      window.gsap.ticker.add(function(time){if(lenis)lenis.raf(time*1000)});
+      window.gsap.ticker.lagSmoothing(0);
+      lenis._v14TickerBound=true;
+    }
+
+    if(window.gsap && !window.__PIXEL_V14_GSAP_STARTED__){
+      window.__PIXEL_V14_GSAP_STARTED__=true;
+      var g=window.gsap;
+
+      if(window.ScrollTrigger){
+        g.registerPlugin(window.ScrollTrigger);
+        if(lenis)lenis.on('scroll',function(){window.ScrollTrigger.update()});
+      }
+
+      if($('.landing-hero')){
+        g.timeline({defaults:{ease:'power3.out'}})
+          .fromTo('.hero-kicker',{y:8,opacity:.4},{y:0,opacity:1,duration:.34})
+          .fromTo('.hero-copy h1',{y:16,filter:'blur(5px)'},{y:0,filter:'blur(0px)',duration:.55},'-.2')
+          .fromTo('.hero-preview-wrap',{y:12,opacity:.88},{y:0,opacity:1,duration:.55},'-.44');
+      }
+
+      if(window.ScrollTrigger){
+        g.from('.compact-features article',{
+          scrollTrigger:{trigger:'.compact-features',start:'top 86%'},
+          y:24,opacity:0,stagger:.08,duration:.5,ease:'power3.out'
+        });
+        g.from('.memory-tile',{
+          scrollTrigger:{trigger:'.memory-strip',start:'top 84%'},
+          y:30,opacity:0,stagger:{each:.07,from:'random'},duration:.58,ease:'power3.out'
+        });
+      }
+    }
+
+    syncScreen();
+    window.PixelV14.lenis=!!lenis;
+    window.PixelV14.gsap=!!window.gsap;
+    window.PixelV14.scrollTrigger=!!window.ScrollTrigger;
+  }
+
+  var v14LocalHost=/^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/.test(location.hostname);
+  if(!v14LocalHost && !reduce){
+    var lenisPromise=v14LoadScript(
+      'https://unpkg.com/lenis@1.3.26/dist/lenis.min.js',
+      function(){return !!window.Lenis}
+    );
+    var gsapPromise=v14LoadScript(
+      'https://cdn.jsdelivr.net/npm/gsap@3.15/dist/gsap.min.js',
+      function(){return !!window.gsap}
+    );
+    Promise.all([lenisPromise,gsapPromise]).then(function(){
+      if(!window.gsap)return false;
+      return v14LoadScript(
+        'https://cdn.jsdelivr.net/npm/gsap@3.15/dist/ScrollTrigger.min.js',
+        function(){return !!window.ScrollTrigger}
+      );
+    }).then(v14UpgradeWithLibraries).catch(function(){});
+  }
+
   window.addEventListener('beforeunload',function(){
     if(fallbackRaf)cancelAnimationFrame(fallbackRaf);
   },{once:true});
