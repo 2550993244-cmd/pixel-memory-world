@@ -41,6 +41,7 @@ function normalizeRoom(r) {
   r.quest.items ||= [];
   r.music ||= null;
   r.meta ||= {};
+  r.revisions ||= [];
   r.meta.revision ||= 1;
   r.meta.createdAt ||= r.createdAt || Date.now();
   r.meta.updatedAt ||= r.updatedAt || r.meta.createdAt;
@@ -59,8 +60,24 @@ function isOwner(req, r) {
 }
 function publicRoom(r) {
   normalizeRoom(r);
-  const { ownerHash, ...safe } = r;
+  const { ownerHash, revisions, ...safe } = r;
   return safe;
+}
+function recordRevision(r, kind, data, label='') {
+  normalizeRoom(r);
+  const payload = JSON.stringify(data ?? null);
+  const last = r.revisions[r.revisions.length - 1];
+  if (last && last.kind === kind && JSON.stringify(last.data ?? null) === payload) return last;
+  const rev = {
+    id: crypto.randomBytes(8).toString('hex'),
+    kind,
+    label: String(label || kind),
+    data: JSON.parse(payload),
+    createdAt: Date.now()
+  };
+  r.revisions.push(rev);
+  if (r.revisions.length > 30) r.revisions = r.revisions.slice(-30);
+  return rev;
 }
 function touchRoom(r) {
   normalizeRoom(r);
@@ -169,7 +186,7 @@ const server = http.createServer(async (req, res) => {
   const u = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = u.pathname;
   try {
-    if (pathname === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, version: 'v15.0', rooms: Object.keys(rooms).length, connections: connectionCount(), durableDataDir: !!process.env.PIXEL_DATA_DIR, durableUploadDir: !!process.env.PIXEL_UPLOAD_DIR, time: Date.now() });
+    if (pathname === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, version: 'v15.1', rooms: Object.keys(rooms).length, connections: connectionCount(), durableDataDir: !!process.env.PIXEL_DATA_DIR, durableUploadDir: !!process.env.PIXEL_UPLOAD_DIR, time: Date.now() });
     if (pathname === '/api/rooms' && req.method === 'POST') {
       const body = JSON.parse((await readBody(req)).toString('utf8') || '{}');
       const code = String(body.code || randomCode()).toUpperCase();
@@ -190,6 +207,29 @@ const server = http.createServer(async (req, res) => {
       touchRoom(r);
       return json(res, 200, { ok: true, ownerToken, meta: r.meta });
     }
+    const revisionsm = /^\/api\/rooms\/([A-Z0-9]{6})\/revisions$/.exec(pathname);
+    if (revisionsm && req.method === 'GET') {
+      const r = rooms[revisionsm[1]];
+      if (!r) return json(res, 404, { error: 'room_not_found' });
+      if (!isOwner(req, r)) return json(res, 403, { error: 'owner_required' });
+      normalizeRoom(r);
+      const items = r.revisions.slice().reverse().map(({ id, kind, label, createdAt }) => ({ id, kind, label, createdAt }));
+      return json(res, 200, { ok: true, revisions: items, meta: r.meta });
+    }
+    const restorem = /^\/api\/rooms\/([A-Z0-9]{6})\/revisions\/([a-f0-9]{16})\/restore$/.exec(pathname);
+    if (restorem && req.method === 'POST') {
+      const r = rooms[restorem[1]];
+      if (!r) return json(res, 404, { error: 'room_not_found' });
+      if (!isOwner(req, r)) return json(res, 403, { error: 'owner_required' });
+      normalizeRoom(r);
+      const rev = r.revisions.find(x => x.id === restorem[2]);
+      if (!rev) return json(res, 404, { error: 'revision_not_found' });
+      if (rev.kind !== 'layout') return json(res, 400, { error: 'unsupported_revision_kind' });
+      recordRevision(r, 'layout', r.world.layout || {}, '恢复前自动备份');
+      r.world = { ...r.world, layout: JSON.parse(JSON.stringify(rev.data || {})) };
+      touchRoom(r);
+      return json(res, 200, { ok: true, layout: r.world.layout, restoredRevision: rev.id, meta: r.meta });
+    }
     const layoutm = /^\/api\/rooms\/([A-Z0-9]{6})\/layout$/.exec(pathname);
     if (layoutm && req.method === 'PUT') {
       const r = rooms[layoutm[1]];
@@ -197,6 +237,8 @@ const server = http.createServer(async (req, res) => {
       if (!isOwner(req, r)) return json(res, 403, { error: 'owner_required' });
       const b = JSON.parse((await readBody(req)).toString('utf8') || '{}');
       const layout = b.layout && typeof b.layout === 'object' ? b.layout : {};
+      const before = JSON.parse(JSON.stringify(r.world.layout || {}));
+      if (JSON.stringify(before) !== JSON.stringify(layout)) recordRevision(r, 'layout', before, b.label || '房间布置');
       r.world = { ...r.world, layout };
       touchRoom(r);
       return json(res, 200, { ok: true, layout: r.world.layout, meta: r.meta });
@@ -359,4 +401,4 @@ server.on('upgrade', (req, socket) => {
   socket.on('close', close); socket.on('end', close); socket.on('error', close);
 });
 
-server.listen(PORT, () => console.log(`Pixel Memory V15.0 server: http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`Pixel Memory V15.1 server: http://localhost:${PORT}`));
