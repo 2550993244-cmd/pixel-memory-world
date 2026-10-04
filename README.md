@@ -4,13 +4,13 @@
 
 生日、纪念日、毕业、告别，或者任何值得留下来的日子，都可以被做成一间多人在线的小屋。大家用自己的像素小人进入同一个房间，在里面走动、聊天、放照片和纪念物、播放音乐、一起庆祝，再从门外进入一张回忆寻宝地图。
 
-**当前版本：V13.1 · interaction & cleanup**
+**当前版本：V14 · visual system & motion upgrade**
 
 ---
 
 ## 现在可以体验什么
 
-> V13.1 根据实际截图继续收紧界面：放大创建页 / 人物页 / 音乐抽屉的小字号；删除人物预览左侧没有必要的“三步骤”和大块空地；音乐控制改成内容自适应的紧凑抽屉；Outside 删除重复的“回忆路”路牌；钓鱼升级为原创像素鱼 + 气泡咬钩 + 按住收线追鱼的小游戏；同时把网页 CSS / JS 整理到 `assets/` 目录。
+> V14 把“视觉升级”从零散样式变成一套正式系统：新增 DESIGN.md 作为视觉契约；接入 Lenis 平滑滚动与 GSAP / ScrollTrigger 的渐进增强动画；参考 React Bits 的 Magnet、SpotlightCard、PixelTransition 交互思路并用原生 DOM/CSS 重写；参考 Vanta 的鼠标响应动态背景，但为了保持像素气质与负载控制，改为轻量原生 Canvas 光场而没有引入 Three.js。首页重做了视觉层级、滚动章节、场景聚光、像素闪切与排版下限。
 
 ### 房间
 - 6 位邀请码创建 / 加入同一个世界
@@ -42,6 +42,18 @@
 - 木桥改为弧形 SVG 桥面，不再是一条平直矩形
 - 删除地图里两个重复的“回忆路”路牌，让小路和地形自己承担引导
 
+### V14 视觉系统与动效
+- 新增根目录 `DESIGN.md`：明确颜色、字体下限、形状语言、留白、动效、无障碍与禁止项，后续迭代不再靠“感觉”反复漂移
+- 首页接入 Lenis：内容页滚动更顺；进入 Room / Outside 后自动停止平滑滚动，不干扰 WASD / 地图交互
+- GSAP + ScrollTrigger：首屏、三段功能、故事区与回忆物件使用统一节奏的入场 / 滚动动画
+- 首页增加轻量原生 Canvas 动态光场：参考 Vanta 的“鼠标响应环境背景”思路，但不加载 Three.js
+- Spotlight：功能卡、回忆物件、主题选择和动态抽屉会跟随鼠标产生柔和聚光
+- Pixel dissolve：门铃互动会出现像素闪切，不再只有普通淡入
+- 首页右侧加入三段章节轨道，顶部导航下增加滚动进度线
+- 中文正文默认改为现代系统无衬线字体；像素 / 房间码 / 英文 metadata 才使用等宽字体
+- 明确字号下限：正文 14–16px、次级正文 12–14px、互动标签不低于 12px、metadata 10–11px
+- 所有增强均为渐进增强：外部动效库加载失败时，创建 / 人物 / 房间 / Outside 主流程仍可使用
+
 ### V13 控件与交互
 - 不再让所有按钮共享同一种方框外观
 - 主 CTA：胶囊式按钮 + 轻磁吸 + 指针光斑 + 箭头位移
@@ -69,6 +81,18 @@
 - 室内 / 室外前景遮挡
 - 室外场景开始使用网格化场景数据
 - 室外路径与河流改为 SVG 曲线路径，减少直线矩形拼接感
+
+---
+
+## V14 参考与取舍
+
+这次不是把开源特效库全部塞进页面，而是按当前技术栈和项目气质做筛选：
+
+- **Lenis**：实际接入，用于内容页的平滑滚动。
+- **GSAP + ScrollTrigger**：实际接入，用于首屏与滚动编排。
+- **React Bits**：项目本身是原生 HTML / CSS / JS，没有为了动效强行迁移 React；Magnet、SpotlightCard、PixelTransition 的交互逻辑被重写成原生实现。
+- **Vanta**：研究了它用 WebGL / Three.js 做可交互背景的做法，但当前页面不直接加载 Vanta。原因是这个项目的核心视觉是“暖色记忆 + 像素世界”，原生低分辨率 Canvas 更轻，也更容易做成像素化的环境光。
+- **awesome-design-md**：采用它的 DESIGN.md 工作方式，把视觉规则固化在仓库根目录，避免以后每一版都重新争论字号、圆角、阴影和交互方式。
 
 ---
 
@@ -105,7 +129,8 @@ pixel-memory-world/
 │   │   ├── styles.css          # 通用布局、房间 UI、表单
 │   │   ├── landing.css         # 首页视觉
 │   │   ├── world.css           # 室内 / Outside / 像素钓鱼
-│   │   └── controls-v13.css    # V13 控件与交互视觉
+│   │   ├── controls-v13.css    # V13 控件与交互视觉
+│   │   └── experience-v14.css  # V14 排版与体验层
 │   └── js/
 │       ├── app.js              # 房间、人物、聊天、音乐、纪念物
 │       ├── network.js          # REST / WebSocket 联网
@@ -113,7 +138,8 @@ pixel-memory-world/
 │       ├── quest.js            # Outside、回忆宝藏、录音、钓鱼逻辑
 │       ├── scene-map.js        # 室外网格场景数据
 │       ├── world.js            # 场景渲染、人物方向与深度
-│       └── ui-v13.js           # V13 指针 / 按压微交互
+│       ├── ui-v13.js           # V13 指针 / 按压微交互
+│       └── experience-v14.js    # V14 Lenis / GSAP / 光场 / Spotlight / Pixel dissolve
 ├── server/
 │   ├── server.js
 │   ├── package.json
@@ -123,6 +149,7 @@ pixel-memory-world/
 ├── .github/
 │   ├── smoke-test.cjs
 │   └── workflows/smoke-test.yml
+├── DESIGN.md                   # 视觉契约
 ├── DEPLOY.md
 └── README.md
 ~~~
@@ -181,12 +208,12 @@ Render / Railway / 云服务器
 GET /api/health
 ~~~
 
-V12 正常返回：
+V14 正常返回：
 
 ~~~json
 {
   "ok": true,
-  "version": "v13.1"
+  "version": "v14.0"
 }
 ~~~
 
