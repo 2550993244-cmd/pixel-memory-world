@@ -87,12 +87,12 @@ https://pixel-memory-world.onrender.com
 https://你的-render-域名/api/health
 ~~~
 
-V15.7 正常应返回类似：
+V15.8 正常应返回类似：
 
 ~~~json
 {
   "ok": true,
-  "version": "v15.7"
+  "version": "v15.8"
 }
 ~~~
 
@@ -364,3 +364,16 @@ Viewer 对 `POST /ops`、`PUT /api/rooms/:code` 与房间作用域上传应收�
 ~~~
 
 Viewer WebSocket 只接受 presence / movement 类消息。生产多实例广播实现也必须保留这个角色过滤，不能只在单机 Node 进程里实现。
+
+
+### V15.8 隐形 viewer presence
+
+Viewer WebSocket 仍保持订阅，用来接收房间 / Outside 的实时变化，但除 ping 外的 viewer 上行实时消息全部由服务器丢弃。不要在反向代理或多实例广播层重新转发 viewer 的 presence / movement 消息。
+
+服务器根据同一房间内 `role=viewer` 的连接，按 `player id` 去重计算匿名观看人数，并只向非 viewer WebSocket 发送：
+
+~~~json
+{"type":"viewer-count","sender":"server","count":3}
+~~~
+
+因此一个 viewer 同时打开 Room 与 Outside 不应计为两人。未来如果切换到多实例 WebSocket，需要把这个唯一 viewer 计数迁移到共享 presence store（例如 Redis），否则每个实例只能看到自己的局部观看人数。
