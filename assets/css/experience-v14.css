@@ -795,3 +795,30 @@ body.v14-ready #copyKeepsakeInvite{
    inside the pressed-flower souvenir while keeping its text above overlays. */
 body.v14-ready .flower-tile .pressed-flower{position:absolute;z-index:2}
 body.v14-ready .flower-tile .flower-note{position:absolute;z-index:3}
+
+
+/* V14.2.1 · keep every caption in the collage, including the flower note. */
+body.v14-ready .memory-strip{padding-bottom:66px}
+body.v14-ready .memory-ticket{padding-right:22px}
+body.v14-ready .memory-ticket:before{right:23%}
+body.v14-ready .flower-tile{
+  right:10px;
+  bottom:-30px;
+  width:150px;
+  min-width:150px;
+  height:96px;
+}
+body.v14-ready .flower-tile .pressed-flower{left:11px;top:11px;width:42px;height:68px}
+body.v14-ready .flower-tile .flower-note{left:61px;right:8px;top:14px}
+body.v14-ready .flower-note b{font-size:10px!important;line-height:1.3}
+body.v14-ready .flower-note small{
+  display:block;
+  margin-top:3px;
+  font-size:8px;
+  line-height:1.35;
+  color:#8d7b6d;
+}
+@media(max-width:760px){
+  body.v14-ready .memory-strip{padding-bottom:34px}
+  body.v14-ready .flower-tile{width:150px;margin:-58px 12px 0 0}
+}
