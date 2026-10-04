@@ -1,7 +1,9 @@
 const $=(s,r=document)=>r.querySelector(s);const $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const uid=()=>crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`;
-const actorKey='pixel-memory-actor-v1';
+const actorKey='pixel-memory-actor-v1',actorTokenKey='pixel-memory-actor-token-v1';
 const persistentActorId=()=>{try{let id=localStorage.getItem(actorKey);if(!id){id=uid();localStorage.setItem(actorKey,id)}return id}catch(_){return uid()}};
+const persistentActorToken=()=>{try{let token=localStorage.getItem(actorTokenKey);if(!token){token=uid()+uid();localStorage.setItem(actorTokenKey,token)}return token}catch(_){return uid()+uid()}};
+persistentActorToken();
 const state={screen:'landing',roomCode:'',world:{occasion:'生日',honoree:'重要的人',date:'',invite:'今晚，我们偷偷在这里等你。',theme:'cream',music:'birthday',customMusicName:'',customMusicUrl:'',backdrop:''},player:{id:uid(),actorId:persistentActorId(),name:'朋友',hair:'1',outfit:'coral',item:'🎁',x:50,y:80,host:false,celebrated:false},players:new Map(),channel:null,keys:new Set(),near:null,mementos:[],notes:[],photos:[],activity:[],net:{latency:null,lastPing:0},audio:{ctx:null,master:null,playing:false,timer:null,startTimer:null,volume:.42,customUrl:null,element:null,fx:true,pendingSync:null}};
 const colors={coral:'#e98f92',blue:'#8fb6c9',sage:'#9bb59c',butter:'#f3c969'};
 const fixedObjects=[{id:'notes',x:14,y:23,r:12,label:'看看留言墙'},{id:'photos',x:82,y:24,r:13,label:'看看照片墙'},{id:'cake',x:50,y:48,r:12,label:'靠近蛋糕'},{id:'gifts',x:82,y:57,r:12,label:'看看礼物角'},{id:'music',x:32,y:24,r:10,label:'播放房间音乐'},{id:'sofa',x:18,y:57,r:13,label:'坐一会儿'}];
@@ -9,8 +11,39 @@ const roomKey=c=>`pixel-memory-v7-${c}`;const memoryKey=c=>`pixel-memory-v7-memo
 function currentMemory(){return {mementos:state.mementos,notes:state.notes,photos:state.photos,activity:state.activity.slice(-40)}}
 function saveRoom(sync=true){if(!state.roomCode)return;localStorage.setItem(roomKey(state.roomCode),JSON.stringify(state.world));saveMemory();if(sync){const patch={...state.world};broadcast('world-patch',{patch});PixelNet?.applyOp?.(state.roomCode,'world',{patch}).catch(()=>{})}}
 function saveMemory(){if(!state.roomCode)return;localStorage.setItem(memoryKey(state.roomCode),JSON.stringify(currentMemory()))}
-function memoryOp(op){applyMemoryOp(op);broadcast('memory-op',{op});PixelNet?.applyOp?.(state.roomCode,'memory',op).catch(()=>{});saveMemory()}
-function applyMemoryOp(op){if(!op?.kind)return;const add=(arr,item)=>{if(!item?.id)return;const i=arr.findIndex(x=>x.id===item.id);if(i>=0)arr[i]={...arr[i],...item};else arr.push(item)};if(op.kind==='memento:add')add(state.mementos,op.item);if(op.kind==='note:add')add(state.notes,op.item);if(op.kind==='photo:add')add(state.photos,op.item);if(op.kind==='activity:add'){add(state.activity,op.item);state.activity=state.activity.slice(-60)}if(op.kind==='world:patch'&&op.patch)state.world={...state.world,...op.patch};saveMemory()}
+function memoryOp(op){
+  applyMemoryOp(op);
+  if(window.PixelNet?.enabled) PixelNet.applyOp(state.roomCode,'memory',op).catch(()=>{});
+  else broadcast('memory-op',{op});
+  saveMemory()
+}
+async function commitMemoryOp(op){
+  if(window.PixelNet?.enabled){
+    await PixelNet.applyOp(state.roomCode,'memory',op);
+    applyMemoryOp(op);
+  }else{
+    applyMemoryOp(op);
+    broadcast('memory-op',{op});
+  }
+  saveMemory();
+  renderMementos?.();
+  return true
+}
+function applyMemoryOp(op){
+  if(!op?.kind)return;
+  const add=(arr,item)=>{if(!item?.id)return;const i=arr.findIndex(x=>x.id===item.id);if(i>=0)arr[i]={...arr[i],...item};else arr.push(item)};
+  if(op.kind==='memento:add')add(state.mementos,op.item);
+  if(op.kind==='memento:move'){const m=state.mementos.find(x=>x.id===op.id);if(m){m.x=Number(op.x);m.y=Number(op.y)}}
+  if(op.kind==='memento:hide'){const m=state.mementos.find(x=>x.id===op.id);if(m)m.hidden=!!op.hidden}
+  if(op.kind==='memento:remove')state.mementos=state.mementos.filter(x=>x.id!==op.id);
+  if(op.kind==='note:add')add(state.notes,op.item);
+  if(op.kind==='note:remove')state.notes=state.notes.filter(x=>x.id!==op.id);
+  if(op.kind==='photo:add')add(state.photos,op.item);
+  if(op.kind==='photo:remove')state.photos=state.photos.filter(x=>x.id!==op.id);
+  if(op.kind==='activity:add'){add(state.activity,op.item);state.activity=state.activity.slice(-60)}
+  if(op.kind==='world:patch'&&op.patch)state.world={...state.world,...op.patch};
+  saveMemory()
+}
 function loadRoom(code){try{const w=JSON.parse(localStorage.getItem(roomKey(code)));if(w)state.world={...state.world,...w};const m=JSON.parse(localStorage.getItem(memoryKey(code)));if(m){state.mementos=m.mementos||[];state.notes=m.notes||[];state.photos=m.photos||[];state.activity=m.activity||[]}}catch(e){}}
 async function loadRoomRemote(code){loadRoom(code);if(!window.PixelNet?.enabled)return false;try{const r=await PixelNet.getRoom(code);if(r.world)state.world={...state.world,...r.world};if(r.memory){state.mementos=r.memory.mementos||[];state.notes=r.memory.notes||[];state.photos=r.memory.photos||[];state.activity=r.memory.activity||[]}if(r.music)state.audio.pendingSync=r.music;localStorage.setItem(roomKey(code),JSON.stringify(state.world));localStorage.setItem(memoryKey(code),JSON.stringify(currentMemory()));return true}catch(e){return false}}
 function randomCode(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';return Array.from({length:6},()=>chars[Math.floor(Math.random()*chars.length)]).join('')}
@@ -93,7 +126,7 @@ function doHug(){const n=nearestPlayer();if(!n)return toast('靠近一个朋友�
 function openModal(ey,title,html){$('#modalEyebrow').textContent=ey;$('#modalTitle').textContent=title;$('#modalBody').innerHTML=html;$('#modal').classList.remove('hidden');$('#modal').setAttribute('aria-hidden','false')}function closeModal(){$('#modal').classList.add('hidden');$('#modal').setAttribute('aria-hidden','true')}$$('[data-close-modal]').forEach(x=>x.onclick=closeModal);
 function openNoteModal(){openModal('LEAVE A LITTLE TRACE','在这里留下一句话',`<div class="modal-form"><label class="field"><span>别人以后走到这里，也能看到它</span><textarea id="noteText" rows="4" maxlength="120" placeholder="今年也要很开心。"></textarea></label><button id="saveNoteBtn" class="button primary full press">把这句话贴到墙上 <span>→</span></button></div>`);setTimeout(()=>$('#saveNoteBtn').onclick=()=>{const t=$('#noteText').value.trim();if(!t)return toast('先写一句话');const item={id:uid(),authorId:state.player.actorId,by:state.player.name,text:t,time:Date.now()};memoryOp({kind:'note:add',item});addActivity(`${state.player.name} 在留言墙贴了一张纸条`);reaction(state.player.id,'✎');closeModal();toast('它已经贴在墙上了')},0)}
 function openMementoModal(){let type='🎁',photo='',photoFile=null;openModal('DROP A MEMORY','在脚边放下一件纪念物',`<div class="modal-form"><div class="type-grid"><button class="type-choice selected press" data-mtype="🎁">🎁</button><button class="type-choice press" data-mtype="✉️">✉️</button><button class="type-choice press" data-mtype="🌷">🌷</button><button class="type-choice press" data-mtype="🎫">🎫</button><button class="type-choice press" data-mtype="📷">📷</button></div><label class="field"><span>给它一个名字</span><input id="mTitle" maxlength="28" placeholder="例如：2019 年的第一张合照"></label><label class="field"><span>它为什么重要？</span><textarea id="mMeaning" rows="4" maxlength="180" placeholder="那天我们第一次一起旅行，回程坐错了车。"></textarea></label><div class="photo-upload-box"><span id="mPhotoState">可以加一张照片，把它做成地上的小相框</span><button id="pickMPhoto" class="button secondary small press">选择照片</button></div><button id="dropMBtn" class="button primary full press">就放在我现在站的位置 <span>↓</span></button></div>`);setTimeout(()=>{$$('[data-mtype]').forEach(b=>b.onclick=()=>{$$('[data-mtype]').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');type=b.dataset.mtype});$('#pickMPhoto').onclick=()=>$('#mementoPhotoInput').click();$('#mementoPhotoInput').onchange=e=>{const f=e.target.files[0];if(!f)return;photoFile=f;const rd=new FileReader();rd.onload=()=>{photo=rd.result;$('#mPhotoState').textContent=`${f.name} · 保存时会上传给房间`};rd.readAsDataURL(f)};$('#dropMBtn').onclick=async()=>{const btn=$('#dropMBtn');btn.disabled=true;const title=$('#mTitle').value.trim()||'一件小东西',meaning=$('#mMeaning').value.trim()||'有人觉得它值得被留下。';if(photoFile&&window.PixelNet?.enabled){try{$('#mPhotoState').textContent='正在上传照片…';const up=await PixelNet.uploadBlob(photoFile,photoFile.name);photo=up.url;$('#mPhotoState').textContent='照片已上传 · 其他人可以看到'}catch(_){btn.disabled=false;$('#mPhotoState').textContent='上传失败，请再试一次';return toast('照片没有上传成功，暂时没有放下纪念物')}}const item={id:uid(),authorId:state.player.actorId,type,photo,title,meaning,by:state.player.name,x:state.player.x+2,y:state.player.y+2,time:Date.now()};memoryOp({kind:'memento:add',item});addActivity(`${state.player.name} 放下了「${title}」`);renderMementos();closeModal();reaction(state.player.id,'✦');toast('它已经同步到这间房了')}} ,0)}
-function renderMementos(){const layer=$('#mementoLayer');layer.innerHTML='';state.mementos.forEach(m=>{const e=document.createElement('div');e.className=`memento${m.photo?' photo':''}`;e.dataset.id=m.id;e.style.left=`${m.x}%`;e.style.top=`${m.y}%`;const bg=m.photo?`style="background-image:url('${m.photo.replace(/'/g,"%27")}')"`:'';e.innerHTML=`<div class="object" ${bg}>${m.photo?'':m.type}</div>`;layer.appendChild(e)});updateNear();renderCelebrateStatus()}
+function renderMementos(){const layer=$('#mementoLayer');layer.innerHTML='';state.mementos.filter(m=>!m.hidden).forEach(m=>{const e=document.createElement('div');e.className=`memento${m.photo?' photo':''}`;e.dataset.id=m.id;e.style.left=`${m.x}%`;e.style.top=`${m.y}%`;const bg=m.photo?`style="background-image:url('${m.photo.replace(/'/g,"%27")}')"`:'';e.innerHTML=`<div class="object" ${bg}>${m.photo?'':m.type}</div>`;layer.appendChild(e)});updateNear();renderCelebrateStatus()}
 function openMementoDetail(m){openModal('YOU FOUND SOMETHING',escapeHTML(m.title),`${m.photo?`<img class="memory-detail-photo" src="${m.photo}" alt="${escapeHTML(m.title)}">`:''}<p style="line-height:1.8;font-size:11px;color:#6f5f56">${escapeHTML(m.meaning)}</p><div class="memory-detail-meta">${escapeHTML(m.by)} 把它留在这里 · ${new Date(m.time).toLocaleDateString('zh-CN')}</div>`);reaction(state.player.id,'✦')}
 function takePhoto(){const names=[...state.players.values()].map(p=>p.name);const item={id:uid(),authorId:state.player.actorId,by:state.player.name,names,time:Date.now()};memoryOp({kind:'photo:add',item});addActivity(`${state.player.name} 按下快门，${names.length} 个人被拍进了合影`);reaction(state.player.id,'📷');toast(`咔嚓！${names.length} 个人被拍进去了`)}
 
@@ -353,4 +386,5 @@ openMusicDrawer = function(){
   },0);
 };
 
-window.PixelIdentity={version:'1',get actorId(){return state.player.actorId},get sessionId(){return state.player.id}};
+window.PixelIdentity={version:'2',get actorId(){return state.player.actorId},get sessionId(){return state.player.id},get hasPrivateToken(){return !!localStorage.getItem(actorTokenKey)}};
+window.PixelMemoryOps={commit:commitMemoryOp,apply:applyMemoryOp};
