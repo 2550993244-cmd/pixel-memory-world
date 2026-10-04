@@ -1,5 +1,5 @@
 ---
-version: 15.4
+version: 15.5
 name: Pixel Memory World
 description: A warm multiplayer pixel-memory space. The interface should feel like a keepsake box that became a tiny playable world: soft paper surfaces, restrained pastel accents, readable modern Chinese typography, pixel-art scenes, and motion that responds to people rather than decorating every surface.
 ---
@@ -174,6 +174,17 @@ The technical sprite contract is fixed and the production direction is now **War
 - The runtime must keep the current DOM sprite as a fallback until a real atlas is present.
 - Production atlas language: warm brown outlines, muted clothing, small facial features, restrained handmade irregularity, readable four-direction silhouettes, and expressive-but-not-cartoonish social poses.
 - Keep the DOM sprite only as a compatibility fallback; new character work should extend the warm layered atlas instead of creating a second visual system.
+
+## Archive / delete language
+
+Sentimental content makes destructive actions asymmetric: accidental loss is far more costly than an extra confirmation.
+
+- “Archive” is the default lifecycle action and must use calm, reversible language.
+- Always show the 30-day recovery deadline in archived-room surfaces.
+- Archived rooms are read-only and closed to guests; do not make them look merely “hidden.”
+- “Delete permanently” must live in a visually separate danger section and require retyping the room code.
+- Never use the warm primary CTA styling for irreversible deletion.
+- After permanent deletion, local cached room copies and owner tokens must also be cleared.
 
 ## Recovery-key language
 
