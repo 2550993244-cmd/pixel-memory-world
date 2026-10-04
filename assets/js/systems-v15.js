@@ -110,6 +110,36 @@
   ensureCameraWorld();
   requestAnimationFrame(cameraFrame);
 
+  function tiledPathD(points){
+    if(!points?.length)return '';
+    let d='M '+points[0].x.toFixed(2)+' '+points[0].y.toFixed(2);
+    for(let i=1;i<points.length;i++){
+      const a=points[i-1],b=points[i];
+      const mx=(a.x+b.x)/2;
+      d+=' Q '+mx.toFixed(2)+' '+a.y.toFixed(2)+' '+b.x.toFixed(2)+' '+b.y.toFixed(2);
+    }
+    return d;
+  }
+  function syncTiledVisuals(){
+    const rt=window.PixelMapRuntime;
+    if(!rt)return;
+    const points=rt.pathPoints?.()||[];
+    const d=tiledPathD(points);
+    if(d){
+      $('.pm-path-bank,.pm-path-core,.pm-path-dashes').forEach(path=>path.setAttribute('d',d));
+    }
+    const fishing=rt.object?.('fishing');
+    const fishEl=$('#questFishingSpot');
+    if(fishing&&fishEl){fishEl.style.left=fishing.x+'%';fishEl.style.top=fishing.y+'%'}
+    const door=rt.object?.('return-door');
+    const doorEl=$('#questReturnDoor');
+    if(door&&doorEl){doorEl.style.left=door.x+'%';doorEl.style.top=door.y+'%'}
+    const badge=$('.pm-camera-badge-v15 span');
+    if(badge)badge.textContent=rt.source==='tiled-json'?'CAMERA · TILED MAP':'CAMERA · MAP FALLBACK';
+  }
+  window.PixelMapRuntime?.ready?.then(()=>setTimeout(syncTiledVisuals,0));
+  window.addEventListener('pixel-map-ready',()=>setTimeout(syncTiledVisuals,0));
+
   // ---------------------------------------------------------------------------
   // P2 · finite character action states on top of the existing sprite renderer
   // ---------------------------------------------------------------------------
