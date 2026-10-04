@@ -720,7 +720,7 @@ The hidden actor identity provides continuity and permissions; the displayed aut
 
 ## D014 · Public alias linkage
 
-**Status:** needs owner decision  
+**Status:** decided — A · Keep alias linkage private  
 **Blocks:** whether viewers can visibly tell that two historical names belong to the same contributor  
 **Does not block:** permissions, immutable author snapshots, contributor renaming, recovery keys or room access
 
@@ -752,3 +752,79 @@ A contributor profile could show “曾用名：小林 / Lynn”.
 Choose **A · Keep alias linkage private**.
 
 The system needs identity continuity for authorship and permissions; the room does not need to turn that internal identity graph into public biography.
+
+### Decision
+
+Selected **A · Keep alias linkage private**.
+
+Implemented in V15.14:
+- public room and Outside payloads strip authorId before leaving the server
+- verified authors receive only a private `isAuthor: true` capability hint on their own items
+- hosts can curate without receiving contributor identity-link keys
+- realtime player packets strip actorId, preventing cross-visit name correlation through live presence data
+- historical authorName remains visible exactly as captured at creation time
+- no same-person badge, alias profile or public “曾用名” chain is generated
+
+The result is deliberately asymmetric: the server can prove continuity; another visitor cannot reconstruct that continuity from the product surface or public room payloads.
+
+---
+
+## D015 · Private “my traces” view
+
+**Status:** needs owner decision
+
+Should a contributor get a private drawer that gathers everything they personally left across visits and historical names?
+
+- **A · Yes, private only — recommended:** show “我留下的” using `isAuthor`, visible only to that contributor.
+- **B · No aggregation:** keep editing contextual; contributors find old items in the room/map themselves.
+- **C · Current-visit only:** show only things created in the current visit.
+
+---
+
+## D016 · Author deletion rights
+
+**Status:** needs owner decision
+
+When contributors return later, how much control should they have over their old content?
+
+- **A · Edit + delete own content — recommended:** the author can remove what they created; host recovery history remains available where supported.
+- **B · Edit but not delete:** authors can correct wording, but only the host can remove memories.
+- **C · Hide instead of delete:** authors can privately request/trigger hiding while the host keeps the underlying record.
+
+---
+
+## D017 · Historical avatar snapshots
+
+**Status:** needs owner decision
+
+Should a memory preserve only the author's historical name, or also the avatar they were using at that moment?
+
+- **A · Name only — recommended:** avatar stays a live-visit expression and does not become another long-term identity trail.
+- **B · Snapshot avatar per memory:** store hair/outfit/item alongside authorName.
+- **C · Current avatar everywhere:** old memories visually follow the contributor's latest saved appearance.
+
+---
+
+## D018 · Edited-memory disclosure
+
+**Status:** needs owner decision
+
+If an author changes the text of an old memory later, should viewers be told?
+
+- **A · Small “edited” marker — recommended:** preserve trust without showing a full edit history.
+- **B · No marker:** show only the current text.
+- **C · Public edit history:** expose prior versions and edit times.
+
+---
+
+## D019 · Lost-credential identity recovery
+
+**Status:** needs owner decision
+
+If someone loses their actor credential and later returns with the same display name, should the system reconnect them to old content?
+
+- **A · Never auto-merge by name — recommended:** same name is not proof of identity; only recovery credentials can restore authorship.
+- **B · Host-assisted relink:** the host can manually bind a new actor credential to old content.
+- **C · Name-based relink:** automatically assume matching names are the same person.
+
+These five decisions are intentionally separable so they can be answered in one batch without coupling public privacy back to account identity.
