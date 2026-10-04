@@ -439,6 +439,35 @@
     editor.keyboardSave=setTimeout(persistRoomLayout,350);
   },true);
 
+  async function restoreLatestCloudRevision(){
+    if(!(await ensureOwner()))return;
+    if(!window.PixelNet?.enabled)return toast('本机模式没有云端历史版本');
+    try{
+      const data=await PixelNet.getRevisions(state.roomCode);
+      const rev=(data.revisions||[]).find(x=>x.kind==='layout');
+      if(!rev)return toast('还没有可恢复的历史布置');
+      const result=await PixelNet.restoreRevision(state.roomCode,rev.id);
+      state.world.layout=cloneLayout(result.layout||{});
+      editor.history=[];
+      editor.future=[];
+      editor.lastLayout='';
+      applyRoomLayout(true);
+      try{saveRoom(false)}catch(_){}
+      toast('已经恢复上一版云端布置');
+    }catch(e){
+      toast(String(e?.message||'').includes('403')?'只有房主可以恢复历史版本':'恢复历史版本失败');
+    }
+  }
+
+  async function revisionStatusText(){
+    if(!window.PixelNet?.enabled||!PixelNet.hasOwnerToken?.(state.roomCode))return '';
+    try{
+      const data=await PixelNet.getRevisions(state.roomCode);
+      const count=(data.revisions||[]).filter(x=>x.kind==='layout').length;
+      return count ? ' · 已保留 '+count+' 个布局版本' : ' · 暂无历史版本';
+    }catch(_){return ''}
+  }
+
   function storageStatus(){
     if(!window.PixelNet?.enabled)return '当前为本机保存模式';
     if(PixelNet.hasOwnerToken?.(state.roomCode))return '房主权限已绑定 · 云端保存开启';
@@ -457,11 +486,17 @@
       <div class="pm-storage-state-v15"><i></i><span>${storageStatus()}</span></div>
       <div class="settings-grid">
         <button id="startRoomEditorV15" class="press">✥ 调整房间布置<br><small>拖动沙发、蛋糕桌、照片墙等</small></button>
+        <button id="restoreRoomRevisionV15" class="press">↶ 恢复上一版<br><small>跨刷新恢复云端家具布局</small></button>
         <button id="resetRoomEditorV15" class="press">↺ 恢复默认布置<br><small>只重置家具位置</small></button>
       </div>`;
     body.prepend(section);
     $('#startRoomEditorV15').onclick=startRoomEditor;
+    $('#restoreRoomRevisionV15').onclick=restoreLatestCloudRevision;
     $('#resetRoomEditorV15').onclick=resetRoomLayout;
+    revisionStatusText().then(extra=>{
+      const span=$('.pm-storage-state-v15 span',section);
+      if(span&&extra) span.textContent+=extra;
+    });
   }
 
   const settingsBtn=$('#worldSettingsBtn');
@@ -480,6 +515,7 @@
     reset:resetRoomLayout,
     undo:undoLayout,
     redo:redoLayout,
+    restoreLatest:restoreLatestCloudRevision,
     apply:()=>applyRoomLayout(true),
     get historyLength(){return editor.history.length},
     get futureLength(){return editor.future.length},
