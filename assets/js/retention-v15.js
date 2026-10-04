@@ -9,7 +9,9 @@
       localStorage.removeItem('pixel-memory-v7-memory-'+code);
       localStorage.removeItem('pixel-memory-archived-'+code);
       PixelNet.saveOwnerToken?.(code,'');
-      PixelNet.saveInviteToken?.(code,'');
+      PixelNet.clearInviteToken?.(code,'contributor');
+      PixelNet.clearInviteToken?.(code,'viewer');
+      PixelNet.saveInviteRole?.(code,'');
     }catch(_){}
   }
   function leaveToLanding(){
