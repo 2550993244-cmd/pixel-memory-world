@@ -1,5 +1,5 @@
 ---
-version: 15.9
+version: 15.10
 name: Pixel Memory World
 description: A warm multiplayer pixel-memory space. The interface should feel like a keepsake box that became a tiny playable world: soft paper surfaces, restrained pastel accents, readable modern Chinese typography, pixel-art scenes, and motion that responds to people rather than decorating every surface.
 ---
@@ -174,6 +174,17 @@ The technical sprite contract is fixed and the production direction is now **War
 - The runtime must keep the current DOM sprite as a fallback until a real atlas is present.
 - Production atlas language: warm brown outlines, muted clothing, small facial features, restrained handmade irregularity, readable four-direction silhouettes, and expressive-but-not-cartoonish social poses.
 - Keep the DOM sprite only as a compatibility fallback; new character work should extend the warm layered atlas instead of creating a second visual system.
+
+## Contributor identity ceremony
+
+Contributor onboarding should feel deliberate because the identity becomes socially visible and authors content.
+
+- Contributor links must stop on the complete avatar builder before entering the room.
+- Show a short identity notice explaining that name and avatar are visible to friends and contextualize authored memories.
+- Keep all four choices before entry: name, hair, outfit and held item.
+- Do not reuse the viewer instant-entry path for contributors.
+- The final enter action is the point at which contributor presence becomes visible to the room.
+- Viewer and contributor onboarding may share visual assets, but their entry semantics must remain visibly different.
 
 ## Instant spectator entry
 
