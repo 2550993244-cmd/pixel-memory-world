@@ -152,7 +152,7 @@ Implemented in V15.3:
 
 ## D004 · Cross-device identity and recovery
 
-**Status:** needs owner decision  
+**Status:** decided — A · No mandatory account + optional recovery key  
 **Blocks:** ownership recovery on a new phone/computer, portable author identity, long-term room deletion/recovery, whether an auth provider is required  
 **Does not block:** current room codes, same-device ownership, host curation, multiplayer, Tiled maps, character art, storage adapters
 
@@ -196,8 +196,62 @@ Every participant signs in before contributing.
 
 **Tradeoff:** highest friction and weakest fit with spontaneous birthday / anniversary invitations.
 
+### Decision
+
+Selected **A · No mandatory account + optional recovery key**.
+
+Implemented in V15.4:
+- ordinary room entry remains account-free
+- owner recovery keys restore both room ownership and the creator's author identity
+- participant identity keys restore authorship without granting owner privileges
+- recovery keys use a versioned `PMR1` envelope with SHA-256 corruption detection
+- imported credentials are checked against the room server before replacing current browser credentials
+- corrupted keys and incorrect owner tokens are rejected
+- the recovery center supports copyable keys and portable `.pmrkey` files
+
+A recovery key is a bearer secret: possession of the key grants the represented privilege. The UI must continue treating it like a password, never like a shareable invitation code.
+
+
+---
+
+## D005 · Room deletion and retention
+
+**Status:** needs owner decision  
+**Blocks:** owner-facing delete/archive controls, automatic cleanup policy, recovery after accidental deletion  
+**Does not block:** invitations, recovery keys, author identity, curation, multiplayer, maps, character art
+
+Now that room ownership can survive device changes, the next irreversible product rule is what “delete this world” should actually mean.
+
+### A · Archive first, permanent delete later — recommended
+
+- owner can archive a room immediately
+- archived rooms stop accepting normal joins and become read-only to the owner
+- server keeps the room for a fixed recovery window
+- owner can restore it during that window
+- permanent deletion happens only after a second explicit action or after the recovery window expires
+
+**Best fit:** sentimental content where accidental deletion would be disproportionately painful.
+
+**Tradeoff:** the service retains data for a period after the user first asks to remove it, so the UI must state the recovery window clearly.
+
+### B · Immediate permanent deletion
+
+- one confirmed delete removes room data and uploaded media immediately
+- no server-side recovery
+
+**Best fit:** strongest “delete means delete now” semantics.
+
+**Tradeoff:** one mistaken click can permanently erase a shared keepsake.
+
+### C · Archive only, no self-service permanent delete
+
+- owner can hide/archive a world
+- permanent deletion requires support/admin action
+
+**Best fit:** early prototype with maximum safety against accidental loss.
+
+**Tradeoff:** poor long-term user control and not appropriate for a mature privacy model.
+
 ### Default recommendation
 
-Choose **A · No mandatory account + optional recovery key**.
-
-It preserves the strongest part of the current product — opening a link and immediately entering a shared memory space — while still giving careful creators a way to protect long-term ownership.
+Choose **A · Archive first, permanent delete later**, with a clearly disclosed recovery window and an explicit “delete permanently now” escape hatch.
