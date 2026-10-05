@@ -580,7 +580,7 @@ async function openMyTracesDrawer(){
     $('#myTraceSearchV17').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();runSearch()}};
     $('#myTraceClearSearchV17')&&($('#myTraceClearSearchV17').onclick=()=>{myTraceQueryV17='';openMyTracesDrawer()});
     $('#myTraceResetFiltersV17')&&($('#myTraceResetFiltersV17').onclick=()=>{myTraceQueryV17='';myTraceTypeFilterV16='all';myTraceNameFilterV16='all';openMyTracesDrawer()});
-    $('[data-trace-type-v16]').forEach(b=>b.onclick=()=>{myTraceTypeFilterV16=b.dataset.traceTypeV16;openMyTracesDrawer()});
+    $$('[data-trace-type-v16]').forEach(b=>b.onclick=()=>{myTraceTypeFilterV16=b.dataset.traceTypeV16;openMyTracesDrawer()});
     $('#myTraceNameFilterV16').onchange=e=>{myTraceNameFilterV16=e.target.value;openMyTracesDrawer()};
     $$('[data-trace-year-toggle-v17]').forEach(b=>b.onclick=()=>{
       const year=b.dataset.traceYearToggleV17,section=b.closest('[data-trace-year-section-v17]'),list=section?.querySelector('.trace-year-list-v16');
