@@ -45,7 +45,7 @@
           <image wx:if="{{item.url||item.image||item.photo}}" class="photo" mode="aspectFill" src="{{item.url||item.image||item.photo}}"></image>
           <view wx:else class="photo-placeholder">📷<text>{{(item.names&&item.names.length)||1}} 人的合影</text></view>
           <view class="photo-copy">
-            <text class="photo-caption">{{item.caption||((item.names&&item.names.join('、'))||'一张合影')}}</text>
+            <text class="photo-caption">{{item.displayCaption}}</text>
             <text class="photo-by">{{item.by||item.authorName||'朋友'}}</text>
           </view>
           <button wx:if="{{item.isAuthor}}" class="delete-corner" data-id="{{item.id}}" bindtap="deletePhoto">×</button>
@@ -64,10 +64,11 @@
       </view>
       <input class="input" maxlength="28" value="{{mTitle}}" bindinput="onMTitle" placeholder="给它一个名字"/>
       <textarea class="textarea short" maxlength="180" value="{{mMeaning}}" bindinput="onMMeaning" placeholder="它为什么值得被留下？"></textarea>
-      <view class="photo-pick">
+      <view wx:if="{{!editingMementoId}}" class="photo-pick">
         <image wx:if="{{mPhotoUrl}}" class="m-preview" mode="aspectFill" src="{{mPhotoUrl}}"></image>
-        <button class="ghost" loading="{{uploadingMemento}}" disabled="{{uploadingMemento}}" bindtap="pickMementoPhoto">{{mPhotoUrl?'换一张照片':'附一张照片（可选）'}}</button>
+        <button class="ghost" loading="{{uploadingMemento}}" disabled="{{uploadingMemento}}" bindtap="pickMementoPhoto">{{mPhotoUrl?'已附照片 · 点击重选':'附一张照片（可选）'}}</button>
       </view>
+      <view wx:else class="edit-tip">修改模式暂时只调整名称、文字和类型；原照片会继续保留。</view>
       <button class="primary" loading="{{saving}}" disabled="{{saving}}" bindtap="saveMemento">{{editingMementoId?'保存纪念物':'放进房间'}}</button>
       <button wx:if="{{editingMementoId}}" class="ghost" bindtap="cancelMementoEdit">取消修改</button>
     </view>
