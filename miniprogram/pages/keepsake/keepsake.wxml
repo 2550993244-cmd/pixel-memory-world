@@ -1,0 +1,50 @@
+<view class="keepsake-page">
+  <view class="eyebrow top">PIXEL MEMORY · KEEPSAKE</view>
+
+  <view class="paper-card">
+    <view class="paper-stamp">✦</view>
+    <view class="date">{{displayDate}}</view>
+    <view class="keepsake-title">{{honoree}}的{{occasion}}</view>
+    <view class="quote">“{{invite||'今晚，我们在这里等你。'}}”</view>
+
+    <view class="people" wx:if="{{people.length}}">
+      <block wx:for="{{people}}" wx:key="*this">
+        <view class="person-chip">{{item}}</view>
+      </block>
+    </view>
+
+    <view class="stats">
+      <view><text>{{stats.people}}</text><text class="stat-label">留下名字</text></view>
+      <view><text>{{stats.notes}}</text><text class="stat-label">留言</text></view>
+      <view><text>{{stats.mementos}}</text><text class="stat-label">纪念物</text></view>
+      <view><text>{{stats.photos}}</text><text class="stat-label">照片</text></view>
+    </view>
+
+    <view class="last-line">
+      <text class="last-label">最后留在这里的一句话</text>
+      <text class="last-text">{{lastLine}}</text>
+    </view>
+
+    <view class="memory-meter">
+      <view class="meter-head"><text>这间房的回忆构成</text><text>{{totalMemories}} 件</text></view>
+      <view class="meter-bar">
+        <view class="meter notes" style="width:{{meter.notes}}%;"></view>
+        <view class="meter mementos" style="width:{{meter.mementos}}%;"></view>
+        <view class="meter photos" style="width:{{meter.photos}}%;"></view>
+      </view>
+      <view class="legend"><text>● 留言</text><text>● 纪念物</text><text>● 照片</text></view>
+    </view>
+
+    <view class="footer">
+      <text>ROOM {{code}}</text>
+      <text>小小世界</text>
+    </view>
+  </view>
+
+  <view class="actions">
+    <button class="share" open-type="share">把这张纪念卡分享给朋友</button>
+    <button class="back" bindtap="backToRoom">回到房间</button>
+  </view>
+
+  <view class="hint">这张卡会随着同一个房间里的留言、照片和纪念物继续更新。</view>
+</view>

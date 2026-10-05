@@ -1,0 +1,45 @@
+<view class="avatar-page">
+  <view class="eyebrow">PIXEL YOU · 房间里的你</view>
+  <view class="title">先把自己变成一个小人。</view>
+  <view class="sub">名字和形象会保存在这台设备上，回到房间后会实时同步给朋友。</view>
+
+  <view class="preview-card">
+    <view class="preview-scene">
+      <view class="pixel-person hair-{{hair}} outfit-{{outfit}}">
+        <view class="hair"></view>
+        <view class="face"></view>
+        <view class="shirt"></view>
+        <view class="held">{{item}}</view>
+      </view>
+      <view class="name-tag">{{name||'朋友'}}</view>
+    </view>
+  </view>
+
+  <view class="builder-card">
+    <view class="label">怎么称呼你？</view>
+    <input class="input" maxlength="10" value="{{name}}" bindinput="onName" placeholder="例如：小羽"/>
+
+    <view class="label">发型</view>
+    <view class="choice-row">
+      <block wx:for="{{hairOptions}}" wx:key="*this">
+        <button class="choice {{hair===item?'on':''}}" data-value="{{item}}" bindtap="chooseHair">发型 {{item}}</button>
+      </block>
+    </view>
+
+    <view class="label">衣服</view>
+    <view class="swatch-row">
+      <block wx:for="{{outfitOptions}}" wx:key="value">
+        <button class="swatch {{outfit===item.value?'on':''}} {{item.value}}" data-value="{{item.value}}" bindtap="chooseOutfit">{{item.label}}</button>
+      </block>
+    </view>
+
+    <view class="label">手里带点什么</view>
+    <view class="item-row">
+      <block wx:for="{{itemOptions}}" wx:for-item="gift" wx:key="*this">
+        <button class="item {{item===gift?'on':''}}" data-value="{{gift}}" bindtap="chooseItem">{{gift}}</button>
+      </block>
+    </view>
+
+    <button class="save" bindtap="saveAvatar">保存并回到房间</button>
+  </view>
+</view>

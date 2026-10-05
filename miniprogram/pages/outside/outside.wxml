@@ -1,0 +1,91 @@
+<view class="outside-page">
+  <view class="outside-head">
+    <view>
+      <view class="eyebrow">OUTSIDE · MEMORY QUEST</view>
+      <view class="outside-title">门外还有一条路。</view>
+      <view class="outside-sub">沿着小路走，看看朋友把哪些回忆藏在了外面。</view>
+    </view>
+    <view class="count">{{questItems.length}} 段回忆</view>
+  </view>
+
+  <view class="outdoor-stage">
+    <view class="sky"></view>
+    <view class="hill h1"></view><view class="hill h2"></view>
+    <view class="path"></view>
+    <view class="pond"></view>
+    <view class="bridge"></view>
+    <view class="tree t1">♣</view><view class="tree t2">♣</view><view class="tree t3">♣</view>
+    <view class="mailbox">✉</view>
+
+    <block wx:for="{{questItems}}" wx:key="id">
+      <button class="quest-marker {{nearbyId===item.id?'near':''}}" style="left:{{item.x}}%;top:{{item.y}}%;" data-id="{{item.id}}" bindtap="openQuestItem">
+        <text>{{item.icon||'✦'}}</text>
+      </button>
+    </block>
+
+    <view class="outside-player hair-{{avatar.hair}} outfit-{{avatar.outfit}}" style="left:{{playerX}}%;top:{{playerY}}%;">
+      <view class="p-hair"></view><view class="p-face"></view><view class="p-shirt"></view>
+      <text class="p-item">{{avatar.item}}</text>
+    </view>
+
+    <view wx:if="{{nearbyId}}" class="near-prompt" bindtap="discoverNearby">这里好像藏着一段回忆 · 点一下看看</view>
+
+    <view class="move-pad">
+      <button class="move up" data-dx="0" data-dy="-5" bindtap="move">↑</button>
+      <button class="move left" data-dx="-5" data-dy="0" bindtap="move">←</button>
+      <button class="move center">✦</button>
+      <button class="move right" data-dx="5" data-dy="0" bindtap="move">→</button>
+      <button class="move down" data-dx="0" data-dy="5" bindtap="move">↓</button>
+    </view>
+  </view>
+
+  <view class="quest-editor">
+    <view class="editor-title">藏下一段 Memory Quest</view>
+    <view class="editor-sub">选择一个地点，再写下只有走到这里才会发现的话。</view>
+
+    <scroll-view scroll-x class="spot-scroll">
+      <view class="spot-row">
+        <block wx:for="{{spots}}" wx:key="key">
+          <button class="spot {{selectedSpot===item.key?'on':''}}" data-key="{{item.key}}" bindtap="chooseSpot">{{item.icon}} {{item.label}}</button>
+        </block>
+      </view>
+    </scroll-view>
+
+    <input class="input" maxlength="40" value="{{questTitle}}" bindinput="onQuestTitle" placeholder="给这段回忆一个标题"/>
+    <textarea class="textarea" maxlength="280" value="{{questText}}" bindinput="onQuestText" placeholder="例如：其实那天什么大事都没发生，但后来想起时，总觉得这段路很亮。"></textarea>
+
+    <view class="quest-image-row">
+      <image wx:if="{{questImage}}" class="quest-image-preview" mode="aspectFill" src="{{questImage}}"></image>
+      <button class="ghost" loading="{{uploading}}" disabled="{{uploading}}" bindtap="pickQuestImage">{{questImage?'换一张线索照片':'加一张线索照片（可选）'}}</button>
+    </view>
+
+    <button class="save" loading="{{saving}}" disabled="{{saving}}" bindtap="saveQuest">把它藏到路上</button>
+  </view>
+
+  <view class="quest-list">
+    <view class="list-title">已经藏下的回忆</view>
+    <block wx:for="{{questItems}}" wx:key="id">
+      <view class="quest-card" data-id="{{item.id}}" bindtap="openQuestItem">
+        <view class="quest-icon">{{item.icon||'✦'}}</view>
+        <view class="quest-copy">
+          <text class="quest-card-title">{{item.title||'一段回忆'}}</text>
+          <text class="quest-card-by">第 {{item.order||index+1}} 站 · {{item.by||item.authorName||'朋友'}}</text>
+        </view>
+        <text class="arrow">›</text>
+      </view>
+    </block>
+    <view wx:if="{{!questItems.length}}" class="empty">这条路还是空的。第一段 Memory Quest 可以从你开始。</view>
+  </view>
+</view>
+
+<view wx:if="{{selectedQuest}}" class="detail-mask" bindtap="closeQuestDetail">
+  <view class="detail-sheet" catchtap="noop">
+    <view class="detail-icon">{{selectedQuest.icon||'✦'}}</view>
+    <view class="detail-title">{{selectedQuest.title||'一段回忆'}}</view>
+    <image wx:if="{{selectedQuest.image}}" class="detail-image" mode="aspectFill" src="{{selectedQuest.image}}"></image>
+    <view class="detail-text">{{selectedQuest.text||'有人把一小段故事藏在了这里。'}}</view>
+    <view class="detail-meta">{{selectedQuest.by||selectedQuest.authorName||'朋友'}} · Memory Quest</view>
+    <button wx:if="{{selectedQuest.isAuthor||isOwner}}" class="delete" bindtap="deleteSelectedQuest">删除这段门外回忆</button>
+    <button class="close" bindtap="closeQuestDetail">继续沿着路走</button>
+  </view>
+</view>

@@ -1,5 +1,12 @@
 {
-  "pages": ["pages/index/index", "pages/room/room"],
+  "pages": [
+    "pages/index/index",
+    "pages/room/room",
+    "pages/memory/memory",
+    "pages/avatar/avatar",
+    "pages/outside/outside",
+    "pages/keepsake/keepsake"
+  ],
   "window": {
     "navigationBarTitleText": "小小世界",
     "navigationBarBackgroundColor": "#fff6eb",

@@ -1,35 +1,178 @@
 <view class="room-page">
   <view class="room-head">
-    <view><view class="eyebrow">LIVE PIXEL ROOM</view><view class="room-title">{{honoree}}的小小世界</view></view>
-    <view class="code">{{code}}</view>
+    <view class="room-meta">
+      <view class="eyebrow">LIVE PIXEL ROOM</view>
+      <view class="room-title">{{honoree}}的小小世界</view>
+    </view>
+    <view class="room-code">
+      <text>{{code}}</text>
+      <text class="room-code-label">房间码</text>
+    </view>
+  </view>
+
+  <view class="status-row">
+    <view class="online"><view class="online-dot"></view>{{players.length}} 人在线</view>
+    <view class="status-tip">移动、聊天，或者一起庆祝</view>
   </view>
 
   <view class="pixel-stage">
-    <view class="window"></view><view class="rug"></view><view class="cake">🎂</view><view class="door">OUTSIDE</view>
+    <view class="wall"></view>
+    <view class="floor"></view>
+    <view class="window"></view>
+    <view class="string-lights"><view></view><view></view><view></view><view></view><view></view></view>
+    <view class="sofa"></view>
+    <view class="rug"></view>
+    <view class="cake">✦</view>
+
+    <button class="memory-wall notes-wall" data-tab="notes" bindtap="goMemory">
+      <text>✎</text><text>留言 {{memoryStats.notes}}</text>
+    </button>
+    <button class="memory-wall photos-wall" data-tab="photos" bindtap="goMemory">
+      <text>▣</text><text>照片 {{memoryStats.photos}}</text>
+    </button>
+
+    <block wx:for="{{visibleMementos}}" wx:key="id">
+      <button class="room-memento" style="left:{{item.x}}%;top:{{item.y}}%;" data-tab="mementos" bindtap="goMemory">
+        <image wx:if="{{item.photo}}" class="room-memento-photo" mode="aspectFill" src="{{item.photo}}"></image>
+        <text wx:else>{{item.type}}</text>
+      </button>
+    </block>
+
+    <view class="door" bindtap="goOutside">OUTSIDE</view>
+
     <block wx:for="{{players}}" wx:key="id">
-      <view class="person" style="left:{{item.x}}%;top:{{item.y}}%;">
-        <view class="pname">{{item.name}}</view><view class="head"></view><view class="body"></view>
+      <view class="person {{item.id===playerId?'me':''}} hair-{{item.hair||'1'}} outfit-{{item.outfit||'coral'}}" style="left:{{item.x}}%;top:{{item.y}}%;">
+        <view class="pname">{{item.name}}</view>
+        <view class="hair"></view>
+        <view class="head"></view>
+        <view class="body"></view>
+        <view class="held">{{item.item||'🎁'}}</view>
       </view>
     </block>
+
     <view class="bubble" wx:if="{{lastChat}}">{{lastChat}}</view>
-  </view>
 
-  <view class="move-pad">
-    <button class="move up" data-dx="0" data-dy="-4" bindtap="move">↑</button>
-    <button class="move left" data-dx="-4" data-dy="0" bindtap="move">←</button>
-    <button class="move down" data-dx="0" data-dy="4" bindtap="move">↓</button>
-    <button class="move right" data-dx="4" data-dy="0" bindtap="move">→</button>
-  </view>
-
-  <view class="card actions">
-    <view class="online">● {{players.length}} 人在线</view>
-    <view class="chatrow"><input class="input chat" value="{{chat}}" bindinput="onChat" placeholder="说句话…"/><button class="mini" bindtap="sendChat">发送</button></view>
-    <view class="action-grid">
-      <button class="action {{celebrated?'on':''}}" bindtap="celebrate">✦\n庆祝</button>
-      <button class="action {{recording?'recording':''}}" bindtap="toggleRecord">🎙\n{{recording?'停止':'录音'}}</button>
-      <button class="action" bindtap="playLastVoice">▶\n最近语音</button>
-      <button class="action" open-type="share">⌁\n邀请好友</button>
+    <view class="move-pad">
+      <button class="move up" data-dx="0" data-dy="-4" bindtap="move">↑</button>
+      <button class="move left" data-dx="-4" data-dy="0" bindtap="move">←</button>
+      <button class="move center">✦</button>
+      <button class="move right" data-dx="4" data-dy="0" bindtap="move">→</button>
+      <button class="move down" data-dx="0" data-dy="4" bindtap="move">↓</button>
     </view>
   </view>
-  <view class="muted tip">网页端的 Memory Quest 与完整地图仍可用同一邀请码进入；小程序地图会在下一步继续迁移。</view>
+
+  <view class="chat-panel">
+    <view class="chatrow">
+      <input class="input chat" value="{{chat}}" bindinput="onChat" bindconfirm="sendChat" confirm-type="send" placeholder="和房间里的人说句话…"/>
+      <button class="send" bindtap="sendChat">发送</button>
+    </view>
+  </view>
+
+  <view class="action-dock">
+    <button class="action {{celebrated?'on':''}}" bindtap="celebrate">
+      <text>✦</text><text class="action-label">{{celebrated?'已庆祝':'庆祝'}}</text>
+    </button>
+    <button class="action {{recording?'recording':''}}" bindtap="toggleRecord">
+      <text>🎙</text><text class="action-label">{{recording?'停止':'录音'}}</text>
+    </button>
+    <button class="action" bindtap="playLastVoice">
+      <text>▶</text><text class="action-label">语音</text>
+    </button>
+    <button class="action" bindtap="openMemoryPanel">
+      <text>▥</text><text class="action-label">回忆</text>
+    </button>
+    <button class="action" open-type="share">
+      <text>⌁</text><text class="action-label">邀请</text>
+    </button>
+  </view>
+
+  <view class="room-foot">网页端与小程序端共用同一个房间码、实时房间和回忆数据。</view>
+</view>
+
+<view wx:if="{{showMemoryPanel}}" class="sheet-mask" bindtap="closeMemoryPanel">
+  <view class="memory-sheet" catchtap="noop">
+    <view class="sheet-handle"></view>
+    <view class="sheet-head">
+      <view>
+        <view class="eyebrow">ROOM MEMORY · 实时同步</view>
+        <view class="sheet-title">这间房已经留下了什么？</view>
+      </view>
+      <button class="sheet-close" bindtap="closeMemoryPanel">×</button>
+    </view>
+
+    <view class="metric-grid">
+      <view class="metric">
+        <text class="metric-value">{{players.length}}</text>
+        <text class="metric-label">在线</text>
+      </view>
+      <view class="metric">
+        <text class="metric-value">{{memoryStats.notes}}</text>
+        <text class="metric-label">留言</text>
+      </view>
+      <view class="metric">
+        <text class="metric-value">{{memoryStats.mementos}}</text>
+        <text class="metric-label">纪念物</text>
+      </view>
+      <view class="metric">
+        <text class="metric-value">{{memoryStats.photos}}</text>
+        <text class="metric-label">照片</text>
+      </view>
+    </view>
+
+    <view class="sheet-section">
+      <view class="section-row">
+        <text class="section-title">继续逛这间世界</text>
+        <text class="section-note">小程序版完整入口</text>
+      </view>
+      <view class="feature-grid">
+        <button class="feature" data-tab="notes" bindtap="goMemory"><text>✎</text><text class="feature-label">留言墙</text></button>
+        <button class="feature" data-tab="photos" bindtap="goMemory"><text>▣</text><text class="feature-label">照片墙</text></button>
+        <button class="feature" data-tab="mementos" bindtap="goMemory"><text>✦</text><text class="feature-label">纪念物</text></button>
+        <button class="feature" bindtap="goAvatar"><text>☺</text><text class="feature-label">我的形象</text></button>
+        <button class="feature" bindtap="goOutside"><text>♣</text><text class="feature-label">Outside·Quest</text></button>
+        <button class="feature" bindtap="goKeepsake"><text>▤</text><text class="feature-label">纪念卡</text></button>
+      </view>
+    </view>
+
+    <view class="sheet-section">
+      <view class="section-row">
+        <text class="section-title">内容构成</text>
+        <text class="section-note">来自同一房间的共享数据</text>
+      </view>
+
+      <view class="chart">
+        <block wx:for="{{memoryChart}}" wx:key="key">
+          <view class="chart-row">
+            <text class="chart-label">{{item.label}}</text>
+            <view class="chart-track">
+              <view class="chart-fill {{item.key}}" style="width:{{item.width}}%;"></view>
+            </view>
+            <text class="chart-value">{{item.value}}</text>
+          </view>
+        </block>
+      </view>
+    </view>
+
+    <view class="sheet-section">
+      <view class="section-row">
+        <text class="section-title">最近发生</text>
+        <text class="section-note">{{memoryStats.activity}} 条记录</text>
+      </view>
+
+      <view wx:if="{{recentActivity.length}}" class="activity-list">
+        <block wx:for="{{recentActivity}}" wx:key="id">
+          <view class="activity-item">
+            <view class="activity-dot"></view>
+            <view class="activity-copy">
+              <text>{{item.text}}</text>
+              <text class="activity-time">{{item.time}}</text>
+            </view>
+          </view>
+        </block>
+      </view>
+      <view wx:else class="empty-memory">
+        这里还很安静。网页端留下的留言、照片和纪念物会同步显示在这里。
+      </view>
+    </view>
+  </view>
 </view>

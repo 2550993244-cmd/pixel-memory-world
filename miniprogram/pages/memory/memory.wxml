@@ -1,0 +1,95 @@
+<view class="memory-page">
+  <view class="page-head">
+    <view class="eyebrow">SHARED MEMORY · {{code}}</view>
+    <view class="page-title">{{honoree}}的回忆册</view>
+    <view class="page-sub">网页和小程序看到的是同一组留言、照片与纪念物。</view>
+  </view>
+
+  <view class="tabs">
+    <button class="tab {{tab==='notes'?'on':''}}" data-tab="notes" bindtap="switchTab">留言 {{notes.length}}</button>
+    <button class="tab {{tab==='photos'?'on':''}}" data-tab="photos" bindtap="switchTab">照片 {{photos.length}}</button>
+    <button class="tab {{tab==='mementos'?'on':''}}" data-tab="mementos" bindtap="switchTab">纪念物 {{mementos.length}}</button>
+  </view>
+
+  <view wx:if="{{tab==='notes'}}" class="section">
+    <view class="composer">
+      <textarea class="textarea" maxlength="120" value="{{noteText}}" bindinput="onNoteInput" placeholder="给以后走进这里的人留一句话…"></textarea>
+      <button class="primary" loading="{{saving}}" disabled="{{saving}}" bindtap="saveNote">{{editingNoteId?'保存修改':'贴到留言墙'}}</button>
+      <button wx:if="{{editingNoteId}}" class="ghost" bindtap="cancelNoteEdit">取消修改</button>
+    </view>
+
+    <view wx:if="{{notes.length}}" class="note-list">
+      <block wx:for="{{notes}}" wx:key="id">
+        <view class="note-card">
+          <view class="note-meta"><text>{{item.by||item.authorName||'朋友'}}</text><text>{{item.editedAt?'已编辑':''}}</text></view>
+          <view class="note-text">{{item.text}}</view>
+          <view wx:if="{{item.isAuthor||isOwner}}" class="row-actions">
+            <button wx:if="{{item.isAuthor}}" class="mini" data-id="{{item.id}}" bindtap="editNote">修改</button>
+            <button class="mini danger" data-id="{{item.id}}" bindtap="deleteNote">删除</button>
+          </view>
+        </view>
+      </block>
+    </view>
+    <view wx:else class="empty">还没有留言。第一张纸条可以从你开始。</view>
+  </view>
+
+  <view wx:if="{{tab==='photos'}}" class="section">
+    <view class="composer photo-composer">
+      <input class="input" maxlength="40" value="{{photoCaption}}" bindinput="onPhotoCaption" placeholder="给这张照片写一句话（可选）"/>
+      <button class="primary" loading="{{uploading}}" disabled="{{uploading}}" bindtap="pickPhoto">从相册或相机留下一张照片</button>
+    </view>
+
+    <view wx:if="{{photos.length}}" class="photo-grid">
+      <block wx:for="{{photos}}" wx:key="id">
+        <view class="photo-card">
+          <image wx:if="{{item.url||item.image||item.photo}}" class="photo" mode="aspectFill" src="{{item.url||item.image||item.photo}}"></image>
+          <view wx:else class="photo-placeholder">📷<text>{{(item.names&&item.names.length)||1}} 人的合影</text></view>
+          <view class="photo-copy">
+            <text class="photo-caption">{{item.displayCaption}}</text>
+            <text class="photo-by">{{item.by||item.authorName||'朋友'}}</text>
+          </view>
+          <button wx:if="{{item.isAuthor||isOwner}}" class="delete-corner" data-id="{{item.id}}" bindtap="deletePhoto">×</button>
+        </view>
+      </block>
+    </view>
+    <view wx:else class="empty">照片墙还是空的。可以把今天的第一张照片留在这里。</view>
+  </view>
+
+  <view wx:if="{{tab==='mementos'}}" class="section">
+    <view class="composer">
+      <view class="type-row">
+        <block wx:for="{{mementoTypes}}" wx:key="*this">
+          <button class="type {{mType===item?'on':''}}" data-type="{{item}}" bindtap="pickType">{{item}}</button>
+        </block>
+      </view>
+      <input class="input" maxlength="28" value="{{mTitle}}" bindinput="onMTitle" placeholder="给它一个名字"/>
+      <textarea class="textarea short" maxlength="180" value="{{mMeaning}}" bindinput="onMMeaning" placeholder="它为什么值得被留下？"></textarea>
+      <view wx:if="{{!editingMementoId}}" class="photo-pick">
+        <image wx:if="{{mPhotoUrl}}" class="m-preview" mode="aspectFill" src="{{mPhotoUrl}}"></image>
+        <button class="ghost" loading="{{uploadingMemento}}" disabled="{{uploadingMemento}}" bindtap="pickMementoPhoto">{{mPhotoUrl?'已附照片 · 点击重选':'附一张照片（可选）'}}</button>
+      </view>
+      <view wx:else class="edit-tip">修改模式暂时只调整名称、文字和类型；原照片会继续保留。</view>
+      <button class="primary" loading="{{saving}}" disabled="{{saving}}" bindtap="saveMemento">{{editingMementoId?'保存纪念物':'放进房间'}}</button>
+      <button wx:if="{{editingMementoId}}" class="ghost" bindtap="cancelMementoEdit">取消修改</button>
+    </view>
+
+    <view wx:if="{{mementos.length}}" class="memento-list">
+      <block wx:for="{{mementos}}" wx:key="id">
+        <view class="memento-card">
+          <image wx:if="{{item.photo}}" class="memento-photo" mode="aspectFill" src="{{item.photo}}"></image>
+          <view wx:else class="memento-icon">{{item.type||'✦'}}</view>
+          <view class="memento-copy">
+            <view class="memento-title">{{item.title||'一件小东西'}}</view>
+            <view class="memento-meaning">{{item.meaning||'有人觉得它值得被留下。'}}</view>
+            <view class="memento-by">{{item.by||item.authorName||'朋友'}}</view>
+          </view>
+          <view wx:if="{{item.isAuthor||isOwner}}" class="row-actions vertical">
+            <button wx:if="{{item.isAuthor}}" class="mini" data-id="{{item.id}}" bindtap="editMemento">修改</button>
+            <button class="mini danger" data-id="{{item.id}}" bindtap="deleteMemento">删除</button>
+          </view>
+        </view>
+      </block>
+    </view>
+    <view wx:else class="empty">还没有纪念物。可以把一个小故事放下来。</view>
+  </view>
+</view>

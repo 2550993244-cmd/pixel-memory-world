@@ -1,0 +1,14 @@
+{
+  "description": "Pixel Memory 微信小程序",
+  "compileType": "miniprogram",
+  "appid": "wx375798c799caa904",
+  "projectname": "pixel-memory-world",
+  "miniprogramRoot": "miniprogram/",
+  "setting": {
+    "urlCheck": true,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true
+  }
+}
