@@ -66,8 +66,8 @@ const { chromium } = require('playwright');
     inviteVersion: window.PixelInvite?.version || null
   }));
   console.log('V15_1_DIAG', v15Diag);
-  if (v15Diag.runtime?.version !== '15.17') throw new Error('V15.17 systems runtime missing');
-  if (v15Diag.retentionVersion !== '15.5' || v15Diag.recoveryVersion !== '15.7' || v15Diag.inviteVersion !== '15.13') throw new Error('V15.17 invite/retention/recovery runtime missing');
+  if (v15Diag.runtime?.version !== '15.18') throw new Error('V15.18 systems runtime missing');
+  if (v15Diag.retentionVersion !== '15.5' || v15Diag.recoveryVersion !== '15.7' || v15Diag.inviteVersion !== '15.13') throw new Error('V15.18 invite/retention/recovery runtime missing');
   if (v15Diag.sceneVersion !== '15.0') throw new Error('V15 layered scene map missing');
   if (v15Diag.mapRuntime.source !== 'tiled-json' || v15Diag.mapRuntime.collisionCount < 3 || v15Diag.mapRuntime.pathCount < 6) {
     throw new Error('V15.1 Tiled map runtime did not load canonical JSON');
@@ -118,6 +118,33 @@ const { chromium } = require('playwright');
     throw new Error('landing typography regressed to undersized text');
   }
 
+  // V15.18 visual QA: the cover should read as a quiet framed keepsake,
+  // not a noisy/glassy marketing panel.
+  const coverAudit=await page.evaluate(()=>{
+    const hero=document.querySelector('.landing-hero');
+    const preview=document.querySelector('.hero-preview-wrap');
+    const shell=document.querySelector('.hero-scene-shell');
+    const noise=document.querySelector('.landing-noise');
+    const title=document.querySelector('.hero-copy h1');
+    const tip=document.querySelector('.preview-tip');
+    const hr=hero.getBoundingClientRect(),pr=preview.getBoundingClientRect();
+    const shellStyle=getComputedStyle(shell),noiseStyle=getComputedStyle(noise),titleStyle=getComputedStyle(title);
+    return {
+      heroWidth:hr.width,
+      previewWidth:pr.width,
+      shellRadius:parseFloat(shellStyle.borderRadius),
+      shellBackground:shellStyle.backgroundImage,
+      noiseOpacity:parseFloat(noiseStyle.opacity||'1'),
+      titleFont:parseFloat(titleStyle.fontSize),
+      tip:tip?.textContent?.trim()||'',
+      overflow:document.documentElement.scrollWidth-innerWidth
+    };
+  });
+  console.log('V15_18_COVER_AUDIT',coverAudit);
+  if(coverAudit.heroWidth>1290||coverAudit.previewWidth>630||coverAudit.shellRadius<22||coverAudit.noiseOpacity>.08||coverAudit.titleFont<46||coverAudit.overflow>2||!/移动鼠标/.test(coverAudit.tip)){
+    throw new Error('V15.18 landing cover cohesion regressed '+JSON.stringify(coverAudit));
+  }
+  if(!/linear-gradient/i.test(coverAudit.shellBackground)) throw new Error('V15.18 keepsake preview shell lost paper treatment');
 
   const collageAudit = await page.evaluate(() => {
     const visible = el => {
@@ -1123,13 +1150,53 @@ const { chromium } = require('playwright');
   await page.waitForFunction(() => document.body.classList.contains('pm-room-editing-v15'));
   await page.waitForSelector('.pm-room-editor-toolbar-v15');
 
+  const editorVisualAudit=await page.evaluate(()=>{
+    const stage=document.querySelector('#worldStage');
+    const halo=document.querySelector('.pm-editor-drop-halo-v18');
+    const pseudo=getComputedStyle(stage,'::after');
+    const hs=getComputedStyle(halo);
+    return {
+      promptLeft:pseudo.left,
+      promptTop:pseudo.top,
+      promptRadius:pseudo.borderRadius,
+      promptBackground:pseudo.backgroundColor,
+      haloExists:!!halo,
+      haloOpacity:parseFloat(hs.opacity||'0'),
+      haloZ:Number.parseFloat(hs.zIndex)||0
+    };
+  });
+  console.log('V15_18_EDITOR_VISUAL_IDLE',editorVisualAudit);
+  if(!editorVisualAudit.haloExists||editorVisualAudit.promptLeft==='50%'||parseFloat(editorVisualAudit.promptRadius)>14||editorVisualAudit.haloOpacity>.05){
+    throw new Error('V15.18 editor still uses the centered white selection treatment '+JSON.stringify(editorVisualAudit));
+  }
+
   const sofaBox = await page.locator('.room-sofa').boundingBox();
   if (!sofaBox) throw new Error('V15 editable sofa missing');
   await page.mouse.move(sofaBox.x + sofaBox.width/2, sofaBox.y + sofaBox.height/2);
   await page.mouse.down();
   await page.mouse.move(sofaBox.x + sofaBox.width/2 + 42, sofaBox.y + sofaBox.height/2 - 18, {steps:5});
+  const dragHaloAudit=await page.evaluate(()=>{
+    const halo=document.querySelector('.pm-editor-drop-halo-v18');
+    const sofa=document.querySelector('.room-sofa');
+    const h=getComputedStyle(halo),sr=sofa.getBoundingClientRect(),hr=halo.getBoundingClientRect();
+    return {
+      opacity:parseFloat(h.opacity||'0'),
+      width:hr.width,height:hr.height,
+      haloZ:Number.parseFloat(h.zIndex)||0,
+      sofaZ:Number.parseFloat(getComputedStyle(sofa).zIndex)||0,
+      left:parseFloat(halo.style.left)||0,
+      top:parseFloat(halo.style.top)||0
+    };
+  });
+  console.log('V15_18_EDITOR_DROP_HALO',dragHaloAudit);
+  if(dragHaloAudit.opacity<.8||dragHaloAudit.width<60||dragHaloAudit.height>40||dragHaloAudit.haloZ>=dragHaloAudit.sofaZ||dragHaloAudit.left<=4||dragHaloAudit.top<=10){
+    throw new Error('V15.18 grounded furniture drop halo failed '+JSON.stringify(dragHaloAudit));
+  }
   await page.mouse.up();
-  await page.waitForTimeout(280);
+  await page.waitForTimeout(180);
+  const haloAfterDrop=await page.evaluate(()=>parseFloat(getComputedStyle(document.querySelector('.pm-editor-drop-halo-v18')).opacity||'1'));
+  if(haloAfterDrop>.05) throw new Error('V15.18 furniture drop halo remains visible after placement');
+  await page.waitForTimeout(100);
 
   const guestMemento=page.locator('.memento[data-id="ci-guest-memento"]');
   await page.waitForFunction(()=>document.querySelector('.memento[data-id="ci-guest-memento"]')?.hasAttribute('data-curatable-memento'));
@@ -1247,15 +1314,22 @@ const { chromium } = require('playwright');
     const sr=stage.getBoundingClientRect();
     const state=window.PixelCameraRuntime?.state||{};
     const center=window.PixelCameraRuntime?.screenToWorldPercent?.(sr.left+sr.width/2,sr.top+sr.height/2)||null;
+    const stageStyle=getComputedStyle(stage),worldStyle=getComputedStyle(world);
+    const horizon=document.querySelector('.pm-horizon-layer');
     return {
       wrapper: !!world,
       active: stage?.classList.contains('pm-camera-active'),
-      transform: getComputedStyle(world).transform,
+      transform: worldStyle.transform,
       collisionCount: window.PixelMapRuntime?.collisionEllipses?.().length || 0,
       source: window.PixelMapRuntime?.source || '',
       stageW:sr.width,stageH:sr.height,
       worldW:state.worldW||0,worldH:state.worldH||0,
-      center
+      center,
+      stageBackgroundColor:stageStyle.backgroundColor,
+      stageBackgroundImage:stageStyle.backgroundImage,
+      worldBackgroundImage:worldStyle.backgroundImage,
+      horizonInsideWorld:!!horizon?.closest('.pm-camera-world-v15'),
+      horizonHeight:horizon?parseFloat(getComputedStyle(horizon).height):0
     };
   });
   console.log('V15_2_CAMERA_AUDIT', cameraAudit);
@@ -1263,6 +1337,10 @@ const { chromium } = require('playwright');
   if (cameraAudit.transform === 'none') throw new Error('V15 camera did not transform the quest world');
   if (!(cameraAudit.worldW > cameraAudit.stageW*1.08 || cameraAudit.worldH > cameraAudit.stageH*1.08)) throw new Error('V15.2 Outside world is not actually larger than the viewport');
   if (!cameraAudit.center || cameraAudit.center.x<0 || cameraAudit.center.x>100 || cameraAudit.center.y<0 || cameraAudit.center.y>100) throw new Error('V15.2 camera screen-to-world mapping invalid');
+  if(cameraAudit.stageBackgroundImage!=='none'||!/rgb\(128,\s*155,\s*104\)/.test(cameraAudit.stageBackgroundColor)||!/linear-gradient/i.test(cameraAudit.worldBackgroundImage)||!cameraAudit.horizonInsideWorld){
+    throw new Error('V15.18 Outside palette is still split between fixed viewport and moving world '+JSON.stringify(cameraAudit));
+  }
+  if(cameraAudit.horizonHeight>cameraAudit.worldH*.24) throw new Error('V15.18 Outside horizon is too dominant '+JSON.stringify(cameraAudit));
 
   await page.evaluate(()=>document.querySelector('#questStage').classList.add('placing'));
   await page.waitForTimeout(120);
@@ -1290,7 +1368,7 @@ const { chromium } = require('playwright');
     throw new Error('Browser errors:\n' + errors.join('\n'));
   }
 
-  console.log('SMOKE_OK V15.17 private search -> safe private HTML export -> one-time recovery reminder -> recent-year expansion -> no contributor recycle bin -> returning contributor timeline -> author delete undo -> recovery shortcut -> type/name/year organization -> private my-traces -> author edit/delete -> name-only history -> edited markers -> no name-based recovery -> private alias linkage -> historical author snapshots -> live contributor appearance -> returning prefill -> contributor ceremony -> instant spectators -> invisible viewers -> dual invite roles -> archive retention -> recovery -> curator -> warm atlas -> tiled camera -> revisions -> join');
+  console.log('SMOKE_OK V15.18 visual cohesion -> outdoor camera palette -> grounded furniture placement -> quieter landing cover -> private memory archive -> author continuity -> privacy -> recovery -> curator -> warm atlas -> tiled camera -> revisions -> join');
   await browser.close();
 })().catch(async err => {
   console.error(err);
