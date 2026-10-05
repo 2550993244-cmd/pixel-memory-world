@@ -47,7 +47,7 @@ function accessHeaders(code,{mutation=false,upload=false}={}){
 function request({url,method='GET',data,header={},timeout=12000}){
   return new Promise((resolve,reject)=>{
     wx.request({
-      url,method,data,header,timeout,
+      url,method,data,header:{'content-type':'application/json',...header},timeout,
       success:r=>{
         if(r.statusCode>=200&&r.statusCode<300)resolve(r.data);
         else{
