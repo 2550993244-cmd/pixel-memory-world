@@ -128,10 +128,15 @@
   async function questOp(op) {
     if(typeof isViewOnly==='function'&&isViewOnly()){toast('只看模式不能修改门外回忆');return false}
     if(window.PixelNet?.enabled){
-      try{await PixelNet.applyOp(state.roomCode,'quest',op);applyQuestOp(op);return true}catch(e){toast('这个回忆现在不能被修改');return false}
+      try{
+        await PixelNet.applyOp(state.roomCode,'quest',op);applyQuestOp(op);
+        if(op?.kind==='add'&&op?.item&&typeof isAuthoredByMe==='function'&&isAuthoredByMe(op.item))window.scheduleIdentityRecoveryReminderV17?.();
+        return true
+      }catch(e){toast('这个回忆现在不能被修改');return false}
     }
     applyQuestOp(op);
     questBroadcast('quest-op', { op });
+    if(op?.kind==='add'&&op?.item&&typeof isAuthoredByMe==='function'&&isAuthoredByMe(op.item))window.scheduleIdentityRecoveryReminderV17?.();
     return true;
   }
 
