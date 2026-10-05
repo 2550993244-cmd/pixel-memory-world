@@ -114,7 +114,7 @@
         <button class="feature" data-tab="photos" bindtap="goMemory"><text>▣</text><text class="feature-label">照片墙</text></button>
         <button class="feature" data-tab="mementos" bindtap="goMemory"><text>✦</text><text class="feature-label">纪念物</text></button>
         <button class="feature" bindtap="goAvatar"><text>☺</text><text class="feature-label">我的形象</text></button>
-        <button class="feature" bindtap="goOutside"><text>♣</text><text class="feature-label">Outside</text></button>
+        <button class="feature" bindtap="goOutside"><text>♣</text><text class="feature-label">Outside·Quest</text></button>
         <button class="feature" bindtap="goKeepsake"><text>▤</text><text class="feature-label">纪念卡</text></button>
       </view>
     </view>
