@@ -48,7 +48,8 @@ function memoryOp(op){
   applyMemoryOp(op);
   if(window.PixelNet?.enabled) PixelNet.applyOp(state.roomCode,'memory',op).catch(()=>{});
   else broadcast('memory-op',{op});
-  saveMemory()
+  saveMemory();
+  if(['note:add','memento:add','photo:add'].includes(op?.kind)&&op?.item&&isAuthoredByMe(op.item))scheduleIdentityRecoveryReminderV17()
 }
 async function commitMemoryOp(op){
   if(isViewOnly()){toast('这是只看链接，不能留下或修改内容');return false}
@@ -84,7 +85,32 @@ function loadRoom(code){try{const w=JSON.parse(localStorage.getItem(roomKey(code
 async function loadRoomRemote(code){loadRoom(code);if(!window.PixelNet?.enabled)return false;try{const r=await PixelNet.getRoom(code);if(r?.meta?.archivedAt){window.PixelRetention?.showArchivedRoom?.(r);return 'archived'}if(r.world)state.world={...state.world,...r.world};if(r.memory){state.mementos=r.memory.mementos||[];state.notes=r.memory.notes||[];state.photos=r.memory.photos||[];state.activity=r.memory.activity||[]}if(r.music)state.audio.pendingSync=r.music;applyAccessMode(r.accessRole||PixelNet.getInviteRole?.(code)||'contributor');localStorage.setItem(roomKey(code),JSON.stringify(state.world));localStorage.setItem(memoryKey(code),JSON.stringify(currentMemory()));return true}catch(e){if(e?.status===410){window.PixelRetention?.showGuestArchived?.(code,e.data||{});return 'archived'}if(e?.status===404&&!PixelNet.hasOwnerToken?.(code)){window.PixelInvite?.showJoinGate?.(code,{invalid:PixelNet.hasInviteToken?.(code)});return 'invite-required'}if(e?.status===403&&e?.data?.error==='invite_required'){window.PixelInvite?.showJoinGate?.(code,{invalid:true});return 'invite-required'}return false}}
 function randomCode(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';return Array.from({length:6},()=>chars[Math.floor(Math.random()*chars.length)]).join('')}
 function escapeHTML(s=''){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function toast(t){const el=$('#toast');el.textContent=t;el.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('show'),1800)}
+function toast(t){const el=$('#toast');el.textContent=t;el.classList.remove('has-action-v16');el.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('show'),1800)}
+function toastActionV17(t,label,action,duration=8500){
+  const el=$('#toast');
+  clearTimeout(toast.t);
+  el.innerHTML=`<span>${escapeHTML(t)}</span><button class="toast-undo-v16 press" type="button">${escapeHTML(label)}</button>`;
+  el.classList.add('show','has-action-v16');
+  const btn=el.querySelector('.toast-undo-v16');
+  btn.onclick=async()=>{
+    btn.disabled=true;
+    clearTimeout(toast.t);
+    try{await action?.()}finally{el.classList.remove('show','has-action-v16')}
+  };
+  toast.t=setTimeout(()=>el.classList.remove('show','has-action-v16'),duration);
+}
+const AUTHOR_RECOVERY_REMINDER_PREFIX_V17='pixel-memory-author-recovery-reminder-v17:';
+function authorRecoveryReminderKeyV17(){return AUTHOR_RECOVERY_REMINDER_PREFIX_V17+String(state.player.actorId||persistentActorId())}
+function scheduleIdentityRecoveryReminderV17(){
+  if(isViewOnly()||window.PixelNet?.hasOwnerToken?.(state.roomCode)||state.accessRole!=='contributor')return;
+  const key=authorRecoveryReminderKeyV17();
+  if(localStorage.getItem(key))return;
+  setTimeout(()=>{
+    if(localStorage.getItem(key)||state.screen!=='world'||isViewOnly())return;
+    localStorage.setItem(key,'shown');
+    toastActionV17('想以后换设备还能回来管理这些回忆吗？','保存身份钥匙',()=>window.PixelRecovery?.open?.(),9000);
+  },1300);
+}
 function undoItemSnapshot(item){if(!item||typeof item!=='object')return item;const copy=JSON.parse(JSON.stringify(item));delete copy.authorId;delete copy.isAuthor;return copy}
 function toastUndo(t,undo,label='撤销'){
   const el=$('#toast');
@@ -451,9 +477,38 @@ async function removeOwnQuestTrace(item){
 }
 let myTraceTypeFilterV16='all';
 let myTraceNameFilterV16='all';
+let myTraceQueryV17='';
+const myTraceExpandedYearsV17=new Set();
 function traceTimeV16(item){const n=Number(item?.time);if(Number.isFinite(n)&&n>0)return n;const p=Date.parse(item?.time||'');return Number.isFinite(p)?p:0}
 function traceDateV16(ts){return ts?new Date(ts).toLocaleDateString('zh-CN',{month:'short',day:'numeric'}):'时间未记录'}
 function traceYearV16(ts){return ts?String(new Date(ts).getFullYear()):'更早'}
+function traceSearchTextV17(e){
+  const i=e.item||{};
+  return [e.label,authorSnapshot(i),i.title,i.text,i.meaning,...(Array.isArray(i.names)?i.names:[])].filter(Boolean).join(' ').toLocaleLowerCase('zh-CN')
+}
+function downloadTextFileV17(name,text,type='text/html;charset=utf-8'){
+  const blob=new Blob([text],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)
+}
+function exportPrivateTimelineV17(entries){
+  const groups=new Map();
+  entries.slice().sort((a,b)=>b.ts-a.ts).forEach(e=>{const y=traceYearV16(e.ts);if(!groups.has(y))groups.set(y,[]);groups.get(y).push(e)});
+  const card=e=>{
+    const i=e.item||{},who=escapeHTML(authorSnapshot(i)),date=escapeHTML(traceDateV16(e.ts));
+    let body='';
+    if(e.kind==='note')body=escapeHTML(i.text||'');
+    else if(e.kind==='memento')body=`<b>${escapeHTML(i.title||'纪念物')}</b><br>${escapeHTML(i.meaning||'')}`;
+    else if(e.kind==='photo')body=escapeHTML((i.names||[]).join('、')||'一次合影');
+    else body=`<b>${escapeHTML(i.title||'门外回忆')}</b><br>${escapeHTML(i.text||'')}`;
+    return `<article><small>${escapeHTML(e.label)} · ${date} · ${who}${i.editedAt?' · 已编辑':''}</small><p>${body}</p></article>`;
+  };
+  const sections=[...groups.entries()].map(([year,list])=>`<section><h2>${escapeHTML(year)}</h2>${list.map(card).join('')}</section>`).join('');
+  const title=`我留下的 · ${escapeHTML(state.world.honoree||state.roomCode||'Pixel Memory')}`;
+  const html=`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>body{max-width:760px;margin:40px auto;padding:0 22px;background:#faf7f1;color:#554841;font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.7}header{padding-bottom:22px;border-bottom:1px solid #d9cdc1}h1{font-size:28px;margin:0 0 6px}header p,small{color:#8c7d73}section{margin-top:30px}h2{font-size:18px;color:#687c67}article{margin:12px 0;padding:16px 18px;border:1px solid #dfd4ca;border-radius:14px;background:#fffdf9}article p{margin:7px 0 0}footer{margin:34px 0;color:#9b8d83;font-size:12px}</style></head><body><header><h1>${title}</h1><p>${entries.length} 条属于你的回忆 · 导出于 ${escapeHTML(new Date().toLocaleString('zh-CN'))}</p><p>这份档案只整理你本人留下的内容，不包含 actorId、恢复密钥或内部身份关联字段。</p></header>${sections||'<p>还没有留下内容。</p>'}<footer>Pixel Memory · private archive</footer></body></html>`;
+  const safeRoom=String(state.roomCode||'private').replace(/[^A-Z0-9_-]/gi,'').slice(0,20)||'private';
+  downloadTextFileV17(`pixel-memory-${safeRoom}-my-timeline.html`,html);
+  toast('已导出你的私人时间线')
+}
 async function openMyTracesDrawer(){
   if(isViewOnly())return toast('只看模式没有作者内容');
   showDrawer('我留下的','<div class="drawer-section"><div class="activity-row">正在把你以前留下的东西整理出来…</div></div>');
@@ -475,9 +530,16 @@ async function openMyTracesDrawer(){
   ].sort((a,b)=>b.ts-a.ts);
   const names=[...new Set(entries.map(e=>authorSnapshot(e.item)).filter(Boolean))];
   if(myTraceNameFilterV16!=='all'&&!names.includes(myTraceNameFilterV16))myTraceNameFilterV16='all';
-  const filtered=entries.filter(e=>(myTraceTypeFilterV16==='all'||e.kind===myTraceTypeFilterV16)&&(myTraceNameFilterV16==='all'||authorSnapshot(e.item)===myTraceNameFilterV16));
+  const q=myTraceQueryV17.trim().toLocaleLowerCase('zh-CN');
+  const filtered=entries.filter(e=>
+    (myTraceTypeFilterV16==='all'||e.kind===myTraceTypeFilterV16)&&
+    (myTraceNameFilterV16==='all'||authorSnapshot(e.item)===myTraceNameFilterV16)&&
+    (!q||traceSearchTextV17(e).includes(q))
+  );
   const groups=new Map();
   filtered.forEach(e=>{const y=traceYearV16(e.ts);if(!groups.has(y))groups.set(y,[]);groups.get(y).push(e)});
+  const years=[...groups.keys()],latestYear=years[0]||'';
+  const activelyFiltering=!!q||myTraceTypeFilterV16!=='all'||myTraceNameFilterV16!=='all';
   const typeButtons=[['all','全部'],['note','留言'],['memento','纪念物'],['photo','合影'],['quest','Outside']].map(([k,v])=>`<button class="trace-filter-v16 press ${myTraceTypeFilterV16===k?'selected':''}" data-trace-type-v16="${k}">${v}</button>`).join('');
   const nameOptions=['<option value="all">全部历史名字</option>',...names.map(n=>`<option value="${escapeHTML(n)}" ${myTraceNameFilterV16===n?'selected':''}>${escapeHTML(n)}</option>`)].join('');
   const entryHtml=e=>{
@@ -487,25 +549,43 @@ async function openMyTracesDrawer(){
     if(e.kind==='photo')return `<article class="trace-card-v16" data-trace-kind="photo"><div class="trace-card-head-v16"><span>📷 合影</span><small>${date} · ${name}</small></div><p>${(i.names||[]).map(escapeHTML).join('、')||'一次合影'}</p><button class="button danger small press" data-my-photo-delete="${escapeHTML(i.id)}">⌫ 删除这次记录</button></article>`;
     return `<article class="trace-card-v16" data-trace-kind="quest"><div class="trace-card-head-v16"><span>✦ Outside</span><small>${date} · ${name}${editedMarker(i)}</small></div><p><b>${escapeHTML(i.title||'门外回忆')}</b><br>${escapeHTML(i.text||'')}</p><div class="memory-detail-actions"><button class="button secondary small press" data-my-quest-edit="${escapeHTML(i.id)}">✎ 修改</button><button class="button danger small press" data-my-quest-delete="${escapeHTML(i.id)}">⌫ 删除</button></div></article>`;
   };
-  const timeline=[...groups.entries()].map(([year,list])=>`<section class="trace-year-v16"><div class="trace-year-label-v16"><b>${escapeHTML(year)}</b><span>${list.length} 条</span></div><div class="trace-year-list-v16">${list.map(entryHtml).join('')}</div></section>`).join('');
-  const empty='<div class="activity-row">这个筛选条件下还没有内容。</div>';
+  const timeline=[...groups.entries()].map(([year,list])=>{
+    const open=activelyFiltering||year===latestYear||myTraceExpandedYearsV17.has(year);
+    return `<section class="trace-year-v16 ${open?'is-open':'is-collapsed'}" data-trace-year-section-v17="${escapeHTML(year)}"><button class="trace-year-label-v16 press" data-trace-year-toggle-v17="${escapeHTML(year)}" aria-expanded="${open?'true':'false'}"><span><b>${escapeHTML(year)}</b><small>${list.length} 条</small></span><i>${open?'−':'＋'}</i></button><div class="trace-year-list-v16 ${open?'':'hidden'}">${list.map(entryHtml).join('')}</div></section>`;
+  }).join('');
+  const empty=q?'<div class="activity-row">没有找到包含这个关键词的内容。</div>':'<div class="activity-row">这个筛选条件下还没有内容。</div>';
   showDrawer('我留下的',`
     <div class="drawer-section my-traces-summary-v16">
       <h4>PRIVATE TIMELINE · 只有你能看到</h4>
       <div class="person-row"><span>跨名字留下的内容</span><b>${entries.length}</b></div>
       <small>系统只在你本人视角把历史身份连续起来。别人仍只会看到每条回忆当时的名字。</small>
-      <div class="trace-recovery-row-v16"><button id="myTraceRecoveryV16" class="button secondary full press">⇄ 换设备继续 · 保存/恢复个人身份</button></div>
+      <div class="trace-recovery-row-v16"><button id="myTraceRecoveryV16" class="button secondary full press">⇄ 换设备继续 · 保存/恢复个人身份</button><button id="myTraceExportV17" class="button secondary full press">⇩ 导出我的私人时间线</button></div>
     </div>
     <div class="drawer-section trace-controls-v16">
-      <h4>整理方式</h4>
+      <h4>查找与整理</h4>
+      <div class="trace-search-v17"><input id="myTraceSearchV17" value="${escapeHTML(myTraceQueryV17)}" maxlength="60" placeholder="搜毕业、旅行、蛋糕…"><button id="myTraceSearchBtnV17" class="button secondary small press">搜索</button>${q?'<button id="myTraceClearSearchV17" class="button secondary small press">清除</button>':''}</div>
       <div class="trace-filter-row-v16">${typeButtons}</div>
       <label class="trace-name-filter-v16"><span>按历史名字</span><select id="myTraceNameFilterV16">${nameOptions}</select></label>
+      <small class="trace-result-count-v17">当前显示 ${filtered.length} / ${entries.length} 条${q?` · 搜索“${escapeHTML(myTraceQueryV17.trim())}”`:''}</small>
     </div>
-    <div class="drawer-section my-trace-timeline-v16"><h4>我的时间线 · 按年份</h4>${timeline||empty}</div>`);
+    <div class="drawer-section my-trace-timeline-v16"><h4>我的时间线 · 最近一年展开</h4>${timeline||empty}</div>`);
   setTimeout(()=>{
+    const runSearch=()=>{myTraceQueryV17=$('#myTraceSearchV17').value.trim();openMyTracesDrawer()};
+    $('#myTraceSearchBtnV17').onclick=runSearch;
+    $('#myTraceSearchV17').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();runSearch()}};
+    $('#myTraceClearSearchV17')&&($('#myTraceClearSearchV17').onclick=()=>{myTraceQueryV17='';openMyTracesDrawer()});
     $$('[data-trace-type-v16]').forEach(b=>b.onclick=()=>{myTraceTypeFilterV16=b.dataset.traceTypeV16;openMyTracesDrawer()});
     $('#myTraceNameFilterV16').onchange=e=>{myTraceNameFilterV16=e.target.value;openMyTracesDrawer()};
+    $$('[data-trace-year-toggle-v17]').forEach(b=>b.onclick=()=>{
+      const year=b.dataset.traceYearToggleV17,section=b.closest('[data-trace-year-section-v17]'),list=section?.querySelector('.trace-year-list-v16');
+      if(!section||!list)return;
+      const opening=list.classList.contains('hidden');
+      list.classList.toggle('hidden',!opening);section.classList.toggle('is-open',opening);section.classList.toggle('is-collapsed',!opening);
+      b.setAttribute('aria-expanded',opening?'true':'false');const icon=b.querySelector('i');if(icon)icon.textContent=opening?'−':'＋';
+      if(opening)myTraceExpandedYearsV17.add(year);else myTraceExpandedYearsV17.delete(year)
+    });
     $('#myTraceRecoveryV16').onclick=()=>window.PixelRecovery?.open?.();
+    $('#myTraceExportV17').onclick=()=>exportPrivateTimelineV17(entries);
     $$('[data-my-note-edit]').forEach(b=>b.onclick=()=>{const n=notes.find(x=>x.id===b.dataset.myNoteEdit);if(n)openNoteEdit(n,openMyTracesDrawer)});
     $$('[data-my-note-delete]').forEach(b=>b.onclick=()=>{const n=notes.find(x=>x.id===b.dataset.myNoteDelete);if(n)removeOwnNote(n,openMyTracesDrawer)});
     $$('[data-my-memento]').forEach(b=>b.onclick=()=>{const m=mementos.find(x=>x.id===b.dataset.myMemento);if(m)openMementoDetail(m)});
@@ -514,6 +594,12 @@ async function openMyTracesDrawer(){
     $$('[data-my-quest-delete]').forEach(b=>b.onclick=()=>{const q=quests.find(x=>x.id===b.dataset.myQuestDelete);if(q)removeOwnQuestTrace(q)});
   },0)
 }
+window.PixelAuthorContinuityV17={
+  version:'15.17',
+  open:openMyTracesDrawer,
+  remind:scheduleIdentityRecoveryReminderV17,
+  export:()=>openMyTracesDrawer()
+};
 
 // drawer
 function showDrawer(title,html){$('#drawerTitle').textContent=title;$('#drawerBody').innerHTML=html;$('#roomDrawer').classList.remove('hidden');$('#roomDrawer').setAttribute('aria-hidden','false')}function closeDrawer(){$('#roomDrawer').classList.add('hidden');$('#roomDrawer').setAttribute('aria-hidden','true')}$('#closeRoomDrawer').onclick=closeDrawer;
