@@ -6,12 +6,12 @@
     </view>
     <view class="room-code">
       <text>{{code}}</text>
-      <small>房间码</small>
+      <text class="room-code-label">房间码</text>
     </view>
   </view>
 
   <view class="status-row">
-    <view class="online"><i></i>{{players.length}} 人在线</view>
+    <view class="online"><view class="online-dot"></view>{{players.length}} 人在线</view>
     <view class="status-tip">移动、聊天，或者一起庆祝</view>
   </view>
 
@@ -19,7 +19,7 @@
     <view class="wall"></view>
     <view class="floor"></view>
     <view class="window"></view>
-    <view class="string-lights"><i></i><i></i><i></i><i></i><i></i></view>
+    <view class="string-lights"><view></view><view></view><view></view><view></view><view></view></view>
     <view class="sofa"></view>
     <view class="rug"></view>
     <view class="cake">✦</view>
@@ -52,10 +52,10 @@
   </view>
 
   <view class="action-dock">
-    <button class="action {{celebrated?'on':''}}" bindtap="celebrate"><text>✦</text><small>{{celebrated?'已庆祝':'庆祝'}}</small></button>
-    <button class="action {{recording?'recording':''}}" bindtap="toggleRecord"><text>🎙</text><small>{{recording?'停止':'录音'}}</small></button>
-    <button class="action" bindtap="playLastVoice"><text>▶</text><small>最近语音</small></button>
-    <button class="action" open-type="share"><text>⌁</text><small>邀请好友</small></button>
+    <button class="action {{celebrated?'on':''}}" bindtap="celebrate"><text>✦</text><text class="action-label">{{celebrated?'已庆祝':'庆祝'}}</text></button>
+    <button class="action {{recording?'recording':''}}" bindtap="toggleRecord"><text>🎙</text><text class="action-label">{{recording?'停止':'录音'}}</text></button>
+    <button class="action" bindtap="playLastVoice"><text>▶</text><text class="action-label">最近语音</text></button>
+    <button class="action" open-type="share"><text>⌁</text><text class="action-label">邀请好友</text></button>
   </view>
 
   <view class="room-foot">网页端与小程序端共用同一个房间码和实时房间。</view>
