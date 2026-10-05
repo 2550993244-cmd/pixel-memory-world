@@ -23,13 +23,15 @@
     <view class="sofa"></view>
     <view class="rug"></view>
     <view class="cake">✦</view>
-    <view class="door">OUTSIDE</view>
+    <view class="door" bindtap="goOutside">OUTSIDE</view>
 
     <block wx:for="{{players}}" wx:key="id">
-      <view class="person {{item.id===playerId?'me':''}}" style="left:{{item.x}}%;top:{{item.y}}%;">
+      <view class="person {{item.id===playerId?'me':''}} hair-{{item.hair||'1'}} outfit-{{item.outfit||'coral'}}" style="left:{{item.x}}%;top:{{item.y}}%;">
         <view class="pname">{{item.name}}</view>
+        <view class="hair"></view>
         <view class="head"></view>
         <view class="body"></view>
+        <view class="held">{{item.item||'🎁'}}</view>
       </view>
     </block>
 
@@ -99,6 +101,21 @@
       <view class="metric">
         <text class="metric-value">{{memoryStats.photos}}</text>
         <text class="metric-label">照片</text>
+      </view>
+    </view>
+
+    <view class="sheet-section">
+      <view class="section-row">
+        <text class="section-title">继续逛这间世界</text>
+        <text class="section-note">小程序版完整入口</text>
+      </view>
+      <view class="feature-grid">
+        <button class="feature" data-tab="notes" bindtap="goMemory"><text>✎</text><text class="feature-label">留言墙</text></button>
+        <button class="feature" data-tab="photos" bindtap="goMemory"><text>▣</text><text class="feature-label">照片墙</text></button>
+        <button class="feature" data-tab="mementos" bindtap="goMemory"><text>✦</text><text class="feature-label">纪念物</text></button>
+        <button class="feature" bindtap="goAvatar"><text>☺</text><text class="feature-label">我的形象</text></button>
+        <button class="feature" bindtap="goOutside"><text>♣</text><text class="feature-label">Outside</text></button>
+        <button class="feature" bindtap="goKeepsake"><text>▤</text><text class="feature-label">纪念卡</text></button>
       </view>
     </view>
 
