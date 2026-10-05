@@ -1152,22 +1152,24 @@ const { chromium } = require('playwright');
 
   const editorVisualAudit=await page.evaluate(()=>{
     const stage=document.querySelector('#worldStage');
-    const halo=document.querySelector('.pm-editor-drop-halo-v18');
     const pseudo=getComputedStyle(stage,'::after');
-    const hs=getComputedStyle(halo);
+    const status=document.querySelector('.pm-editor-drag-status-v19');
+    const ss=getComputedStyle(status);
     return {
-      promptLeft:pseudo.left,
-      promptTop:pseudo.top,
-      promptRadius:pseudo.borderRadius,
-      promptBackground:pseudo.backgroundColor,
-      haloExists:!!halo,
-      haloOpacity:parseFloat(hs.opacity||'0'),
-      haloZ:Number.parseFloat(hs.zIndex)||0
+      pseudoBackground:pseudo.backgroundImage,
+      pseudoColor:pseudo.backgroundColor,
+      pseudoBackdrop:pseudo.backdropFilter||pseudo.webkitBackdropFilter||'none',
+      stageFilter:getComputedStyle(stage).filter,
+      oldHaloExists:!!document.querySelector('.pm-editor-drop-halo-v18'),
+      statusExists:!!status,
+      statusOpacity:parseFloat(ss.opacity||'0')
     };
   });
-  console.log('V15_18_EDITOR_VISUAL_IDLE',editorVisualAudit);
-  if(!editorVisualAudit.haloExists||editorVisualAudit.promptLeft==='50%'||parseFloat(editorVisualAudit.promptRadius)>14||editorVisualAudit.haloOpacity>.05){
-    throw new Error('V15.18 editor still uses the centered white selection treatment '+JSON.stringify(editorVisualAudit));
+  console.log('EDITOR_VISUAL_IDLE',editorVisualAudit);
+  if(editorVisualAudit.oldHaloExists||!editorVisualAudit.statusExists||editorVisualAudit.statusOpacity>.05||
+     editorVisualAudit.pseudoBackground!=='none'||editorVisualAudit.pseudoColor!=='rgba(0, 0, 0, 0)'||
+     editorVisualAudit.pseudoBackdrop!=='none'||editorVisualAudit.stageFilter!=='none'){
+    throw new Error('room editor is dimming or covering the stage '+JSON.stringify(editorVisualAudit));
   }
 
   const sofaBox = await page.locator('.room-sofa').boundingBox();
@@ -1175,27 +1177,28 @@ const { chromium } = require('playwright');
   await page.mouse.move(sofaBox.x + sofaBox.width/2, sofaBox.y + sofaBox.height/2);
   await page.mouse.down();
   await page.mouse.move(sofaBox.x + sofaBox.width/2 + 42, sofaBox.y + sofaBox.height/2 - 18, {steps:5});
-  const dragHaloAudit=await page.evaluate(()=>{
-    const halo=document.querySelector('.pm-editor-drop-halo-v18');
+  const dragStatusAudit=await page.evaluate(()=>{
+    const status=document.querySelector('.pm-editor-drag-status-v19');
     const sofa=document.querySelector('.room-sofa');
-    const h=getComputedStyle(halo),sr=sofa.getBoundingClientRect(),hr=halo.getBoundingClientRect();
+    const pseudo=getComputedStyle(document.querySelector('#worldStage'),'::after');
     return {
-      opacity:parseFloat(h.opacity||'0'),
-      width:hr.width,height:hr.height,
-      haloZ:Number.parseFloat(h.zIndex)||0,
-      sofaZ:Number.parseFloat(getComputedStyle(sofa).zIndex)||0,
-      left:parseFloat(halo.style.left)||0,
-      top:parseFloat(halo.style.top)||0
+      opacity:parseFloat(getComputedStyle(status).opacity||'0'),
+      text:status?.textContent?.trim()||'',
+      dragging:sofa?.classList.contains('pm-dragging-v15')||false,
+      oldHaloExists:!!document.querySelector('.pm-editor-drop-halo-v18'),
+      pseudoBackground:pseudo.backgroundImage,
+      pseudoBackdrop:pseudo.backdropFilter||pseudo.webkitBackdropFilter||'none'
     };
   });
-  console.log('V15_18_EDITOR_DROP_HALO',dragHaloAudit);
-  if(dragHaloAudit.opacity<.8||dragHaloAudit.width<60||dragHaloAudit.height>40||dragHaloAudit.haloZ>=dragHaloAudit.sofaZ||dragHaloAudit.left<=4||dragHaloAudit.top<=10){
-    throw new Error('V15.18 grounded furniture drop halo failed '+JSON.stringify(dragHaloAudit));
+  console.log('EDITOR_DRAG_STATUS',dragStatusAudit);
+  if(dragStatusAudit.opacity<.8||!dragStatusAudit.dragging||!/正在移动/.test(dragStatusAudit.text)||!/沙发/.test(dragStatusAudit.text)||
+     dragStatusAudit.oldHaloExists||dragStatusAudit.pseudoBackground!=='none'||dragStatusAudit.pseudoBackdrop!=='none'){
+    throw new Error('drag-only furniture status failed '+JSON.stringify(dragStatusAudit));
   }
   await page.mouse.up();
   await page.waitForTimeout(180);
-  const haloAfterDrop=await page.evaluate(()=>parseFloat(getComputedStyle(document.querySelector('.pm-editor-drop-halo-v18')).opacity||'1'));
-  if(haloAfterDrop>.05) throw new Error('V15.18 furniture drop halo remains visible after placement');
+  const statusAfterDrop=await page.evaluate(()=>parseFloat(getComputedStyle(document.querySelector('.pm-editor-drag-status-v19')).opacity||'1'));
+  if(statusAfterDrop>.05) throw new Error('furniture drag status remains visible after placement');
   await page.waitForTimeout(100);
 
   const guestMemento=page.locator('.memento[data-id="ci-guest-memento"]');
@@ -1368,7 +1371,7 @@ const { chromium } = require('playwright');
     throw new Error('Browser errors:\n' + errors.join('\n'));
   }
 
-  console.log('SMOKE_OK V15.18 visual cohesion -> outdoor camera palette -> grounded furniture placement -> quieter landing cover -> private memory archive -> author continuity -> privacy -> recovery -> curator -> warm atlas -> tiled camera -> revisions -> join');
+  console.log('SMOKE_OK editor drag-only status -> no stage dimming -> outdoor camera palette -> quieter landing cover -> private memory archive -> author continuity -> privacy -> recovery -> curator -> warm atlas -> tiled camera -> revisions -> join');
   await browser.close();
 })().catch(async err => {
   console.error(err);
