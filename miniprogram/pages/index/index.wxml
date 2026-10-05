@@ -1,28 +1,43 @@
-<view class="page">
-  <view class="eyebrow">PIXEL MEMORY · WECHAT</view>
-  <view class="title">把重要的日子，\n变成一个可以走进去的地方。</view>
-  <view class="muted">小程序轻量版先负责邀请、加入房间、聊天、庆祝与录音。网页端和小程序端共用同一个房间码。</view>
+<view class="page landing-page">
+  <view class="eyebrow">PIXEL MEMORY · 小小世界</view>
+  <view class="title">把重要的日子，<text class="accent">变成一个可以走进去的地方。</text></view>
+  <view class="muted intro">朋友不在同一座城市，也能在同一间像素小屋里等你。</view>
+
+  <view class="room-preview">
+    <view class="preview-head"><text>● LIVE ROOM</text><text>20:08</text></view>
+    <view class="scene">
+      <view class="window"></view><view class="sofa"></view><view class="rug"></view>
+      <view class="table">✦</view>
+      <view class="person one">羽</view><view class="person two">哲</view><view class="person three">你</view>
+      <view class="bubble">嘘，再等等 ✦</view>
+    </view>
+    <view class="preview-note">一个邀请码 · 大家进入同一个世界</view>
+  </view>
 
   <view class="card panel">
     <view class="tabs">
-      <view class="tab {{mode==='join'?'on':''}}" bindtap="setJoin">加入</view>
-      <view class="tab {{mode==='create'?'on':''}}" bindtap="setCreate">创建</view>
+      <view class="tab {{mode==='join'?'on':''}}" bindtap="setJoin"><text>加入世界</text><small>我有邀请码</small></view>
+      <view class="tab {{mode==='create'?'on':''}}" bindtap="setCreate"><text>创建世界</text><small>为重要的人准备</small></view>
     </view>
 
     <block wx:if="{{mode==='join'}}">
+      <view class="form-title">找到那间正在等你的房间</view>
       <view class="label">六位邀请码</view>
-      <input class="input code" maxlength="6" value="{{code}}" bindinput="onCode" placeholder="8L3Q2K" />
-      <view class="label">你的名字</view>
-      <input class="input" maxlength="10" value="{{name}}" bindinput="onName" placeholder="小林" />
-      <button class="btn" bindtap="joinRoom">找到这间房</button>
+      <input class="input code" maxlength="6" value="{{code}}" bindinput="onCode" placeholder="8L3Q2K"/>
+      <view class="label">怎么称呼你？</view>
+      <input class="input" maxlength="10" value="{{name}}" bindinput="onName" placeholder="例如：小林"/>
+      <button class="btn" loading="{{loading}}" disabled="{{loading}}" bindtap="joinRoom">进入这间小屋</button>
     </block>
 
     <block wx:else>
+      <view class="form-title">先为这一天点亮一间小屋</view>
       <view class="label">为谁创建？</view>
-      <input class="input" maxlength="12" value="{{honoree}}" bindinput="onHonoree" placeholder="小羽" />
+      <input class="input" maxlength="12" value="{{honoree}}" bindinput="onHonoree" placeholder="例如：小羽"/>
       <view class="label">你叫什么？</view>
-      <input class="input" maxlength="10" value="{{name}}" bindinput="onName" placeholder="房主" />
-      <button class="btn" bindtap="createRoom">创建一间联网小屋</button>
+      <input class="input" maxlength="10" value="{{name}}" bindinput="onName" placeholder="例如：阿哲"/>
+      <button class="btn" loading="{{loading}}" disabled="{{loading}}" bindtap="createRoom">创建我的小小世界</button>
     </block>
   </view>
+
+  <view class="footnote">✦ 无需先注册账号 · 正式发布前会补齐隐私说明与内容管理</view>
 </view>
