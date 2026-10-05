@@ -66,8 +66,8 @@ const { chromium } = require('playwright');
     inviteVersion: window.PixelInvite?.version || null
   }));
   console.log('V15_1_DIAG', v15Diag);
-  if (v15Diag.runtime?.version !== '15.16') throw new Error('V15.16 systems runtime missing');
-  if (v15Diag.retentionVersion !== '15.5' || v15Diag.recoveryVersion !== '15.7' || v15Diag.inviteVersion !== '15.13') throw new Error('V15.16 invite/retention/recovery runtime missing');
+  if (v15Diag.runtime?.version !== '15.17') throw new Error('V15.17 systems runtime missing');
+  if (v15Diag.retentionVersion !== '15.5' || v15Diag.recoveryVersion !== '15.7' || v15Diag.inviteVersion !== '15.13') throw new Error('V15.17 invite/retention/recovery runtime missing');
   if (v15Diag.sceneVersion !== '15.0') throw new Error('V15 layered scene map missing');
   if (v15Diag.mapRuntime.source !== 'tiled-json' || v15Diag.mapRuntime.collisionCount < 3 || v15Diag.mapRuntime.pathCount < 6) {
     throw new Error('V15.1 Tiled map runtime did not load canonical JSON');
@@ -544,6 +544,12 @@ const { chromium } = require('playwright');
     await new Promise(r=>setTimeout(r,120));
   });
 
+  // V15.17 D025-D029=A: add a real older-year authored memory for search/collapse/export coverage.
+  await contributorPage.evaluate(async()=>{
+    const item={id:'v17-old-year-note',authorId:state.player.actorId,authorName:state.player.name,by:state.player.name,text:'跨年旅行回忆 · 海边散步',time:Date.now()-400*24*60*60*1000};
+    await commitMemoryOp({kind:'note:add',item});
+  });
+
   // V15.16 D020-D024=A: author-centric entry points, undo, recovery shortcut, filters and private timeline.
   await contributorPage.evaluate(()=>openContributorAvatarCustomizer());
   await contributorPage.waitForSelector('#openMyTracesFromAvatarV16',{timeout:3000});
@@ -581,8 +587,49 @@ const { chromium } = require('playwright');
     throw new Error('V15.16 private timeline / filters failed '+JSON.stringify(privateTraceAudit));
   }
 
+  const yearCollapseAudit=await contributorPage.evaluate(()=>{
+    const sections=[...document.querySelectorAll('[data-trace-year-section-v17]')];
+    return {
+      count:sections.length,
+      states:sections.map(s=>({
+        year:s.dataset.traceYearSectionV17,
+        expanded:s.querySelector('[data-trace-year-toggle-v17]')?.getAttribute('aria-expanded'),
+        hidden:s.querySelector('.trace-year-list-v16')?.classList.contains('hidden')
+      }))
+    };
+  });
+  if(yearCollapseAudit.count<2||yearCollapseAudit.states[0]?.expanded!=='true'||yearCollapseAudit.states.slice(1).some(x=>x.expanded!=='false'||!x.hidden)){
+    throw new Error('V15.17 older years are not collapsed by default '+JSON.stringify(yearCollapseAudit));
+  }
+
+  await contributorPage.locator('#myTraceSearchV17').fill('跨年旅行');
+  await contributorPage.locator('#myTraceSearchBtnV17').click();
+  await contributorPage.waitForFunction(()=>document.querySelectorAll('.trace-card-v16').length===1);
+  const searchAudit=await contributorPage.evaluate(()=>({
+    text:document.querySelector('#drawerBody')?.innerText||'',
+    cards:document.querySelectorAll('.trace-card-v16').length,
+    open:[...document.querySelectorAll('[data-trace-year-toggle-v17]')].every(x=>x.getAttribute('aria-expanded')==='true')
+  }));
+  if(searchAudit.cards!==1||!searchAudit.text.includes('跨年旅行回忆')||!searchAudit.open) throw new Error('V15.17 private search did not surface/expand match '+JSON.stringify(searchAudit));
+  await contributorPage.locator('#myTraceClearSearchV17').click();
+  await contributorPage.waitForFunction(()=>document.querySelectorAll('.trace-card-v16').length>=3);
+
+  const exportAudit=await contributorPage.evaluate(()=>{
+    const html=PixelAuthorContinuityV17.buildExport([{
+      kind:'note',label:'留言',ts:Date.now(),item:{text:'导出安全测试',authorName:'Lynn测试',authorId:'actor-secret-v17',actorToken:'token-secret-v17'}
+    }]);
+    return {
+      version:PixelAuthorContinuityV17.version,
+      hasMemory:html.includes('导出安全测试')&&html.includes('Lynn测试'),
+      leaksActor:html.includes('actor-secret-v17')||html.includes('authorId'),
+      leaksToken:html.includes('token-secret-v17')||html.includes('actorToken')
+    };
+  });
+  if(exportAudit.version!=='15.17'||!exportAudit.hasMemory||exportAudit.leaksActor||exportAudit.leaksToken) throw new Error('V15.17 private export safety failed '+JSON.stringify(exportAudit));
+
   await contributorPage.locator('[data-trace-type-v16="note"]').click();
-  await contributorPage.waitForFunction(()=>document.querySelectorAll('.trace-card-v16').length>=2);
+  await contributorPage.waitForFunction(()=>document.querySelectorAll('.trace-card-v16').length>=3);
+  await contributorPage.waitForFunction(()=>document.querySelectorAll('.trace-card-v16').length>=3);
   await contributorPage.selectOption('#myTraceNameFilterV16',{label:'参与者测试'});
   await contributorPage.waitForFunction(()=>document.querySelectorAll('.trace-card-v16').length===1);
   const filteredTraceAudit=await contributorPage.evaluate(()=>document.querySelector('#drawerBody')?.innerText||'');
@@ -614,7 +661,27 @@ const { chromium } = require('playwright');
     toast:document.querySelector('#toast')?.innerText||''
   }),undoTargetId);
   if(!deleteUndoAudit.restored)throw new Error('V15.16 delete undo did not restore authored note '+JSON.stringify(deleteUndoAudit));
-  console.log('V15_16_RETURNING_CONTINUITY_AUDIT',{avatarContinuityAudit,privateTraceAudit,recoveryShortcutAudit,deleteUndoAudit});
+  const recoveryReminderAudit=await contributorPage.evaluate(async()=>{
+    const key='pixel-memory-author-recovery-reminder-v17:'+state.player.actorId;
+    localStorage.removeItem(key);
+    PixelAuthorContinuityV17.remind();
+    await new Promise(r=>setTimeout(r,2450));
+    const first={
+      marked:localStorage.getItem(key)==='shown',
+      action:document.querySelector('#toast .toast-undo-v16')?.textContent||'',
+      actionable:document.querySelector('#toast')?.classList.contains('has-action-v16')||false
+    };
+    toast('提醒测试已完成');
+    PixelAuthorContinuityV17.remind();
+    await new Promise(r=>setTimeout(r,120));
+    const secondAction=document.querySelector('#toast')?.classList.contains('has-action-v16')||false;
+    return {first,secondAction};
+  });
+  if(!recoveryReminderAudit.first.marked||!/保存身份钥匙/.test(recoveryReminderAudit.first.action)||!recoveryReminderAudit.first.actionable||recoveryReminderAudit.secondAction){
+    throw new Error('V15.17 one-time recovery reminder failed '+JSON.stringify(recoveryReminderAudit));
+  }
+
+  console.log('V15_17_PRIVATE_ARCHIVE_AUDIT',{avatarContinuityAudit,privateTraceAudit,yearCollapseAudit,searchAudit,exportAudit,recoveryShortcutAudit,deleteUndoAudit,recoveryReminderAudit});
   await contributorPage.evaluate(()=>broadcast('leave'));
   await page.waitForFunction(()=>![...state.players.values()].some(p=>p.name==='Lynn测试'),null,{timeout:5000});
   await contributorPage.close();
@@ -1208,7 +1275,7 @@ const { chromium } = require('playwright');
     throw new Error('Browser errors:\n' + errors.join('\n'));
   }
 
-  console.log('SMOKE_OK V15.16 returning contributor timeline -> author delete undo -> recovery shortcut -> type/name/year organization -> private my-traces -> author edit/delete -> name-only history -> edited markers -> no name-based recovery -> private alias linkage -> historical author snapshots -> live contributor appearance -> returning prefill -> contributor ceremony -> instant spectators -> invisible viewers -> dual invite roles -> archive retention -> recovery -> curator -> warm atlas -> tiled camera -> revisions -> join');
+  console.log('SMOKE_OK V15.17 private search -> safe private HTML export -> one-time recovery reminder -> recent-year expansion -> no contributor recycle bin -> returning contributor timeline -> author delete undo -> recovery shortcut -> type/name/year organization -> private my-traces -> author edit/delete -> name-only history -> edited markers -> no name-based recovery -> private alias linkage -> historical author snapshots -> live contributor appearance -> returning prefill -> contributor ceremony -> instant spectators -> invisible viewers -> dual invite roles -> archive retention -> recovery -> curator -> warm atlas -> tiled camera -> revisions -> join');
   await browser.close();
 })().catch(async err => {
   console.error(err);
