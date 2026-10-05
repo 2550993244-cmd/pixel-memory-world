@@ -20,3 +20,4 @@ radial-gradient(circle at 8% 32%,rgba(125,169,187,.13),transparent 26%),
 .form-title{font-size:31rpx;font-weight:750;margin:28rpx 4rpx 2rpx}.code{font-size:43rpx;letter-spacing:14rpx;text-align:center;text-transform:uppercase;font-weight:700}
 .footnote{text-align:center;color:#8d7c72;font-size:20rpx;line-height:1.6;padding:24rpx 16rpx 4rpx}
 @media(max-width:360px){.title{font-size:48rpx}.scene{height:330rpx}.bubble{font-size:18rpx}}
+.invite-hint{margin:16rpx 2rpx 0;padding:14rpx 16rpx;border-radius:14rpx;background:#f3ebe2;color:#8a776d;font-size:19rpx;line-height:1.55}
