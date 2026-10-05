@@ -570,6 +570,7 @@ async function openMyTracesDrawer(){
       <div class="trace-filter-row-v16">${typeButtons}</div>
       <label class="trace-name-filter-v16"><span>按历史名字</span><select id="myTraceNameFilterV16">${nameOptions}</select></label>
       <small class="trace-result-count-v17">当前显示 ${filtered.length} / ${entries.length} 条${q?` · 搜索“${escapeHTML(myTraceQueryV17.trim())}”`:''}</small>
+      ${activelyFiltering?'<button id="myTraceResetFiltersV17" class="text-link trace-reset-v17 press-lite">清除搜索和筛选，查看全部</button>':''}
     </div>
     <div class="drawer-section my-trace-timeline-v16"><h4>我的时间线 · 最近一年展开</h4>${timeline||empty}</div>`);
   setTimeout(()=>{
@@ -577,7 +578,8 @@ async function openMyTracesDrawer(){
     $('#myTraceSearchBtnV17').onclick=runSearch;
     $('#myTraceSearchV17').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();runSearch()}};
     $('#myTraceClearSearchV17')&&($('#myTraceClearSearchV17').onclick=()=>{myTraceQueryV17='';openMyTracesDrawer()});
-    $$('[data-trace-type-v16]').forEach(b=>b.onclick=()=>{myTraceTypeFilterV16=b.dataset.traceTypeV16;openMyTracesDrawer()});
+    $('#myTraceResetFiltersV17')&&($('#myTraceResetFiltersV17').onclick=()=>{myTraceQueryV17='';myTraceTypeFilterV16='all';myTraceNameFilterV16='all';openMyTracesDrawer()});
+    $('[data-trace-type-v16]').forEach(b=>b.onclick=()=>{myTraceTypeFilterV16=b.dataset.traceTypeV16;openMyTracesDrawer()});
     $('#myTraceNameFilterV16').onchange=e=>{myTraceNameFilterV16=e.target.value;openMyTracesDrawer()};
     $$('[data-trace-year-toggle-v17]').forEach(b=>b.onclick=()=>{
       const year=b.dataset.traceYearToggleV17,section=b.closest('[data-trace-year-section-v17]'),list=section?.querySelector('.trace-year-list-v16');
