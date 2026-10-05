@@ -573,7 +573,8 @@ async function openMyTracesDrawer(){
       ${activelyFiltering?'<button id="myTraceResetFiltersV17" class="text-link trace-reset-v17 press-lite">清除搜索和筛选，查看全部</button>':''}
     </div>
     <div class="drawer-section my-trace-timeline-v16"><h4>我的时间线 · 最近一年展开</h4>${timeline||empty}</div>`);
-  setTimeout(()=>{
+  {
+
     const runSearch=()=>{myTraceQueryV17=$('#myTraceSearchV17').value.trim();openMyTracesDrawer()};
     $('#myTraceSearchBtnV17').onclick=runSearch;
     $('#myTraceSearchV17').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();runSearch()}};
@@ -597,7 +598,7 @@ async function openMyTracesDrawer(){
     $$('[data-my-photo-delete]').forEach(b=>b.onclick=()=>{const p=photos.find(x=>x.id===b.dataset.myPhotoDelete);if(p)removeOwnPhoto(p,openMyTracesDrawer)});
     $$('[data-my-quest-edit]').forEach(b=>b.onclick=()=>{const q=quests.find(x=>x.id===b.dataset.myQuestEdit);if(q)editOwnQuestTrace(q)});
     $$('[data-my-quest-delete]').forEach(b=>b.onclick=()=>{const q=quests.find(x=>x.id===b.dataset.myQuestDelete);if(q)removeOwnQuestTrace(q)});
-  },0)
+  }
 }
 window.PixelAuthorContinuityV17={
   version:'15.17',
