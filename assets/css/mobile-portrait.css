@@ -1,0 +1,478 @@
+/* Mobile portrait adaptation
+   9:16 is the design baseline, but the layout remains fluid for modern phone ratios.
+   Loaded last so it can safely override the desktop-first styles. */
+
+@media (max-width: 720px) and (orientation: portrait) {
+  :root{
+    --mobile-gutter: 14px;
+    --mobile-topbar: 64px;
+    --mobile-bottom-safe: max(14px, env(safe-area-inset-bottom));
+  }
+
+  html,
+  body{
+    width:100%;
+    min-width:0;
+    min-height:100%;
+    overflow-x:hidden;
+    -webkit-text-size-adjust:100%;
+    overscroll-behavior-x:none;
+  }
+
+  body{
+    min-height:100dvh;
+  }
+
+  #app,
+  main{
+    width:100%;
+    min-width:0;
+  }
+
+  .topbar{
+    min-height:var(--mobile-topbar);
+    height:var(--mobile-topbar);
+    padding:
+      env(safe-area-inset-top)
+      var(--mobile-gutter)
+      0;
+    box-sizing:content-box;
+  }
+
+  .brand{
+    min-width:0;
+    max-width:calc(100vw - 72px);
+  }
+
+  .brand > span:last-child small,
+  .topbar-right .soft-status{
+    display:none;
+  }
+
+  .screen{
+    width:100%;
+    min-width:0;
+    min-height:100svh;
+    padding:
+      calc(var(--mobile-topbar) + env(safe-area-inset-top) + 12px)
+      var(--mobile-gutter)
+      calc(24px + env(safe-area-inset-bottom));
+    box-sizing:border-box;
+    overflow-x:hidden;
+  }
+
+  /* Landing: one vertical phone composition, tuned around a 9:16 viewport. */
+  .landing-screen{
+    padding-top:calc(var(--mobile-topbar) + env(safe-area-inset-top) + 6px);
+  }
+
+  .landing-hero{
+    display:flex;
+    flex-direction:column;
+    width:100%;
+    min-height:calc(100svh - var(--mobile-topbar) - env(safe-area-inset-top));
+    gap:20px;
+    padding:12px 0 28px;
+    box-sizing:border-box;
+  }
+
+  .hero-copy{
+    width:100%;
+    max-width:none;
+    padding-top:4px!important;
+  }
+
+  .hero-kicker{
+    margin-bottom:10px;
+    font-size:9px;
+    letter-spacing:.14em;
+  }
+
+  .hero-copy h1,
+  body.v14-ready .hero-copy h1{
+    max-width:100%;
+    margin:0 0 12px;
+    font-size:clamp(34px,10.6vw,46px);
+    line-height:1.04;
+    letter-spacing:-.045em;
+  }
+
+  .hero-copy>p,
+  body.v14-ready .hero-copy>p{
+    max-width:100%;
+    margin:0 0 16px;
+    font-size:13px;
+    line-height:1.72;
+  }
+
+  .hero-cta,
+  body.v14-ready .hero-cta{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:9px;
+    width:100%;
+  }
+
+  .hero-cta .button{
+    width:100%;
+    min-height:50px;
+  }
+
+  .hero-proof{
+    margin-top:14px;
+    gap:10px;
+  }
+
+  .hero-preview-wrap{
+    width:100%;
+    max-width:none;
+    margin:0;
+  }
+
+  .hero-scene-shell{
+    width:100%;
+  }
+
+  .hero-room{
+    width:100%;
+    height:auto!important;
+    aspect-ratio: 9 / 7;
+    min-height:0;
+    max-height:none;
+  }
+
+  .preview-label{
+    margin-bottom:8px;
+    font-size:8px;
+  }
+
+  .preview-tip{
+    margin-top:7px;
+    font-size:8px;
+  }
+
+  .compact-features{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:8px;
+    margin-top:10px;
+  }
+
+  .compact-features article,
+  body.v14-ready .compact-features article{
+    min-height:0;
+    padding:14px;
+  }
+
+  .story-band,
+  body.v14-ready .story-band{
+    width:100%;
+    margin-top:44px;
+    padding-top:36px;
+    padding-inline:0;
+    gap:28px;
+  }
+
+  .story-copy h2{
+    font-size:clamp(28px,8.5vw,38px);
+  }
+
+  .memory-strip{
+    width:100%;
+    min-width:0;
+  }
+
+  /* Creation / avatar flows: cards become one-column and thumb-friendly. */
+  .flow-screen{
+    padding-inline:var(--mobile-gutter)!important;
+  }
+
+  .flow-wrap,
+  #creator .flow-wrap,
+  .avatar-layout{
+    width:100%;
+    max-width:none;
+    grid-template-columns:1fr!important;
+    gap:14px;
+  }
+
+  #creator .creator-preview-panel,
+  .flow-intro{
+    position:static!important;
+    width:100%;
+    padding:0;
+  }
+
+  #creator .creator-preview-panel h2{
+    font-size:34px;
+    line-height:1.04;
+  }
+
+  .creator-scene-preview{
+    height:auto!important;
+    aspect-ratio:9 / 7;
+  }
+
+  .creator-preview-meta{
+    grid-template-columns:1fr!important;
+  }
+
+  .flow-card,
+  #creator .flow-card,
+  .avatar-builder-screen .avatar-controls{
+    width:100%;
+    min-width:0;
+    padding:18px 14px!important;
+    box-sizing:border-box;
+  }
+
+  .occasion-grid{
+    grid-template-columns:1fr 1fr!important;
+    gap:8px;
+  }
+
+  .theme-grid,
+  .music-grid,
+  .two-fields,
+  .builder-row{
+    grid-template-columns:1fr!important;
+  }
+
+  .choice-card,
+  .theme-choice,
+  .music-choice{
+    min-width:0;
+  }
+
+  .field input,
+  .field textarea,
+  .field select,
+  button,
+  .button{
+    font-size:max(16px, 1em);
+  }
+
+  .avatar-builder-screen .avatar-stage{
+    width:100%;
+    min-height:470px!important;
+    padding:56px 14px 28px!important;
+    box-sizing:border-box;
+  }
+
+  /* Main room / map: reserve almost the whole phone viewport for the world. */
+  .world-screen{
+    min-height:100svh;
+    padding:
+      calc(var(--mobile-topbar) + env(safe-area-inset-top) + 6px)
+      8px
+      calc(8px + env(safe-area-inset-bottom))!important;
+  }
+
+  .world-bar{
+    width:100%;
+    min-width:0;
+    min-height:46px;
+    margin:0 0 6px;
+    gap:6px;
+    align-items:center;
+  }
+
+  .world-title-block{
+    min-width:0;
+  }
+
+  .world-title-block h2{
+    max-width:44vw;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  .world-bar-actions{
+    margin-left:auto;
+    gap:4px;
+  }
+
+  .world-bar-actions .status-chip{
+    min-width:42px;
+    padding:0 8px;
+  }
+
+  .world-shell{
+    width:100%;
+    max-width:none;
+    min-width:0;
+    padding-bottom:0;
+  }
+
+  .world-stage,
+  body.pm-world .world-stage,
+  .quest-shell,
+  body.pm-world .quest-shell{
+    width:100%;
+    height:calc(100svh - var(--mobile-topbar) - env(safe-area-inset-top) - 66px - env(safe-area-inset-bottom))!important;
+    min-height:0!important;
+    max-height:none!important;
+    border-radius:14px;
+  }
+
+  .world-dock,
+  body.pm-world .world-dock{
+    left:8px!important;
+    right:8px!important;
+    bottom:calc(8px + env(safe-area-inset-bottom))!important;
+    width:auto!important;
+    max-width:none!important;
+    transform:none!important;
+    overflow-x:auto;
+    overflow-y:hidden;
+    justify-content:flex-start;
+    scrollbar-width:none;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  .world-dock::-webkit-scrollbar{
+    display:none;
+  }
+
+  .dock-button,
+  body.pm-world .dock-button{
+    flex:0 0 62px;
+    min-width:62px!important;
+    min-height:56px;
+  }
+
+  .near-prompt{
+    bottom:calc(84px + env(safe-area-inset-bottom));
+    max-width:calc(100vw - 28px);
+    white-space:normal;
+    text-align:center;
+  }
+
+  .dock-popover{
+    left:10px;
+    right:10px;
+    bottom:calc(82px + env(safe-area-inset-bottom));
+    width:auto;
+    max-height:44svh;
+    overflow:auto;
+    transform:none;
+  }
+
+  .pm-touch-pad{
+    bottom:calc(88px + env(safe-area-inset-bottom))!important;
+  }
+
+  /* Drawers and modals become bottom sheets instead of narrow desktop panels. */
+  .side-drawer{
+    left:8px!important;
+    right:8px!important;
+    top:auto!important;
+    bottom:calc(8px + env(safe-area-inset-bottom))!important;
+    width:auto!important;
+    max-width:none!important;
+    max-height:72svh;
+    padding:16px;
+    border-radius:24px 24px 12px 12px;
+  }
+
+  .modal{
+    align-items:end;
+    padding:8px 8px calc(8px + env(safe-area-inset-bottom));
+  }
+
+  .modal-card{
+    width:100%;
+    max-width:none;
+    max-height:82svh;
+    padding:22px 16px;
+    border-radius:24px 24px 12px 12px;
+  }
+
+  .keepsake-shell{
+    width:100%;
+  }
+
+  .keepsake-card{
+    padding:24px 16px;
+  }
+
+  .keepsake-card h2{
+    font-size:30px;
+  }
+
+  .keepsake-stats{
+    grid-template-columns:repeat(2,1fr);
+  }
+
+  .keepsake-stats div:nth-child(2){
+    border-right:0;
+  }
+
+  .celebration-ceremony{
+    width:100%;
+    max-width:none;
+  }
+
+  /* Avoid accidental horizontal overflow from decorative desktop elements. */
+  .landing-symbols,
+  .hero-side-note,
+  .landing-orbit{
+    pointer-events:none;
+  }
+
+  img,
+  canvas,
+  video,
+  svg{
+    max-width:100%;
+  }
+}
+
+/* Extra tightening for narrow 360–390px phones. */
+@media (max-width: 390px) and (orientation: portrait) {
+  :root{ --mobile-gutter: 11px; }
+
+  .hero-copy h1,
+  body.v14-ready .hero-copy h1{
+    font-size:clamp(32px,10.4vw,40px);
+  }
+
+  .occasion-grid{
+    grid-template-columns:1fr!important;
+  }
+
+  .world-screen{
+    padding-left:5px!important;
+    padding-right:5px!important;
+  }
+
+  .dock-button,
+  body.pm-world .dock-button{
+    flex-basis:58px;
+    min-width:58px!important;
+  }
+}
+
+/* Short 9:16 devices: keep the world usable without browser chrome pushing controls away. */
+@media (max-width:720px) and (orientation:portrait) and (max-height:740px) {
+  .landing-hero{
+    gap:14px;
+  }
+
+  .hero-copy h1,
+  body.v14-ready .hero-copy h1{
+    font-size:clamp(31px,9.8vw,39px);
+  }
+
+  .hero-room{
+    aspect-ratio: 16 / 11;
+  }
+
+  .world-stage,
+  body.pm-world .world-stage,
+  .quest-shell,
+  body.pm-world .quest-shell{
+    height:calc(100svh - var(--mobile-topbar) - env(safe-area-inset-top) - 58px - env(safe-area-inset-bottom))!important;
+  }
+}
