@@ -13,7 +13,8 @@ Page({
       {key:'mementos',label:'纪念物',value:0,width:0},
       {key:'photos',label:'照片',value:0,width:0}
     ],
-    recentActivity:[]
+    recentActivity:[],
+    visibleMementos:[]
   },
 
   socket:null,player:null,recorder:null,audio:null,
@@ -254,7 +255,15 @@ Page({
         time:String(item.time||'')
       }));
 
-    this.setData({memoryStats:counts,memoryChart:chart,recentActivity:recent});
+    const visibleMementos=this.memory.mementos
+      .filter(x=>!x.hidden)
+      .map(x=>({
+        id:x.id,type:x.type||'✦',photo:x.photo||'',
+        x:Number.isFinite(Number(x.x))?Number(x.x):50,
+        y:Number.isFinite(Number(x.y))?Number(x.y):78,
+        title:x.title||'纪念物'
+      }));
+    this.setData({memoryStats:counts,memoryChart:chart,recentActivity:recent,visibleMementos});
   },
 
   openMemoryPanel(){this.setData({showMemoryPanel:true})},
