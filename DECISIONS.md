@@ -908,3 +908,73 @@ Implemented in V15.16:
 - the timeline is not a public contributor profile and does not expose same-person linkage to others
 
 The long-term return model is now consistent: **public memories preserve moments; private credentials preserve continuity; the returning author gets useful organization without publishing an identity dossier.**
+
+---
+
+## D025 · Private authored-memory search
+
+**Status:** decided — A · Search only the verified author's own archive
+
+Selected **A**.
+
+Implemented in V15.17:
+- 「我留下的」 can search note text, memento title/meaning, photo names, Outside title/text and the memory's historical authorName
+- search is evaluated only against records already privately marked as authored by the current actor
+- no public room-wide search index or cross-author identity search is created
+
+---
+
+## D026 · First-memory recovery reminder
+
+**Status:** decided — A · One gentle reminder per actor identity
+
+Selected **A**.
+
+Implemented in V15.17:
+- after a Contributor authors their first new note, memento, photo record or Outside memory, the client may show one non-blocking recovery-key reminder
+- the reminder is remembered locally per stable actor credential and is not repeated on later authored actions
+- the action opens the existing verified Recovery Center; it does not invent an account or name-based recovery path
+
+---
+
+## D027 · Contributor recycle bin
+
+**Status:** decided — A · Do not add a persistent Contributor recycle bin
+
+Selected **A**.
+
+Rationale / implementation:
+- retain the existing short undo window after author deletion
+- retain host-only long-term revision recovery where supported
+- do not create a second permanent deleted-items archive for Contributors
+- this keeps the personal memory surface emotionally legible instead of turning it into an administration console
+
+---
+
+## D028 · Multi-year timeline folding
+
+**Status:** decided — A · Newest year open, older years folded
+
+Selected **A**.
+
+Implemented in V15.17:
+- the newest year is expanded by default
+- older year groups are collapsed and can be opened individually
+- active keyword search, type filtering or historical-name filtering expands all matching years automatically
+- fold state is a local presentation preference and never enters room data
+
+---
+
+## D029 · Private timeline export
+
+**Status:** decided — A · Human-readable private HTML archive
+
+Selected **A**.
+
+Implemented in V15.17:
+- authors can export their private timeline as a standalone HTML file
+- export uses an explicit allowlist of presentation fields rather than serializing source records wholesale
+- actorId, actor token, recovery keys and internal same-person linkage metadata are excluded
+- the export is intentionally personal and does not become a full-room data dump
+
+From this point onward, unresolved product micro-decisions default to the option that preserves the same principle unless the owner explicitly overrides it: **warm keepsake first, private continuity second, account/admin machinery only when strictly necessary.**
