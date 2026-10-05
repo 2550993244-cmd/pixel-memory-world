@@ -14,10 +14,10 @@
     </view>
 
     <view class="stats">
-      <view><text>{{stats.people}}</text><small>留下名字</small></view>
-      <view><text>{{stats.notes}}</text><small>留言</small></view>
-      <view><text>{{stats.mementos}}</text><small>纪念物</small></view>
-      <view><text>{{stats.photos}}</text><small>照片</small></view>
+      <view><text>{{stats.people}}</text><text class="stat-label">留下名字</text></view>
+      <view><text>{{stats.notes}}</text><text class="stat-label">留言</text></view>
+      <view><text>{{stats.mementos}}</text><text class="stat-label">纪念物</text></view>
+      <view><text>{{stats.photos}}</text><text class="stat-label">照片</text></view>
     </view>
 
     <view class="last-line">
