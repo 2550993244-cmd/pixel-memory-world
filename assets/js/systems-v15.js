@@ -256,25 +256,27 @@
   // ---------------------------------------------------------------------------
   const roomMap=()=>window.PixelSceneMap?.room?.editableObjects||{};
   const cloneLayout=layout=>JSON.parse(JSON.stringify(layout||{}));
-  const editor={active:false,drag:null,lastLayout:'',claiming:false,history:[],future:[],keyboardSave:null,mementoSave:null,selectedMemento:'',snap:1,halo:null};
+  const editor={active:false,drag:null,lastLayout:'',claiming:false,history:[],future:[],keyboardSave:null,mementoSave:null,selectedMemento:'',snap:1,status:null};
 
-  function editorDropHalo(){
-    if(editor.halo?.isConnected)return editor.halo;
-    const halo=document.createElement('i');
-    halo.className='pm-editor-drop-halo-v18 hidden';
-    halo.setAttribute('aria-hidden','true');
-    worldStage?.appendChild(halo);
-    editor.halo=halo;
-    return halo;
+  function editorDragStatus(){
+    if(editor.status?.isConnected)return editor.status;
+    const status=document.createElement('div');
+    status.className='pm-editor-drag-status-v19 hidden';
+    status.setAttribute('role','status');
+    status.setAttribute('aria-live','polite');
+    status.innerHTML='<i aria-hidden="true"></i><span>正在移动家具</span>';
+    worldStage?.appendChild(status);
+    editor.status=status;
+    return status;
   }
-  function moveEditorHalo(point,visible=true){
-    const halo=editorDropHalo();
-    if(!halo||!point)return;
-    halo.style.left=Number(point.x).toFixed(2)+'%';
-    halo.style.top=Number(point.y).toFixed(2)+'%';
-    halo.classList.toggle('hidden',!visible);
+  function showEditorDragStatus(label='家具'){
+    const status=editorDragStatus();
+    if(!status)return;
+    const text=status.querySelector('span');
+    if(text)text.textContent='正在移动 · '+String(label||'家具');
+    status.classList.remove('hidden');
   }
-  function hideEditorHalo(){editor.halo?.classList.add('hidden')}
+  function hideEditorDragStatus(){editor.status?.classList.add('hidden')}
 
   function pushHistory(){
     const snap=cloneLayout(state.world.layout);
@@ -451,8 +453,8 @@
       if(el){el.dataset.roomObjectV15=id;el.setAttribute('tabindex','0')}
     });
     editorToolbar();
-    editorDropHalo();
-    hideEditorHalo();
+    editorDragStatus();
+    hideEditorDragStatus();
     markEditableMementos();
     $('#closeRoomDrawer')?.click();
     toast('拖动家具到喜欢的位置，松手即可放下');
@@ -463,8 +465,8 @@
     editor.drag=null;
     document.body.classList.remove('pm-room-editing-v15');
     $('.pm-room-editor-toolbar-v15')?.remove();
-    editor.halo?.remove();
-    editor.halo=null;
+    editor.status?.remove();
+    editor.status=null;
     $$('[data-room-object-v15]').forEach(el=>el.removeAttribute('tabindex'));
     $$('[data-curatable-memento]').forEach(el=>{el.removeAttribute('tabindex');delete el.dataset.curatableMemento});
     persistRoomLayout();
@@ -516,7 +518,7 @@
       updateMementoEditorButton();
       editor.drag={kind:'memento',id,el:memoryTarget,pointerId:e.pointerId,origin:{x:m.x,y:m.y}};
       memoryTarget.classList.add('pm-dragging-v15','pm-curator-selected-v15');
-      moveEditorHalo({x:m.x,y:m.y},true);
+      showEditorDragStatus(m.title||'纪念物');
       try{worldStage.setPointerCapture(e.pointerId)}catch(_){}
       return;
     }
@@ -527,9 +529,9 @@
     pushHistory();
     editor.drag={kind:'furniture',id,el:target,pointerId:e.pointerId};
     target.classList.add('pm-dragging-v15');
+    showEditorDragStatus(layoutObject(id)?.label||target.getAttribute('aria-label')||'家具');
     try{worldStage.setPointerCapture(e.pointerId)}catch(_){}
     const p=pointInStage(e);
-    moveEditorHalo(p,true);
     state.world.layout||={};
     state.world.layout[id]=p;
     editor.lastLayout='';
@@ -540,7 +542,6 @@
     if(!editor.active||!editor.drag||editor.drag.pointerId!==e.pointerId)return;
     e.preventDefault();
     const p=pointInStage(e);
-    moveEditorHalo(p,true);
     if(editor.drag.kind==='memento'){
       const m=state.mementos.find(x=>x.id===editor.drag.id);
       if(m){m.x=p.x;m.y=p.y;editor.drag.el.style.left=p.x+'%';editor.drag.el.style.top=p.y+'%'}
@@ -556,7 +557,7 @@
     if(!editor.drag)return;
     const drag=editor.drag;
     drag.el?.classList.remove('pm-dragging-v15');
-    hideEditorHalo();
+    hideEditorDragStatus();
     editor.drag=null;
     if(drag.kind==='memento'){
       const m=state.mementos.find(x=>x.id===drag.id);
