@@ -264,7 +264,12 @@ Page({
   goMemory(e){
     const tab=e.currentTarget.dataset.tab||'notes';
     this.setData({showMemoryPanel:false});
-    wx.navigateTo({url:'/pages/memory/memory?code='+this.data.code+'&tab='+tab});
+    wx.navigateTo({
+      url:'/pages/memory/memory?code='+this.data.code+
+        '&tab='+tab+
+        '&x='+encodeURIComponent(this.player.x)+
+        '&y='+encodeURIComponent(this.player.y)
+    });
   },
 
   goAvatar(){
