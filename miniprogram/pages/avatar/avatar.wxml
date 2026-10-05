@@ -35,8 +35,8 @@
 
     <view class="label">手里带点什么</view>
     <view class="item-row">
-      <block wx:for="{{itemOptions}}" wx:key="*this">
-        <button class="item {{item===item?'on':''}}" data-value="{{item}}" bindtap="chooseItem">{{item}}</button>
+      <block wx:for="{{itemOptions}}" wx:for-item="gift" wx:key="*this">
+        <button class="item {{item===gift?'on':''}}" data-value="{{gift}}" bindtap="chooseItem">{{gift}}</button>
       </block>
     </view>
 
