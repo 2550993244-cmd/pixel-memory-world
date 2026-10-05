@@ -1,4 +1,5 @@
 const app=getApp();
+const roomApi=require('../../utils/room-api');
 const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const randomCode=()=>Array.from({length:6},()=>chars[Math.floor(Math.random()*chars.length)]).join('');
 const ok=status=>status>=200&&status<300;
@@ -35,6 +36,8 @@ Page({
     if(this.data.loading)return;
     const code=this.data.code.trim().toUpperCase();
     const name=this.data.name.trim()||'朋友';
+    roomApi.saveAvatar({...roomApi.getAvatar(),name});
+    roomApi.ensureActor();
     if(code.length!==6)return wx.showToast({title:'请输入6位房间码',icon:'none'});
 
     const cached=wx.getStorageSync(accessKey(code))||{};
@@ -72,6 +75,8 @@ Page({
     if(this.data.loading)return;
     const code=randomCode();
     const name=this.data.name.trim()||'房主';
+    roomApi.saveAvatar({...roomApi.getAvatar(),name});
+    roomApi.ensureActor();
     const honoree=this.data.honoree.trim()||'重要的人';
     this.setData({loading:true});
 
