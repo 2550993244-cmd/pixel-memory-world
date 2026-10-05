@@ -85,7 +85,7 @@
     <image wx:if="{{selectedQuest.image}}" class="detail-image" mode="aspectFill" src="{{selectedQuest.image}}"></image>
     <view class="detail-text">{{selectedQuest.text||'有人把一小段故事藏在了这里。'}}</view>
     <view class="detail-meta">{{selectedQuest.by||selectedQuest.authorName||'朋友'}} · Memory Quest</view>
-    <button wx:if="{{selectedQuest.isAuthor}}" class="delete" bindtap="deleteSelectedQuest">删除我留下的这段回忆</button>
+    <button wx:if="{{selectedQuest.isAuthor||isOwner}}" class="delete" bindtap="deleteSelectedQuest">删除这段门外回忆</button>
     <button class="close" bindtap="closeQuestDetail">继续沿着路走</button>
   </view>
 </view>
