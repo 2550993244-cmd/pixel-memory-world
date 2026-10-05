@@ -16,8 +16,8 @@
 
   <view class="card panel">
     <view class="tabs">
-      <view class="tab {{mode==='join'?'on':''}}" bindtap="setJoin"><text>加入世界</text><small>我有邀请码</small></view>
-      <view class="tab {{mode==='create'?'on':''}}" bindtap="setCreate"><text>创建世界</text><small>为重要的人准备</small></view>
+      <view class="tab {{mode==='join'?'on':''}}" bindtap="setJoin"><text>加入世界</text><text class="tab-sub">我有邀请码</text></view>
+      <view class="tab {{mode==='create'?'on':''}}" bindtap="setCreate"><text>创建世界</text><text class="tab-sub">为重要的人准备</text></view>
     </view>
 
     <block wx:if="{{mode==='join'}}">
