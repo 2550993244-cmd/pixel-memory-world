@@ -109,7 +109,7 @@ function scheduleIdentityRecoveryReminderV17(){
     if(localStorage.getItem(key)||state.screen!=='world'||isViewOnly())return;
     localStorage.setItem(key,'shown');
     toastActionV17('想以后换设备还能回来管理这些回忆吗？','保存身份钥匙',()=>window.PixelRecovery?.open?.(),9000);
-  },1300);
+  },2300);
 }
 function undoItemSnapshot(item){if(!item||typeof item!=='object')return item;const copy=JSON.parse(JSON.stringify(item));delete copy.authorId;delete copy.isAuthor;return copy}
 function toastUndo(t,undo,label='撤销'){
@@ -490,7 +490,7 @@ function downloadTextFileV17(name,text,type='text/html;charset=utf-8'){
   const blob=new Blob([text],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)
 }
-function exportPrivateTimelineV17(entries){
+function buildPrivateTimelineExportV17(entries){
   const groups=new Map();
   entries.slice().sort((a,b)=>b.ts-a.ts).forEach(e=>{const y=traceYearV16(e.ts);if(!groups.has(y))groups.set(y,[]);groups.get(y).push(e)});
   const card=e=>{
@@ -504,7 +504,10 @@ function exportPrivateTimelineV17(entries){
   };
   const sections=[...groups.entries()].map(([year,list])=>`<section><h2>${escapeHTML(year)}</h2>${list.map(card).join('')}</section>`).join('');
   const title=`我留下的 · ${escapeHTML(state.world.honoree||state.roomCode||'Pixel Memory')}`;
-  const html=`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>body{max-width:760px;margin:40px auto;padding:0 22px;background:#faf7f1;color:#554841;font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.7}header{padding-bottom:22px;border-bottom:1px solid #d9cdc1}h1{font-size:28px;margin:0 0 6px}header p,small{color:#8c7d73}section{margin-top:30px}h2{font-size:18px;color:#687c67}article{margin:12px 0;padding:16px 18px;border:1px solid #dfd4ca;border-radius:14px;background:#fffdf9}article p{margin:7px 0 0}footer{margin:34px 0;color:#9b8d83;font-size:12px}</style></head><body><header><h1>${title}</h1><p>${entries.length} 条属于你的回忆 · 导出于 ${escapeHTML(new Date().toLocaleString('zh-CN'))}</p><p>这份档案只整理你本人留下的内容，不包含 actorId、恢复密钥或内部身份关联字段。</p></header>${sections||'<p>还没有留下内容。</p>'}<footer>Pixel Memory · private archive</footer></body></html>`;
+  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>body{max-width:760px;margin:40px auto;padding:0 22px;background:#faf7f1;color:#554841;font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.7}header{padding-bottom:22px;border-bottom:1px solid #d9cdc1}h1{font-size:28px;margin:0 0 6px}header p,small{color:#8c7d73}section{margin-top:30px}h2{font-size:18px;color:#687c67}article{margin:12px 0;padding:16px 18px;border:1px solid #dfd4ca;border-radius:14px;background:#fffdf9}article p{margin:7px 0 0}footer{margin:34px 0;color:#9b8d83;font-size:12px}</style></head><body><header><h1>${title}</h1><p>${entries.length} 条属于你的回忆 · 导出于 ${escapeHTML(new Date().toLocaleString('zh-CN'))}</p><p>这份档案只整理你本人留下的内容，不包含 actorId、恢复密钥或内部身份关联字段。</p></header>${sections||'<p>还没有留下内容。</p>'}<footer>Pixel Memory · private archive</footer></body></html>`
+}
+function exportPrivateTimelineV17(entries){
+  const html=buildPrivateTimelineExportV17(entries);
   const safeRoom=String(state.roomCode||'private').replace(/[^A-Z0-9_-]/gi,'').slice(0,20)||'private';
   downloadTextFileV17(`pixel-memory-${safeRoom}-my-timeline.html`,html);
   toast('已导出你的私人时间线')
@@ -598,7 +601,7 @@ window.PixelAuthorContinuityV17={
   version:'15.17',
   open:openMyTracesDrawer,
   remind:scheduleIdentityRecoveryReminderV17,
-  export:()=>openMyTracesDrawer()
+  buildExport:buildPrivateTimelineExportV17
 };
 
 // drawer
