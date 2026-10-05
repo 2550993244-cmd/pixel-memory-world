@@ -133,7 +133,7 @@
             <view class="activity-dot"></view>
             <view class="activity-copy">
               <text>{{item.text}}</text>
-              <small>{{item.time}}</small>
+              <text class="activity-time">{{item.time}}</text>
             </view>
           </view>
         </block>
