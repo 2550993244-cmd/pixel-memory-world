@@ -629,11 +629,26 @@ const { chromium } = require('playwright');
 
   await contributorPage.locator('[data-trace-type-v16="note"]').click();
   await contributorPage.waitForFunction(()=>document.querySelectorAll('.trace-card-v16').length>=3);
-  await contributorPage.waitForFunction(()=>document.querySelectorAll('.trace-card-v16').length>=3);
   await contributorPage.selectOption('#myTraceNameFilterV16',{label:'参与者测试'});
-  await contributorPage.waitForFunction(()=>document.querySelectorAll('.trace-card-v16').length===1);
-  const filteredTraceAudit=await contributorPage.evaluate(()=>document.querySelector('#drawerBody')?.innerText||'');
-  if(!filteredTraceAudit.includes('旧名留言（修订）')||filteredTraceAudit.includes('新名留言')) throw new Error('V15.16 historical-name filtering failed '+filteredTraceAudit);
+  await contributorPage.waitForFunction(()=>{
+    const text=document.querySelector('#drawerBody')?.innerText||'';
+    return text.includes('旧名留言（修订）')&&!text.includes('新名留言');
+  });
+  const filteredTraceAudit=await contributorPage.evaluate(()=>({
+    text:document.querySelector('#drawerBody')?.innerText||'',
+    selected:document.querySelector('#myTraceNameFilterV16')?.value||'',
+    resetVisible:!!document.querySelector('#myTraceResetFiltersV17')
+  }));
+  if(filteredTraceAudit.selected!=='参与者测试'||!filteredTraceAudit.text.includes('旧名留言（修订）')||filteredTraceAudit.text.includes('新名留言')||!filteredTraceAudit.resetVisible) throw new Error('V15.17 historical-name filtering failed '+JSON.stringify(filteredTraceAudit));
+  await contributorPage.locator('#myTraceResetFiltersV17').click();
+  await contributorPage.waitForFunction(()=>document.querySelectorAll('.trace-card-v16').length>=3&&document.querySelector('#myTraceNameFilterV16')?.value==='all');
+  const resetFilterAudit=await contributorPage.evaluate(()=>({
+    search:document.querySelector('#myTraceSearchV17')?.value||'',
+    selectedName:document.querySelector('#myTraceNameFilterV16')?.value||'',
+    activeTypes:document.querySelectorAll('[data-trace-type-v16].selected').length,
+    allSelected:document.querySelector('[data-trace-type-v16="all"]')?.classList.contains('selected')||false
+  }));
+  if(resetFilterAudit.search||resetFilterAudit.selectedName!=='all'||resetFilterAudit.activeTypes!==1||!resetFilterAudit.allSelected) throw new Error('V15.17 filter reset failed '+JSON.stringify(resetFilterAudit));
 
   await contributorPage.locator('#myTraceRecoveryV16').click();
   await contributorPage.waitForSelector('#copyIdentityRecovery',{timeout:3000});
@@ -681,7 +696,7 @@ const { chromium } = require('playwright');
     throw new Error('V15.17 one-time recovery reminder failed '+JSON.stringify(recoveryReminderAudit));
   }
 
-  console.log('V15_17_PRIVATE_ARCHIVE_AUDIT',{avatarContinuityAudit,privateTraceAudit,yearCollapseAudit,searchAudit,exportAudit,recoveryShortcutAudit,deleteUndoAudit,recoveryReminderAudit});
+  console.log('V15_17_PRIVATE_ARCHIVE_AUDIT',{avatarContinuityAudit,privateTraceAudit,yearCollapseAudit,searchAudit,exportAudit,filteredTraceAudit,resetFilterAudit,recoveryShortcutAudit,deleteUndoAudit,recoveryReminderAudit});
   await contributorPage.evaluate(()=>broadcast('leave'));
   await page.waitForFunction(()=>![...state.players.values()].some(p=>p.name==='Lynn测试'),null,{timeout:5000});
   await contributorPage.close();
