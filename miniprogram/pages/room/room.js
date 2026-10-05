@@ -230,10 +230,10 @@ Page({
   },
 
   refreshMemoryVisuals(){
-    const visibleMementos=this.memory.mementos.filter(x=>!x.hidden);
+    const visibleMementoCount=this.memory.mementos.filter(x=>!x.hidden).length;
     const counts={
       notes:this.memory.notes.length,
-      mementos:visibleMementos.length,
+      mementos:visibleMementoCount,
       photos:this.memory.photos.length,
       activity:this.memory.activity.length
     };
