@@ -514,3 +514,54 @@ body.pm-world .trace-card-v16 p{
   body.pm-world .trace-card-head-v16{display:block}
   body.pm-world .trace-card-head-v16>small{display:block;margin-top:3px;text-align:left}
 }
+
+
+/* V15.18 · final cover hierarchy after V14 experience overrides */
+body.v14-ready .landing-noise{opacity:.065}
+body.v14-ready .landing-hero{
+  max-width:1280px;
+  grid-template-columns:minmax(0,.91fr) minmax(500px,1.09fr);
+  gap:clamp(48px,6vw,92px);
+  padding-top:52px;
+}
+body.v14-ready .hero-copy{padding:18px 0 38px}
+body.v14-ready .hero-copy h1{
+  max-width:660px;
+  font-size:clamp(46px,5.15vw,74px);
+  line-height:1.065;
+  letter-spacing:-.058em;
+}
+body.v14-ready .hero-copy>p{
+  max-width:520px;
+  font-size:13px;
+  line-height:1.95;
+}
+body.v14-ready .hero-preview-wrap{
+  width:min(100%,620px);
+  justify-self:end;
+}
+body.v14-ready .hero-scene-shell{
+  border-radius:26px;
+  filter:none;
+}
+body.v14-ready .hero-scene-shell:before{
+  inset:5px;
+  border-radius:21px;
+  border:0;
+}
+body.v14-ready .hero-room{
+  border-radius:18px;
+  border:0;
+  box-shadow:inset 0 0 0 1px rgba(92,71,58,.12),inset 0 0 0 7px rgba(255,251,243,.20);
+}
+@media(max-width:1000px){
+  body.v14-ready .landing-hero{grid-template-columns:1fr;gap:58px;padding-top:40px}
+  body.v14-ready .hero-preview-wrap{justify-self:center}
+  body.v14-ready .hero-copy h1{font-size:clamp(46px,8vw,68px)}
+}
+@media(max-width:720px){
+  body.v14-ready .landing-hero{padding-top:24px}
+  body.v14-ready .hero-copy{padding-top:24px}
+  body.v14-ready .hero-copy h1{font-size:clamp(40px,11.5vw,56px)}
+  body.v14-ready .hero-copy>p{font-size:13px}
+}
