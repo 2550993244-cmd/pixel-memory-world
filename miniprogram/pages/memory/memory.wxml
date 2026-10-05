@@ -23,8 +23,8 @@
         <view class="note-card">
           <view class="note-meta"><text>{{item.by||item.authorName||'朋友'}}</text><text>{{item.editedAt?'已编辑':''}}</text></view>
           <view class="note-text">{{item.text}}</view>
-          <view wx:if="{{item.isAuthor}}" class="row-actions">
-            <button class="mini" data-id="{{item.id}}" bindtap="editNote">修改</button>
+          <view wx:if="{{item.isAuthor||isOwner}}" class="row-actions">
+            <button wx:if="{{item.isAuthor}}" class="mini" data-id="{{item.id}}" bindtap="editNote">修改</button>
             <button class="mini danger" data-id="{{item.id}}" bindtap="deleteNote">删除</button>
           </view>
         </view>
@@ -48,7 +48,7 @@
             <text class="photo-caption">{{item.displayCaption}}</text>
             <text class="photo-by">{{item.by||item.authorName||'朋友'}}</text>
           </view>
-          <button wx:if="{{item.isAuthor}}" class="delete-corner" data-id="{{item.id}}" bindtap="deletePhoto">×</button>
+          <button wx:if="{{item.isAuthor||isOwner}}" class="delete-corner" data-id="{{item.id}}" bindtap="deletePhoto">×</button>
         </view>
       </block>
     </view>
@@ -83,8 +83,8 @@
             <view class="memento-meaning">{{item.meaning||'有人觉得它值得被留下。'}}</view>
             <view class="memento-by">{{item.by||item.authorName||'朋友'}}</view>
           </view>
-          <view wx:if="{{item.isAuthor}}" class="row-actions vertical">
-            <button class="mini" data-id="{{item.id}}" bindtap="editMemento">修改</button>
+          <view wx:if="{{item.isAuthor||isOwner}}" class="row-actions vertical">
+            <button wx:if="{{item.isAuthor}}" class="mini" data-id="{{item.id}}" bindtap="editMemento">修改</button>
             <button class="mini danger" data-id="{{item.id}}" bindtap="deleteMemento">删除</button>
           </view>
         </view>
