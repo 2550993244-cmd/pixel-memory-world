@@ -5,11 +5,20 @@ const accessKey=code=>'pixel-room-access:'+code;
 Page({
   data:{
     code:'',honoree:'重要的人',chat:'',lastChat:'',players:[],
-    celebrated:false,recording:false,lastVoiceUrl:'',playerId:''
+    celebrated:false,recording:false,lastVoiceUrl:'',playerId:'',
+    showMemoryPanel:false,
+    memoryStats:{notes:0,mementos:0,photos:0,activity:0},
+    memoryChart:[
+      {key:'notes',label:'留言',value:0,width:0},
+      {key:'mementos',label:'纪念物',value:0,width:0},
+      {key:'photos',label:'照片',value:0,width:0}
+    ],
+    recentActivity:[]
   },
 
   socket:null,player:null,recorder:null,audio:null,
   socketReady:false,unloading:false,reconnectTimer:null,inviteToken:'',
+  memory:{notes:[],mementos:[],photos:[],activity:[]},
 
   onLoad(q){
     const code=String(q.code||'').toUpperCase();
@@ -33,9 +42,9 @@ Page({
       header:this.inviteToken?{'X-Room-Invite':this.inviteToken}:{},
       timeout:12000,
       success:r=>{
-        if(r.statusCode===200&&r.data&&r.data.world){
-          this.setData({honoree:r.data.world.honoree||'重要的人'});
-        }
+        if(r.statusCode!==200||!r.data)return;
+        if(r.data.world)this.setData({honoree:r.data.world.honoree||'重要的人'});
+        if(r.data.memory)this.applyMemorySnapshot(r.data.memory);
       }
     });
 
@@ -106,6 +115,15 @@ Page({
       if(i>=0)ps[i]=p; else ps.push(p);
     };
 
+    if(m.type==='room-snapshot'){
+      if(m.world)this.setData({honoree:m.world.honoree||this.data.honoree});
+      if(m.memory)this.applyMemorySnapshot(m.memory);
+    }
+
+    if(m.type==='memory-op'&&m.op){
+      this.applyMemoryOp(m.op);
+    }
+
     if(['hello','state','move','celebrate','chat','voice'].includes(m.type)){
       upsert(m.player);
       if(m.type==='hello'){
@@ -131,6 +149,79 @@ Page({
     upsert(this.player);
     this.setData({players:ps});
   },
+
+  applyMemorySnapshot(memory){
+    this.memory={
+      notes:Array.isArray(memory.notes)?memory.notes:[],
+      mementos:Array.isArray(memory.mementos)?memory.mementos:[],
+      photos:Array.isArray(memory.photos)?memory.photos:[],
+      activity:Array.isArray(memory.activity)?memory.activity:[]
+    };
+    this.refreshMemoryVisuals();
+  },
+
+  applyMemoryOp(op){
+    if(!op||!op.kind)return;
+    const upsert=(list,item)=>{
+      if(!item)return list;
+      const next=[...list];
+      const i=next.findIndex(x=>x.id===item.id);
+      if(i>=0)next[i]=item; else next.push(item);
+      return next;
+    };
+
+    if(op.kind==='note:add')this.memory.notes=upsert(this.memory.notes,op.item);
+    if(op.kind==='note:remove')this.memory.notes=this.memory.notes.filter(x=>x.id!==op.id);
+    if(op.kind==='memento:add')this.memory.mementos=upsert(this.memory.mementos,op.item);
+    if(op.kind==='memento:remove')this.memory.mementos=this.memory.mementos.filter(x=>x.id!==op.id);
+    if(op.kind==='photo:add')this.memory.photos=upsert(this.memory.photos,op.item);
+    if(op.kind==='photo:remove')this.memory.photos=this.memory.photos.filter(x=>x.id!==op.id);
+    if(op.kind==='activity:add')this.memory.activity=upsert(this.memory.activity,op.item).slice(-60);
+
+    this.refreshMemoryVisuals();
+  },
+
+  refreshMemoryVisuals(){
+    const counts={
+      notes:this.memory.notes.length,
+      mementos:this.memory.mementos.length,
+      photos:this.memory.photos.length,
+      activity:this.memory.activity.length
+    };
+
+    const max=Math.max(1,counts.notes,counts.mementos,counts.photos);
+    const chart=[
+      {key:'notes',label:'留言',value:counts.notes,width:counts.notes?Math.max(10,Math.round(counts.notes/max*100)):0},
+      {key:'mementos',label:'纪念物',value:counts.mementos,width:counts.mementos?Math.max(10,Math.round(counts.mementos/max*100)):0},
+      {key:'photos',label:'照片',value:counts.photos,width:counts.photos?Math.max(10,Math.round(counts.photos/max*100)):0}
+    ];
+
+    const recent=this.memory.activity
+      .slice()
+      .reverse()
+      .slice(0,8)
+      .map((item,index)=>({
+        id:item.id||('activity-'+index),
+        text:String(item.text||'留下了一段回忆'),
+        time:String(item.time||'')
+      }));
+
+    this.setData({
+      memoryStats:counts,
+      memoryChart:chart,
+      recentActivity:recent
+    });
+  },
+
+  openMemoryPanel(){
+    this.setData({showMemoryPanel:true});
+  },
+
+  closeMemoryPanel(){
+    this.setData({showMemoryPanel:false});
+  },
+
+  noop(){},
 
   send(obj){
     if(!this.socketReady)return;
