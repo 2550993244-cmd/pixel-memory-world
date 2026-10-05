@@ -1,5 +1,5 @@
 ---
-version: 15.16
+version: 15.17
 name: Pixel Memory World
 description: A warm multiplayer pixel-memory space. The interface should feel like a keepsake box that became a tiny playable world: soft paper surfaces, restrained pastel accents, readable modern Chinese typography, pixel-art scenes, and motion that responds to people rather than decorating every surface.
 ---
@@ -184,6 +184,17 @@ A memory's displayed author name is part of the moment in which the memory was c
 - Contributor renames on later visits must not retroactively rewrite old content.
 - Editing memory text, moving objects or host curation must never mutate the author-name snapshot.
 - Keep actor identity and display-name history conceptually separate: one secures continuity, the other preserves presentation at creation time.
+
+## Private memory archive
+
+The authored-content space should remain a personal keepsake archive, not evolve into an account dashboard.
+
+- Search is private and scoped only to the verified author's own authored records.
+- Default browsing opens the newest year and folds older years; any active search or filter automatically expands matching years so results are never hidden by navigation state.
+- After the first authored memory, show one gentle recovery reminder for that actor credential. Never turn recovery into a recurring nag.
+- Keep the short deletion undo but do not add a persistent Contributor trash/recycle-bin model; long-term recovery remains a host revision concern.
+- Private export is human-readable HTML assembled from an explicit display-field allowlist. Never serialize authorId, actor tokens, recovery keys or internal identity-link metadata into the archive.
+- Export and search may use historical authorName because those names already belong to the author's private continuity view; they must not create a public alias profile.
 
 ## Returning contributor continuity
 
