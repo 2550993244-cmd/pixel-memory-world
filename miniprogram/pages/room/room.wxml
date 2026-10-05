@@ -1,35 +1,62 @@
 <view class="room-page">
   <view class="room-head">
-    <view><view class="eyebrow">LIVE PIXEL ROOM</view><view class="room-title">{{honoree}}的小小世界</view></view>
-    <view class="code">{{code}}</view>
+    <view class="room-meta">
+      <view class="eyebrow">LIVE PIXEL ROOM</view>
+      <view class="room-title">{{honoree}}的小小世界</view>
+    </view>
+    <view class="room-code">
+      <text>{{code}}</text>
+      <small>房间码</small>
+    </view>
+  </view>
+
+  <view class="status-row">
+    <view class="online"><i></i>{{players.length}} 人在线</view>
+    <view class="status-tip">移动、聊天，或者一起庆祝</view>
   </view>
 
   <view class="pixel-stage">
-    <view class="window"></view><view class="rug"></view><view class="cake">🎂</view><view class="door">OUTSIDE</view>
+    <view class="wall"></view>
+    <view class="floor"></view>
+    <view class="window"></view>
+    <view class="string-lights"><i></i><i></i><i></i><i></i><i></i></view>
+    <view class="sofa"></view>
+    <view class="rug"></view>
+    <view class="cake">✦</view>
+    <view class="door">OUTSIDE</view>
+
     <block wx:for="{{players}}" wx:key="id">
-      <view class="person" style="left:{{item.x}}%;top:{{item.y}}%;">
-        <view class="pname">{{item.name}}</view><view class="head"></view><view class="body"></view>
+      <view class="person {{item.id===playerId?'me':''}}" style="left:{{item.x}}%;top:{{item.y}}%;">
+        <view class="pname">{{item.name}}</view>
+        <view class="head"></view>
+        <view class="body"></view>
       </view>
     </block>
+
     <view class="bubble" wx:if="{{lastChat}}">{{lastChat}}</view>
-  </view>
 
-  <view class="move-pad">
-    <button class="move up" data-dx="0" data-dy="-4" bindtap="move">↑</button>
-    <button class="move left" data-dx="-4" data-dy="0" bindtap="move">←</button>
-    <button class="move down" data-dx="0" data-dy="4" bindtap="move">↓</button>
-    <button class="move right" data-dx="4" data-dy="0" bindtap="move">→</button>
-  </view>
-
-  <view class="card actions">
-    <view class="online">● {{players.length}} 人在线</view>
-    <view class="chatrow"><input class="input chat" value="{{chat}}" bindinput="onChat" placeholder="说句话…"/><button class="mini" bindtap="sendChat">发送</button></view>
-    <view class="action-grid">
-      <button class="action {{celebrated?'on':''}}" bindtap="celebrate">✦\n庆祝</button>
-      <button class="action {{recording?'recording':''}}" bindtap="toggleRecord">🎙\n{{recording?'停止':'录音'}}</button>
-      <button class="action" bindtap="playLastVoice">▶\n最近语音</button>
-      <button class="action" open-type="share">⌁\n邀请好友</button>
+    <view class="move-pad">
+      <button class="move up" data-dx="0" data-dy="-4" bindtap="move">↑</button>
+      <button class="move left" data-dx="-4" data-dy="0" bindtap="move">←</button>
+      <button class="move center">✦</button>
+      <button class="move right" data-dx="4" data-dy="0" bindtap="move">→</button>
+      <button class="move down" data-dx="0" data-dy="4" bindtap="move">↓</button>
     </view>
   </view>
-  <view class="muted tip">网页端的 Memory Quest 与完整地图仍可用同一邀请码进入；小程序地图会在下一步继续迁移。</view>
+
+  <view class="chat-panel">
+    <view class="chatrow">
+      <input class="input chat" value="{{chat}}" bindinput="onChat" bindconfirm="sendChat" confirm-type="send" placeholder="和房间里的人说句话…"/>
+      <button class="send" bindtap="sendChat">发送</button>
+    </view>
+  </view>
+
+  <view class="action-dock">
+    <button class="action {{celebrated?'on':''}}" bindtap="celebrate"><text>✦</text><small>{{celebrated?'已庆祝':'庆祝'}}</small></button>
+    <button class="action {{recording?'recording':''}}" bindtap="toggleRecord"><text>🎙</text><small>{{recording?'停止':'录音'}}</small></button>
+    <button class="action" bindtap="playLastVoice"><text>▶</text><small>最近语音</small></button>
+    <button class="action" open-type="share"><text>⌁</text><small>邀请好友</small></button>
+  </view>
+
+  <view class="room-foot">网页端与小程序端共用同一个房间码和实时房间。</view>
 </view>
