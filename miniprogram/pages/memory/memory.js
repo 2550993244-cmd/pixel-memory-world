@@ -7,13 +7,16 @@ Page({
     noteText:'',editingNoteId:'',
     photoCaption:'',
     mementoTypes:['🎁','✉️','🌷','🎫','📷'],
-    mType:'🎁',mTitle:'',mMeaning:'',mPhotoUrl:'',editingMementoId:''
+    mType:'🎁',mTitle:'',mMeaning:'',mPhotoUrl:'',editingMementoId:'',
+    placementX:50,placementY:78
   },
 
   onLoad(q){
     this.setData({
       code:String(q.code||'').toUpperCase(),
-      tab:['notes','photos','mementos'].includes(q.tab)?q.tab:'notes'
+      tab:['notes','photos','mementos'].includes(q.tab)?q.tab:'notes',
+      placementX:Number(q.x)||50,
+      placementY:Number(q.y)||78
     });
   },
 
@@ -25,7 +28,10 @@ Page({
       this.setData({
         honoree:r.world&&r.world.honoree||'重要的人',
         notes:(r.memory&&r.memory.notes||[]).slice().reverse(),
-        photos:(r.memory&&r.memory.photos||[]).slice().reverse(),
+        photos:(r.memory&&r.memory.photos||[]).slice().reverse().map(p=>({
+          ...p,
+          displayCaption:p.caption||((Array.isArray(p.names)&&p.names.length)?p.names.join('、'):'一张合影')
+        })),
         mementos:(r.memory&&r.memory.mementos||[]).filter(x=>!x.hidden).slice().reverse()
       });
     }catch(e){
@@ -173,7 +179,7 @@ Page({
           item:{
             id:api.uid(),authorName:avatar.name,by:avatar.name,
             type:this.data.mType,photo:this.data.mPhotoUrl,
-            title,meaning,x:50,y:78,time:Date.now()
+            title,meaning,x:this.data.placementX,y:this.data.placementY,time:Date.now()
           }
         });
         await api.addActivity(this.data.code,avatar.name,avatar.name+' 放下了「'+title+'」');
