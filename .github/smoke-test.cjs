@@ -1177,6 +1177,7 @@ const { chromium } = require('playwright');
   await page.mouse.move(sofaBox.x + sofaBox.width/2, sofaBox.y + sofaBox.height/2);
   await page.mouse.down();
   await page.mouse.move(sofaBox.x + sofaBox.width/2 + 42, sofaBox.y + sofaBox.height/2 - 18, {steps:5});
+  await page.waitForTimeout(140);
   const dragStatusAudit=await page.evaluate(()=>{
     const status=document.querySelector('.pm-editor-drag-status-v19');
     const sofa=document.querySelector('.room-sofa');
