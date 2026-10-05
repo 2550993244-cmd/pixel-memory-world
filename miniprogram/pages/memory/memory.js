@@ -56,7 +56,7 @@ Page({
           kind:'note:add',
           item:{id:api.uid(),authorName:avatar.name,by:avatar.name,text,time:Date.now()}
         });
-        await api.addActivity(this.data.code,avatar.name,avatar.name+' 在留言墙贴了一张纸条');
+        api.addActivity(this.data.code,avatar.name,avatar.name+' 在留言墙贴了一张纸条').catch(()=>{});
       }
       this.setData({noteText:'',editingNoteId:''});
       await this.loadRoom();
@@ -110,7 +110,7 @@ Page({
             url:up.url,caption:this.data.photoCaption.trim(),time:Date.now()
           };
           await api.applyOp(this.data.code,'memory',{kind:'photo:add',item});
-          await api.addActivity(this.data.code,avatar.name,avatar.name+' 在照片墙留下了一张照片');
+          api.addActivity(this.data.code,avatar.name,avatar.name+' 在照片墙留下了一张照片').catch(()=>{});
           this.setData({photoCaption:''});
           await this.loadRoom();
           wx.showToast({title:'照片留下了'});
@@ -182,7 +182,7 @@ Page({
             title,meaning,x:this.data.placementX,y:this.data.placementY,time:Date.now()
           }
         });
-        await api.addActivity(this.data.code,avatar.name,avatar.name+' 放下了「'+title+'」');
+        api.addActivity(this.data.code,avatar.name,avatar.name+' 放下了「'+title+'」').catch(()=>{});
       }
       this.cancelMementoEdit();
       await this.loadRoom();
