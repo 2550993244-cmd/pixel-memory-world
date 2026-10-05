@@ -525,32 +525,25 @@ body.pm-world .world-stage:focus{box-shadow:0 0 0 4px rgba(236,201,116,.28),9px 
    ========================================== */
 body.pm-world .quest-screen{
   background:
-    radial-gradient(circle at 72% 4%,rgba(255,242,196,.28),transparent 22%),
-    linear-gradient(180deg,#c8ddd9 0%,#d9e0c8 40%,#ced6b8 100%);
+    radial-gradient(circle at 74% 2%,rgba(255,241,197,.20),transparent 24%),
+    linear-gradient(180deg,#e1e7d7 0%,#d7dfc9 46%,#ccd6bb 100%);
 }
 body.pm-world .quest-stage{
-  background:
-    radial-gradient(circle at 12% 37%,rgba(211,226,170,.16),transparent 14%),
-    radial-gradient(circle at 82% 60%,rgba(63,104,64,.10),transparent 22%),
-    linear-gradient(180deg,
-      #8fb8c5 0%,
-      #abcbd0 7%,
-      #cadbd0 13%,
-      #d8dfc1 18%,
-      #90ad73 19%,
-      #84a56b 54%,
-      #789760 100%);
-  border-color:#677e5d;
+  /* The moving world owns the scenery gradient. The fixed viewport stays on the
+     same meadow tone so camera travel never exposes a conflicting blue panel. */
+  background:#809b68;
+  border-color:#667d5b;
+  box-shadow:0 0 0 4px #a8ba93,9px 10px 0 rgba(54,73,51,.18);
 }
 
 /* sky / distant depth */
 body.pm-world .pm-horizon-layer{
-  position:absolute;left:0;right:0;top:0;height:25%;
+  position:absolute;left:0;right:0;top:0;height:20%;
   z-index:2;pointer-events:none;overflow:hidden;
   background:
-    radial-gradient(circle at 78% 18%,rgba(255,239,183,.32),transparent 18%),
-    linear-gradient(180deg,rgba(119,170,190,.24),rgba(214,224,201,.10) 72%,transparent);
-  mask-image:linear-gradient(180deg,#000 0%,#000 82%,transparent 100%);
+    radial-gradient(circle at 78% 16%,rgba(255,237,188,.24),transparent 19%),
+    linear-gradient(180deg,rgba(193,211,198,.22),rgba(185,205,177,.13) 58%,transparent 100%);
+  mask-image:linear-gradient(180deg,#000 0%,rgba(0,0,0,.86) 64%,transparent 100%);
 }
 body.pm-world .pm-horizon-layer>i{position:absolute;display:block}
 body.pm-world .pm-hill-back{
@@ -601,9 +594,9 @@ body.pm-world .quest-path{display:none!important}
 
 /* ground starts after horizon so the sky can breathe */
 body.pm-world .quest-ground-grid{
-  inset:18% 0 0;
+  inset:9% 0 0;
   z-index:1;
-  opacity:.72;
+  opacity:.58;
   background:
     radial-gradient(circle at 15% 22%,rgba(204,225,160,.22) 0 2px,transparent 2.5px),
     radial-gradient(circle at 73% 48%,rgba(65,108,62,.16) 0 2px,transparent 2.6px),
@@ -611,7 +604,7 @@ body.pm-world .quest-ground-grid{
     linear-gradient(90deg,rgba(70,105,62,.055) 1px,transparent 1px),
     linear-gradient(rgba(70,105,62,.045) 1px,transparent 1px);
   background-size:52px 46px,70px 62px,auto,18px 18px,18px 18px;
-  mask-image:linear-gradient(180deg,transparent 0,#000 6%,#000 100%);
+  mask-image:linear-gradient(180deg,transparent 0,rgba(0,0,0,.72) 5%,#000 13%,#000 100%);
 }
 
 /* SVG terrain ribbons */
@@ -769,8 +762,8 @@ body.pm-world .quest-hill{
 }
 
 @media(max-width:760px){
-  body.pm-world .pm-horizon-layer{height:22%}
-  body.pm-world .quest-ground-grid{inset:16% 0 0}
+  body.pm-world .pm-horizon-layer{height:18%}
+  body.pm-world .quest-ground-grid{inset:8% 0 0}
   body.pm-world .quest-bridge{width:21%;left:34%}
 }
 @media(prefers-reduced-motion:reduce){
