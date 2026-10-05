@@ -15,19 +15,92 @@ Page({
     saving:false,uploading:false,selectedQuest:null
   },
 
+  socket:null,
+  unloading:false,
+  reconnectTimer:null,
+
   onLoad(q){
     this.setData({code:String(q.code||'').toUpperCase(),avatar:api.getAvatar()});
+    this.connectQuest();
   },
 
-  onShow(){this.loadQuest()},
+  onShow(){
+    this.setData({avatar:api.getAvatar()});
+    this.loadQuest();
+  },
+
+  onUnload(){
+    this.unloading=true;
+    if(this.reconnectTimer)clearTimeout(this.reconnectTimer);
+    try{this.socket&&this.socket.close({})}catch(_){}
+  },
+
+  connectQuest(){
+    if(this.unloading||!this.data.code)return;
+    const access=api.getAccess(this.data.code);
+    const actor=api.ensureActor();
+    const base=api.serverUrl().replace(/^http:/,'ws:').replace(/^https:/,'wss:');
+    const url=
+      base+'/ws?room='+this.data.code+
+      '&channel='+encodeURIComponent('pixel-memory-quest-'+this.data.code)+
+      '&player='+encodeURIComponent('quest-'+actor.id)+
+      '&invite='+encodeURIComponent(access.inviteToken||'')+
+      '&actorId='+encodeURIComponent(actor.id)+
+      '&actorToken='+encodeURIComponent(actor.token);
+
+    this.socket=wx.connectSocket({url});
+    this.socket.onMessage(e=>{
+      let m;
+      try{m=JSON.parse(e.data)}catch(_){return}
+      if(m.type==='quest-update'&&Array.isArray(m.items)){
+        this.setQuestItems(m.items);
+      }
+      if(m.type==='quest-op'&&m.op)this.applyQuestOp(m.op);
+    });
+    this.socket.onClose(()=>{
+      if(this.unloading)return;
+      if(this.reconnectTimer)clearTimeout(this.reconnectTimer);
+      this.reconnectTimer=setTimeout(()=>this.connectQuest(),1800);
+    });
+  },
 
   async loadQuest(){
     try{
       const r=await api.getRoom(this.data.code);
-      const items=(r.quest&&r.quest.items||[]).filter(x=>!x.hidden).sort((a,b)=>(a.order||0)-(b.order||0));
-      this.setData({honoree:r.world&&r.world.honoree||'重要的人',questItems:items});
-      this.updateNearby();
+      this.setData({honoree:r.world&&r.world.honoree||'重要的人'});
+      this.setQuestItems(r.quest&&r.quest.items||[]);
     }catch(_){wx.showToast({title:'门外地图加载失败',icon:'none'})}
+  },
+
+  setQuestItems(items){
+    const visible=(items||[])
+      .filter(x=>!x.hidden)
+      .sort((a,b)=>(a.order||0)-(b.order||0));
+    this.setData({questItems:visible});
+    this.updateNearby();
+  },
+
+  applyQuestOp(op){
+    let items=[...this.data.questItems];
+    if(op.kind==='add'&&op.item){
+      const i=items.findIndex(x=>x.id===op.item.id);
+      if(i>=0)items[i]={...items[i],...op.item};else items.push(op.item);
+    }
+    if(op.kind==='update'){
+      items=items.map(x=>x.id===op.id?{
+        ...x,
+        title:typeof op.title==='string'?op.title:x.title,
+        text:typeof op.text==='string'?op.text:x.text,
+        editedAt:op.editedAt||Date.now()
+      }:x);
+    }
+    if(op.kind==='hide'){
+      items=items.map(x=>x.id===op.id?{...x,hidden:!!op.hidden}:x);
+    }
+    if(op.kind==='remove')items=items.filter(x=>x.id!==op.id);
+    if(op.kind==='set'&&Array.isArray(op.items))items=op.items;
+    if(op.kind==='clear')items=[];
+    this.setQuestItems(items);
   },
 
   move(e){
@@ -68,7 +141,10 @@ Page({
 
   pickQuestImage(){
     wx.chooseMedia({
-      count:1,mediaType:['image'],sourceType:['album','camera'],sizeType:['compressed'],
+      count:1,
+      mediaType:['image'],
+      sourceType:['album','camera'],
+      sizeType:['compressed'],
       success:async r=>{
         const file=r.tempFiles&&r.tempFiles[0];
         if(!file)return;
@@ -89,23 +165,30 @@ Page({
     const spot=this.data.spots.find(x=>x.key===this.data.selectedSpot)||this.data.spots[0];
     const avatar=api.getAvatar();
     this.setData({saving:true});
+
     try{
       const item={
         id:api.uid(),
-        authorName:avatar.name,by:avatar.name,
+        authorName:avatar.name,
+        by:avatar.name,
         order:this.data.questItems.length+1,
         title:title||'一段藏在路上的回忆',
         text:text||'看到它的时候，希望你会想起那一天。',
         image:this.data.questImage,
-        icon:spot.icon,x:spot.x,y:spot.y,time:Date.now()
+        icon:spot.icon,
+        x:spot.x,
+        y:spot.y,
+        time:Date.now()
       };
+
       await api.applyOp(this.data.code,'quest',{kind:'add',item});
       await api.addActivity(this.data.code,avatar.name,avatar.name+' 在门外藏下了「'+item.title+'」');
       this.setData({questTitle:'',questText:'',questImage:''});
       await this.loadQuest();
       wx.showToast({title:'已经藏在路上'});
-    }catch(_){wx.showToast({title:'保存失败，请重试',icon:'none'})}
-    finally{this.setData({saving:false})}
+    }catch(_){
+      wx.showToast({title:'保存失败，请重试',icon:'none'});
+    }finally{this.setData({saving:false})}
   },
 
   deleteSelectedQuest(){
