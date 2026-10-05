@@ -10,6 +10,17 @@ body.pm-world .pm-camera-world-v15{
   transform-origin:0 0;
   will-change:transform;
   pointer-events:auto;
+  overflow:hidden;
+  background:
+    radial-gradient(circle at 18% 25%,rgba(214,226,183,.13),transparent 18%),
+    radial-gradient(circle at 78% 64%,rgba(67,103,66,.08),transparent 24%),
+    linear-gradient(180deg,
+      #b8cbbd 0%,
+      #aec3aa 10%,
+      #9fb88e 22%,
+      #91ad79 38%,
+      #86a26f 68%,
+      #7c9864 100%);
 }
 body.pm-world .pm-camera-world-v15>*{pointer-events:auto}
 body.pm-world .pm-camera-badge-v15{
