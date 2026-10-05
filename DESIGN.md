@@ -1,5 +1,5 @@
 ---
-version: 15.17
+version: 15.18
 name: Pixel Memory World
 description: A warm multiplayer pixel-memory space. The interface should feel like a keepsake box that became a tiny playable world: soft paper surfaces, restrained pastel accents, readable modern Chinese typography, pixel-art scenes, and motion that responds to people rather than decorating every surface.
 ---
@@ -184,6 +184,17 @@ A memory's displayed author name is part of the moment in which the memory was c
 - Contributor renames on later visits must not retroactively rewrite old content.
 - Editing memory text, moving objects or host curation must never mutate the author-name snapshot.
 - Keep actor identity and display-name history conceptually separate: one secures continuity, the other preserves presentation at creation time.
+
+## Visual cohesion pass
+
+Camera motion and editing affordances must belong to the same visual plane as the objects they describe.
+
+- Outdoor environmental color belongs inside the moving camera world; the fixed quest viewport is only a same-palette fallback and must never reveal a competing sky/ground split during camera travel.
+- The horizon is atmospheric depth, not a permanent blue banner. Keep it shallow, desaturated and blended into meadow tones.
+- Room placement feedback is grounded: a subtle floor ellipse follows the dragged object and disappears on drop. Avoid centered white cylinders, large selection masks or other overlays that detach from the furniture.
+- Edit-mode guidance sits at an edge of the scene rather than occupying the center focal area.
+- The landing cover should read as a framed keepsake before it reads as a product page: fewer decorative signals, quieter texture, stronger whitespace, paper/emboss treatment around the live room preview.
+- Visual changes must preserve interaction geometry, accessibility targets, camera coordinate mapping and the existing privacy/author-continuity model.
 
 ## Private memory archive
 
