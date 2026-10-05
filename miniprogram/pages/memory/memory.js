@@ -2,7 +2,7 @@ const api=require('../../utils/room-api');
 
 Page({
   data:{
-    code:'',honoree:'重要的人',tab:'notes',saving:false,uploading:false,uploadingMemento:false,
+    code:'',honoree:'重要的人',tab:'notes',isOwner:false,saving:false,uploading:false,uploadingMemento:false,
     notes:[],photos:[],mementos:[],
     noteText:'',editingNoteId:'',
     photoCaption:'',
@@ -12,8 +12,11 @@ Page({
   },
 
   onLoad(q){
+    const code=String(q.code||'').toUpperCase();
+    const access=api.getAccess(code);
     this.setData({
-      code:String(q.code||'').toUpperCase(),
+      code,
+      isOwner:!!access.ownerToken,
       tab:['notes','photos','mementos'].includes(q.tab)?q.tab:'notes',
       placementX:Number(q.x)||50,
       placementY:Number(q.y)||78
