@@ -182,7 +182,7 @@ Page({
       };
 
       await api.applyOp(this.data.code,'quest',{kind:'add',item});
-      await api.addActivity(this.data.code,avatar.name,avatar.name+' 在门外藏下了「'+item.title+'」');
+      api.addActivity(this.data.code,avatar.name,avatar.name+' 在门外藏下了「'+item.title+'」').catch(()=>{});
       this.setData({questTitle:'',questText:'',questImage:''});
       await this.loadQuest();
       wx.showToast({title:'已经藏在路上'});
