@@ -1,1 +1,55 @@
-page{background:#f7f1e8;color:#554841;font-family:monospace}.page{padding:32rpx}.card{background:#fffaf2;border:4rpx solid #745f54;box-shadow:8rpx 8rpx 0 #d8c7b8;padding:28rpx;border-radius:12rpx}.btn{margin-top:20rpx;background:#e98f92!important;color:#fff!important;border:0;border-radius:10rpx;box-shadow:0 10rpx 0 #b86369;font-weight:700}.btn:active{transform:translateY(8rpx);box-shadow:0 2rpx 0 #b86369}.btn.secondary{background:#8fb6c9!important;box-shadow:0 10rpx 0 #668b9b}.label{font-size:24rpx;color:#8d7c72;margin:18rpx 0 8rpx}.input{background:white;border:3rpx solid #d9cabd;padding:20rpx;border-radius:8rpx}.eyebrow{font-size:20rpx;letter-spacing:3rpx;color:#a47d6b}.title{font-size:48rpx;font-weight:800;line-height:1.25;margin:12rpx 0}.muted{color:#8d7c72;font-size:24rpx;line-height:1.7}
+page{
+  min-height:100%;
+  background:#f6efe7;
+  color:#4f433d;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+}
+view,button,input,textarea{box-sizing:border-box}
+button::after{border:0}
+.page{min-height:100vh;padding:28rpx 28rpx calc(36rpx + env(safe-area-inset-bottom))}
+.card{
+  background:rgba(255,251,246,.96);
+  border:3rpx solid #826d61;
+  box-shadow:8rpx 9rpx 0 rgba(120,94,80,.16);
+  border-radius:22rpx;
+  padding:28rpx;
+}
+.btn{
+  min-height:92rpx;
+  margin-top:22rpx;
+  border:0;
+  border-radius:18rpx;
+  background:#de7d82!important;
+  color:#fff!important;
+  box-shadow:0 9rpx 0 #aa5b60;
+  font-size:28rpx;
+  font-weight:700;
+  line-height:92rpx;
+}
+.btn:active{transform:translateY(6rpx);box-shadow:0 3rpx 0 #aa5b60}
+.btn.secondary{background:#7da9bb!important;box-shadow:0 9rpx 0 #587f90}
+.label{font-size:24rpx;color:#7f6d63;margin:24rpx 0 10rpx;font-weight:600}
+.input{
+  width:100%;
+  min-height:88rpx;
+  background:#fff;
+  border:2rpx solid #d8c8bc;
+  padding:0 22rpx;
+  border-radius:16rpx;
+  font-size:30rpx;
+  color:#4f433d;
+}
+.input-placeholder{color:#b4a49a}
+.eyebrow{font-size:18rpx;letter-spacing:4rpx;color:#a17968;font-weight:700}
+.title{font-size:54rpx;font-weight:800;line-height:1.14;letter-spacing:-2rpx;margin:14rpx 0}
+.muted{color:#89786e;font-size:24rpx;line-height:1.72}
+.pill{
+  display:inline-flex;
+  align-items:center;
+  min-height:42rpx;
+  padding:0 16rpx;
+  border-radius:999rpx;
+  background:#eee3d8;
+  color:#78665d;
+  font-size:20rpx;
+}
