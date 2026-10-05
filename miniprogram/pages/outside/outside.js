@@ -12,7 +12,7 @@ Page({
       {key:'mailbox',label:'邮箱',icon:'✉',x:86,y:48}
     ],
     selectedSpot:'meadow',questTitle:'',questText:'',questImage:'',
-    saving:false,uploading:false,selectedQuest:null
+    saving:false,uploading:false,selectedQuest:null,isOwner:false
   },
 
   socket:null,
@@ -20,7 +20,9 @@ Page({
   reconnectTimer:null,
 
   onLoad(q){
-    this.setData({code:String(q.code||'').toUpperCase(),avatar:api.getAvatar()});
+    const code=String(q.code||'').toUpperCase();
+    const access=api.getAccess(code);
+    this.setData({code,avatar:api.getAvatar(),isOwner:!!access.ownerToken});
     this.connectQuest();
   },
 
