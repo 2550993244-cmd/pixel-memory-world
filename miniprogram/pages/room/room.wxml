@@ -52,11 +52,95 @@
   </view>
 
   <view class="action-dock">
-    <button class="action {{celebrated?'on':''}}" bindtap="celebrate"><text>✦</text><text class="action-label">{{celebrated?'已庆祝':'庆祝'}}</text></button>
-    <button class="action {{recording?'recording':''}}" bindtap="toggleRecord"><text>🎙</text><text class="action-label">{{recording?'停止':'录音'}}</text></button>
-    <button class="action" bindtap="playLastVoice"><text>▶</text><text class="action-label">最近语音</text></button>
-    <button class="action" open-type="share"><text>⌁</text><text class="action-label">邀请好友</text></button>
+    <button class="action {{celebrated?'on':''}}" bindtap="celebrate">
+      <text>✦</text><text class="action-label">{{celebrated?'已庆祝':'庆祝'}}</text>
+    </button>
+    <button class="action {{recording?'recording':''}}" bindtap="toggleRecord">
+      <text>🎙</text><text class="action-label">{{recording?'停止':'录音'}}</text>
+    </button>
+    <button class="action" bindtap="playLastVoice">
+      <text>▶</text><text class="action-label">语音</text>
+    </button>
+    <button class="action" bindtap="openMemoryPanel">
+      <text>▥</text><text class="action-label">回忆</text>
+    </button>
+    <button class="action" open-type="share">
+      <text>⌁</text><text class="action-label">邀请</text>
+    </button>
   </view>
 
-  <view class="room-foot">网页端与小程序端共用同一个房间码和实时房间。</view>
+  <view class="room-foot">网页端与小程序端共用同一个房间码、实时房间和回忆数据。</view>
+</view>
+
+<view wx:if="{{showMemoryPanel}}" class="sheet-mask" bindtap="closeMemoryPanel">
+  <view class="memory-sheet" catchtap="noop">
+    <view class="sheet-handle"></view>
+    <view class="sheet-head">
+      <view>
+        <view class="eyebrow">ROOM MEMORY · 实时同步</view>
+        <view class="sheet-title">这间房已经留下了什么？</view>
+      </view>
+      <button class="sheet-close" bindtap="closeMemoryPanel">×</button>
+    </view>
+
+    <view class="metric-grid">
+      <view class="metric">
+        <text class="metric-value">{{players.length}}</text>
+        <text class="metric-label">在线</text>
+      </view>
+      <view class="metric">
+        <text class="metric-value">{{memoryStats.notes}}</text>
+        <text class="metric-label">留言</text>
+      </view>
+      <view class="metric">
+        <text class="metric-value">{{memoryStats.mementos}}</text>
+        <text class="metric-label">纪念物</text>
+      </view>
+      <view class="metric">
+        <text class="metric-value">{{memoryStats.photos}}</text>
+        <text class="metric-label">照片</text>
+      </view>
+    </view>
+
+    <view class="sheet-section">
+      <view class="section-row">
+        <text class="section-title">内容构成</text>
+        <text class="section-note">来自同一房间的共享数据</text>
+      </view>
+
+      <view class="chart">
+        <block wx:for="{{memoryChart}}" wx:key="key">
+          <view class="chart-row">
+            <text class="chart-label">{{item.label}}</text>
+            <view class="chart-track">
+              <view class="chart-fill {{item.key}}" style="width:{{item.width}}%;"></view>
+            </view>
+            <text class="chart-value">{{item.value}}</text>
+          </view>
+        </block>
+      </view>
+    </view>
+
+    <view class="sheet-section">
+      <view class="section-row">
+        <text class="section-title">最近发生</text>
+        <text class="section-note">{{memoryStats.activity}} 条记录</text>
+      </view>
+
+      <view wx:if="{{recentActivity.length}}" class="activity-list">
+        <block wx:for="{{recentActivity}}" wx:key="id">
+          <view class="activity-item">
+            <view class="activity-dot"></view>
+            <view class="activity-copy">
+              <text>{{item.text}}</text>
+              <small>{{item.time}}</small>
+            </view>
+          </view>
+        </block>
+      </view>
+      <view wx:else class="empty-memory">
+        这里还很安静。网页端留下的留言、照片和纪念物会同步显示在这里。
+      </view>
+    </view>
+  </view>
 </view>
