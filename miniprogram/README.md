@@ -15,7 +15,7 @@
 ## 第一次打开前要改什么
 
 1. 用微信开发者工具导入本目录。
-2. 在 `project.config.json` 中把 `touristappid` 换成你自己的 AppID。
+2. 当前开发分支已经配置正式 AppID；不要把 AppSecret 写入仓库或发到聊天中。
 3. 在 `app.js` 中把：
 
 ```js
