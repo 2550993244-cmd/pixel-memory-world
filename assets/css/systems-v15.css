@@ -69,66 +69,72 @@ body.pm-world .pm-sprite[data-action="celebrate"] .pm-sprite-core{animation:pmCe
 @keyframes pmHug{50%{transform:translateX(-50%) scale(.94)}}
 @keyframes pmCelebrateAction{50%{transform:translateX(-50%) translateY(-5px)}}
 
-/* P3 room editing */
+/* P3 room editing
+   Keep the room visually untouched. Editing feedback belongs to the dragged
+   object and a small status chip, never to a full-stage overlay. */
 body.pm-room-editing-v15 #worldStage{cursor:default}
 body.pm-room-editing-v15 #worldStage:after{
-  content:"布置中 · 拖动家具，松手放下";
-  position:absolute;
-  left:16px;top:16px;
-  z-index:310;
-  transform:none;
-  padding:7px 10px;
-  border:1px solid rgba(77,92,72,.18);
-  border-radius:10px;
-  background:rgba(76,91,70,.84);
-  color:#fffdf6;
-  box-shadow:0 7px 18px rgba(61,50,43,.12);
-  backdrop-filter:blur(7px);
-  font-size:9px;
-  letter-spacing:.04em;
+  content:"";
+  inset:0;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent!important;
+  opacity:1!important;
+  backdrop-filter:none!important;
   pointer-events:none;
 }
 body.pm-room-editing-v15 [data-room-object-v15]{
   cursor:grab!important;
   pointer-events:auto!important;
-  outline:1px dashed rgba(96,124,92,.42);
-  outline-offset:4px;
-  filter:drop-shadow(0 5px 7px rgba(83,102,77,.16));
+  outline:0;
   touch-action:none;
 }
 body.pm-room-editing-v15 [data-room-object-v15]:hover,
 body.pm-room-editing-v15 [data-room-object-v15]:focus-visible{
-  outline:2px solid rgba(99,132,96,.58);
-  outline-offset:5px;
-  filter:drop-shadow(0 6px 10px rgba(80,105,77,.24));
+  outline:1px solid rgba(255,249,237,.82);
+  outline-offset:4px;
 }
 body.pm-room-editing-v15 [data-room-object-v15].pm-dragging-v15{
   cursor:grabbing!important;
-  outline-color:rgba(102,137,98,.78);
-  filter:drop-shadow(0 7px 12px rgba(74,99,73,.28));
+  outline:1px solid rgba(255,249,237,.94);
+  outline-offset:5px;
+  filter:brightness(1.035) drop-shadow(0 7px 10px rgba(67,55,46,.16));
   z-index:280!important;
 }
-body.pm-world .pm-editor-drop-halo-v18{
+body.pm-world .pm-editor-drag-status-v19{
   position:absolute;
-  z-index:2;
-  width:76px;
-  height:28px;
-  border:2px solid rgba(100,132,95,.58);
-  border-radius:50%;
-  transform:translate(-50%,-50%);
-  background:
-    radial-gradient(ellipse at center,rgba(139,167,127,.17) 0 40%,rgba(139,167,127,.07) 41% 63%,transparent 64%);
-  box-shadow:
-    0 0 0 5px rgba(128,158,118,.07),
-    inset 0 0 0 1px rgba(255,252,237,.32);
-  filter:drop-shadow(0 3px 4px rgba(68,87,65,.16));
+  left:50%;
+  top:14px;
+  z-index:330;
+  transform:translateX(-50%);
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-height:32px;
+  padding:7px 12px;
+  border:1px solid rgba(96,80,68,.13);
+  border-radius:999px;
+  background:rgba(255,251,244,.96);
+  color:#514942;
+  box-shadow:0 7px 18px rgba(66,53,45,.10);
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.03em;
   pointer-events:none;
-  transition:left .045s linear,top .045s linear,opacity .12s ease,transform .12s ease;
+  transition:opacity .12s ease,transform .12s ease;
 }
-body.pm-world .pm-editor-drop-halo-v18.hidden{
-  display:block!important;
+body.pm-world .pm-editor-drag-status-v19 i{
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#7f9c79;
+  box-shadow:0 0 0 3px rgba(127,156,121,.13);
+}
+body.pm-world .pm-editor-drag-status-v19.hidden{
+  display:flex!important;
   opacity:0;
-  transform:translate(-50%,-50%) scale(.76);
+  transform:translateX(-50%) translateY(-5px);
 }
 body.pm-world .pm-layout-positioned-v15{
   margin:0!important;
@@ -226,17 +232,15 @@ body.pm-world .quest-stage.pm-camera-fit .pm-camera-world-v15{cursor:crosshair}
 body.pm-room-editing-v15 #mementoLayer .memento[data-curatable-memento]{
   pointer-events:auto!important;
   cursor:grab!important;
-  outline:2px dashed rgba(170,126,91,.72);
-  outline-offset:5px;
-  filter:drop-shadow(0 0 9px rgba(170,126,91,.28));
+  outline:0;
   touch-action:none;
 }
-body.pm-room-editing-v15 #mementoLayer .memento[data-curatable-memento]:focus,
+body.pm-room-editing-v15 #mementoLayer .memento[data-curatable-memento]:focus-visible,
 body.pm-room-editing-v15 #mementoLayer .memento[data-curatable-memento]:hover,
 body.pm-room-editing-v15 #mementoLayer .memento.pm-curator-selected-v15{
-  outline-style:solid;
-  outline-color:#ae7d5f;
-  filter:drop-shadow(0 0 13px rgba(174,125,95,.42));
+  outline:1px solid rgba(174,125,95,.62);
+  outline-offset:4px;
+  filter:drop-shadow(0 5px 9px rgba(116,85,66,.16));
 }
 body.pm-room-editing-v15 #mementoLayer .memento.pm-dragging-v15{
   cursor:grabbing!important;
