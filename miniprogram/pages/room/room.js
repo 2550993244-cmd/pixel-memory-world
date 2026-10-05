@@ -1,5 +1,6 @@
 const app=getApp();
 const uid=()=>Date.now()+'-'+Math.random().toString(16).slice(2);
+const accessKey=code=>'pixel-room-access:'+code;
 
 Page({
   data:{
@@ -8,19 +9,33 @@ Page({
   },
 
   socket:null,player:null,recorder:null,audio:null,
-  socketReady:false,unloading:false,reconnectTimer:null,
+  socketReady:false,unloading:false,reconnectTimer:null,inviteToken:'',
 
   onLoad(q){
     const code=String(q.code||'').toUpperCase();
     const name=decodeURIComponent(q.name||'朋友');
-    this.player={id:uid(),name,x:50,y:76,hair:'1',outfit:'coral',item:'🎁',host:q.host==='1',celebrated:false};
+    const cached=wx.getStorageSync(accessKey(code))||{};
+    this.inviteToken=String(q.invite||cached.inviteToken||'');
+
+    if(this.inviteToken){
+      wx.setStorageSync(accessKey(code),{...cached,inviteToken:this.inviteToken});
+    }
+
+    this.player={
+      id:uid(),name,x:50,y:76,hair:'1',outfit:'coral',
+      item:'🎁',host:q.host==='1',celebrated:false
+    };
+
     this.setData({code,playerId:this.player.id,players:[{...this.player}]});
 
     wx.request({
       url:app.globalData.serverUrl+'/api/rooms/'+code,
-      timeout:8000,
+      header:this.inviteToken?{'X-Room-Invite':this.inviteToken}:{},
+      timeout:12000,
       success:r=>{
-        if(r.data&&r.data.world)this.setData({honoree:r.data.world.honoree||'重要的人'});
+        if(r.statusCode===200&&r.data&&r.data.world){
+          this.setData({honoree:r.data.world.honoree||'重要的人'});
+        }
       }
     });
 
@@ -29,6 +44,7 @@ Page({
       this.setData({recording:false});
       if(res.tempFilePath)this.uploadVoice(res.tempFilePath);
     });
+
     this.connect();
   },
 
@@ -42,12 +58,21 @@ Page({
 
   connect(){
     if(this.unloading)return;
+    if(!this.inviteToken){
+      wx.showToast({title:'缺少邀请凭证',icon:'none'});
+      return;
+    }
+
     const base=app.globalData.serverUrl.replace(/^http:/,'ws:').replace(/^https:/,'wss:');
     const channel='pixel-memory-live-'+this.data.code;
+    const url=
+      base+'/ws?room='+this.data.code+
+      '&channel='+encodeURIComponent(channel)+
+      '&player='+encodeURIComponent(this.player.id)+
+      '&invite='+encodeURIComponent(this.inviteToken);
+
     this.socketReady=false;
-    this.socket=wx.connectSocket({
-      url:base+'/ws?room='+this.data.code+'&channel='+encodeURIComponent(channel)+'&player='+encodeURIComponent(this.player.id)
-    });
+    this.socket=wx.connectSocket({url});
 
     this.socket.onOpen(()=>{
       this.socketReady=true;
@@ -61,7 +86,10 @@ Page({
       this.receive(m);
     });
 
-    this.socket.onError(()=>wx.showToast({title:'实时连接正在重试',icon:'none'}));
+    this.socket.onError(()=>{
+      wx.showToast({title:'实时连接正在重试',icon:'none'});
+    });
+
     this.socket.onClose(()=>{
       this.socketReady=false;
       if(this.unloading)return;
@@ -80,11 +108,25 @@ Page({
 
     if(['hello','state','move','celebrate','chat','voice'].includes(m.type)){
       upsert(m.player);
-      if(m.type==='hello')this.send({type:'state',sender:this.player.id,player:this.player});
+      if(m.type==='hello'){
+        this.send({type:'state',sender:this.player.id,player:this.player});
+      }
     }
-    if(m.type==='leave'&&m.player)ps=ps.filter(x=>x.id!==m.player.id);
-    if(m.type==='chat')this.setData({lastChat:(m.player?.name||'朋友')+'：'+m.text});
-    if(m.type==='voice'&&m.url)this.setData({lastVoiceUrl:m.url,lastChat:(m.player?.name||'朋友')+' 留了一段声音 🎙'});
+
+    if(m.type==='leave'&&m.player){
+      ps=ps.filter(x=>x.id!==m.player.id);
+    }
+
+    if(m.type==='chat'){
+      this.setData({lastChat:(m.player&&m.player.name||'朋友')+'：'+m.text});
+    }
+
+    if(m.type==='voice'&&m.url){
+      this.setData({
+        lastVoiceUrl:m.url,
+        lastChat:(m.player&&m.player.name||'朋友')+' 留了一段声音 🎙'
+      });
+    }
 
     upsert(this.player);
     this.setData({players:ps});
@@ -133,9 +175,11 @@ Page({
       this.recorder.stop();
       return;
     }
+
     wx.getSetting({
       success:s=>{
         if(s.authSetting['scope.record']===true)return this.startRecord();
+
         if(s.authSetting['scope.record']===false){
           return wx.showModal({
             title:'需要麦克风权限',
@@ -144,6 +188,7 @@ Page({
             success:r=>{if(r.confirm)wx.openSetting({})}
           });
         }
+
         wx.authorize({
           scope:'scope.record',
           success:()=>this.startRecord(),
@@ -161,6 +206,7 @@ Page({
 
   uploadVoice(path){
     wx.showLoading({title:'保存声音'});
+
     wx.uploadFile({
       url:app.globalData.serverUrl+'/api/uploads',
       filePath:path,
@@ -171,7 +217,12 @@ Page({
         try{d=JSON.parse(r.data)}catch(_){return}
         if(d.url){
           this.setData({lastVoiceUrl:d.url});
-          this.send({type:'voice',sender:this.player.id,player:this.player,url:d.url});
+          this.send({
+            type:'voice',
+            sender:this.player.id,
+            player:this.player,
+            url:d.url
+          });
           wx.showToast({title:'声音留下了'});
         }
       },
@@ -181,7 +232,10 @@ Page({
   },
 
   playLastVoice(){
-    if(!this.data.lastVoiceUrl)return wx.showToast({title:'还没有语音',icon:'none'});
+    if(!this.data.lastVoiceUrl){
+      return wx.showToast({title:'还没有语音',icon:'none'});
+    }
+
     try{this.audio&&this.audio.destroy()}catch(e){}
     this.audio=wx.createInnerAudioContext();
     this.audio.src=this.data.lastVoiceUrl;
@@ -191,7 +245,8 @@ Page({
   onShareAppMessage(){
     return{
       title:'来'+this.data.honoree+'的小小世界吧｜'+this.data.code,
-      path:'/pages/index/index?code='+this.data.code
+      path:'/pages/index/index?code='+this.data.code+
+        '&invite='+encodeURIComponent(this.inviteToken)
     };
   }
 });
