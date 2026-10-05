@@ -23,6 +23,21 @@
     <view class="sofa"></view>
     <view class="rug"></view>
     <view class="cake">✦</view>
+
+    <button class="memory-wall notes-wall" data-tab="notes" bindtap="goMemory">
+      <text>✎</text><text>留言 {{memoryStats.notes}}</text>
+    </button>
+    <button class="memory-wall photos-wall" data-tab="photos" bindtap="goMemory">
+      <text>▣</text><text>照片 {{memoryStats.photos}}</text>
+    </button>
+
+    <block wx:for="{{visibleMementos}}" wx:key="id">
+      <button class="room-memento" style="left:{{item.x}}%;top:{{item.y}}%;" data-tab="mementos" bindtap="goMemory">
+        <image wx:if="{{item.photo}}" class="room-memento-photo" mode="aspectFill" src="{{item.photo}}"></image>
+        <text wx:else>{{item.type}}</text>
+      </button>
+    </block>
+
     <view class="door" bindtap="goOutside">OUTSIDE</view>
 
     <block wx:for="{{players}}" wx:key="id">
