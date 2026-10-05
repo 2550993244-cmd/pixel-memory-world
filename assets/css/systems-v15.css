@@ -305,7 +305,39 @@ body.pm-world .my-traces-summary-v16>small{
   font-size:10px;
   line-height:1.55;
 }
-body.pm-world .trace-recovery-row-v16{margin-top:10px}
+body.pm-world .trace-recovery-row-v16{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:7px;
+  margin-top:10px
+}
+body.pm-world .trace-search-v17{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto auto;
+  gap:6px;
+  margin-bottom:9px;
+}
+body.pm-world .trace-search-v17 input{
+  min-width:0;
+  border:1px solid rgba(105,88,75,.16);
+  border-radius:11px;
+  padding:8px 10px;
+  background:#fffdfa;
+  color:#645952;
+  outline:none;
+  font-size:10px;
+}
+body.pm-world .trace-search-v17 input:focus{
+  border-color:#7d987b;
+  box-shadow:0 0 0 3px rgba(125,152,123,.12);
+}
+body.pm-world .trace-result-count-v17{
+  display:block;
+  margin-top:8px;
+  color:#9a8d83;
+  font-size:8px;
+  line-height:1.45;
+}
 body.pm-world .trace-filter-row-v16{
   display:flex;
   flex-wrap:wrap;
@@ -353,19 +385,41 @@ body.pm-world .trace-year-v16{
 }
 body.pm-world .trace-year-label-v16{
   position:relative;
-  padding-top:3px;
+  display:flex;
+  align-items:flex-start;
+  justify-content:flex-end;
+  gap:5px;
+  width:100%;
+  padding:3px 0;
+  border:0;
+  background:transparent;
+  color:inherit;
   text-align:right;
+  box-shadow:none;
 }
+body.pm-world .trace-year-label-v16:hover{filter:none;transform:none}
+body.pm-world .trace-year-label-v16>span{display:block}
 body.pm-world .trace-year-label-v16 b{
   display:block;
   color:#596a59;
   font-size:14px;
 }
-body.pm-world .trace-year-label-v16 span{
+body.pm-world .trace-year-label-v16 small{
   display:block;
   margin-top:3px;
   color:#a09389;
   font-size:8px;
+}
+body.pm-world .trace-year-label-v16 i{
+  display:grid;
+  place-items:center;
+  width:18px;height:18px;
+  margin-top:0;
+  border-radius:50%;
+  background:#eef1e9;
+  color:#718370;
+  font-size:11px;
+  font-style:normal;
 }
 body.pm-world .trace-year-list-v16{
   position:relative;
@@ -413,8 +467,13 @@ body.pm-world .trace-card-v16 p{
   line-height:1.6;
 }
 @media(max-width:700px){
-  body.pm-world .contributor-continuity-actions-v16{grid-template-columns:1fr}
-  body.pm-world .trace-year-v16{grid-template-columns:46px minmax(0,1fr);gap:7px}
+  body.pm-world .contributor-continuity-actions-v16,
+  body.pm-world .trace-recovery-row-v16{grid-template-columns:1fr}
+  body.pm-world .trace-search-v17{grid-template-columns:minmax(0,1fr) auto}
+  body.pm-world .trace-search-v17 #myTraceClearSearchV17{grid-column:1/-1}
+  body.pm-world .trace-year-v16{grid-template-columns:54px minmax(0,1fr);gap:7px}
+  body.pm-world .trace-year-label-v16{gap:2px}
+  body.pm-world .trace-year-label-v16 i{width:15px;height:15px;font-size:9px}
   body.pm-world .trace-card-head-v16{display:block}
   body.pm-world .trace-card-head-v16>small{display:block;margin-top:3px;text-align:left}
 }
