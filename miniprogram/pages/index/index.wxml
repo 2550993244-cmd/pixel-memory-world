@@ -22,11 +22,12 @@
 
     <block wx:if="{{mode==='join'}}">
       <view class="form-title">找到那间正在等你的房间</view>
-      <view class="label">六位邀请码</view>
+      <view class="label">六位房间码</view>
       <input class="input code" maxlength="6" value="{{code}}" bindinput="onCode" placeholder="8L3Q2K"/>
       <view class="label">怎么称呼你？</view>
       <input class="input" maxlength="10" value="{{name}}" bindinput="onName" placeholder="例如：小林"/>
       <button class="btn" loading="{{loading}}" disabled="{{loading}}" bindtap="joinRoom">进入这间小屋</button>
+    <view class="invite-hint">从好友分享的小程序卡片进入时，会自动带上访问凭证。</view>
     </block>
 
     <block wx:else>
