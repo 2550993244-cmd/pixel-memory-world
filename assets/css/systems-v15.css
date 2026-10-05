@@ -110,7 +110,7 @@ body.pm-room-editing-v15 [data-room-object-v15].pm-dragging-v15{
 }
 body.pm-world .pm-editor-drop-halo-v18{
   position:absolute;
-  z-index:118;
+  z-index:2;
   width:76px;
   height:28px;
   border:2px solid rgba(100,132,95,.58);
